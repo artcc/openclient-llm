@@ -4,6 +4,7 @@ Hi there! We've got some great new features for you in this update.
 
 • Memory entries in Settings now use the full row width, making longer text easier to read.
 • Select and copy part of a chat message while using the new actions button for whole-message options.
+• On macOS, onboarding now fully covers the Home screen and its navigation toolbar.
 • Minor bug fixes and improvements for a smoother experience.
 
 ***Recent Updates:
