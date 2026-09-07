@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/License-AGPL%20v3.0-blue?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/Platform-iOS%2026+%20|%20iPadOS%2026+%20|%20macOS%2026+-blue?style=flat-square" alt="Platform" />
   <img src="https://img.shields.io/badge/Swift-6+-orange?style=flat-square&logo=swift" alt="Swift" />
-  <img src="https://img.shields.io/badge/Version-1.6.40-brightgreen?style=flat-square" alt="Version 1.6.40" />
+  <img src="https://img.shields.io/badge/Version-1.6.45-brightgreen?style=flat-square" alt="Version 1.6.45" />
 </p>
 
 OpenClient connects directly to the AI server you configure, without an OpenClient-hosted proxy or subscription.

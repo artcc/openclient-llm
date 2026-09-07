@@ -157,6 +157,25 @@ extension ChatViewModelTests {
         XCTAssertNil(sut.streamTask)
     }
 
+    func test_send_sendTapped_continuedTaskCompletes_doesNotNotify() async {
+        // Given
+        let model = LLMModel(id: "gpt-4")
+        sut.state = .loaded(sut.makeLoadedState(models: [model], pending: nil))
+        mockStreamMessage.chunks = [.token("Answer")]
+        mockStreamingBackground.shouldSendCompletionNotification = false
+        let completed = expectation(description: "Background task completed")
+        mockStreamingBackground.onEnd = { _ in completed.fulfill() }
+        sut.send(.inputChanged("Question"))
+
+        // When
+        sut.send(.sendTapped)
+        await fulfillment(of: [completed], timeout: 1)
+
+        // Then
+        XCTAssertEqual(mockStreamingBackground.completionResults, [true])
+        XCTAssertEqual(mockNotifyStreamingCompleted.completionCallCount, 0)
+    }
+
     func test_send_sendTapped_persistenceFails_completesBackgroundTaskAsFailure() async {
         // Given
         let model = LLMModel(id: "gpt-4")

@@ -131,16 +131,16 @@ private extension MemoryView {
 
 #if os(iOS)
     func iOSItemRow(_ item: MemoryItem) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            itemContent(item)
+        VStack(alignment: .leading, spacing: 7.5) {
+            itemText(item)
 
-            Spacer()
+            HStack(spacing: 6) {
+                itemMetadata(item)
 
-            Toggle("", isOn: Binding(
-                get: { item.isEnabled },
-                set: { _ in viewModel.send(.toggleItem(id: item.id)) }
-            ))
-            .labelsHidden()
+                Spacer()
+
+                itemToggle(item)
+            }
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 6)
@@ -162,50 +162,59 @@ private extension MemoryView {
 
 #if os(macOS)
     func macOSItemRow(_ item: MemoryItem) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            itemContent(item)
+        VStack(alignment: .leading, spacing: 7.5) {
+            itemText(item)
 
-            Spacer()
+            HStack(spacing: 6) {
+                itemMetadata(item)
 
-            Button {
-                editingItem = item
-            } label: {
-                Image(systemName: "pencil")
+                Spacer()
+
+                Button {
+                    editingItem = item
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.borderless)
+
+                Button(role: .destructive) {
+                    viewModel.send(.deleteItem(id: item.id))
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+
+                itemToggle(item)
             }
-            .buttonStyle(.borderless)
-
-            Button(role: .destructive) {
-                viewModel.send(.deleteItem(id: item.id))
-            } label: {
-                Image(systemName: "trash")
-            }
-            .buttonStyle(.borderless)
-
-            Toggle("", isOn: Binding(
-                get: { item.isEnabled },
-                set: { _ in viewModel.send(.toggleItem(id: item.id)) }
-            ))
-            .labelsHidden()
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 8)
     }
 #endif
 
-    func itemContent(_ item: MemoryItem) -> some View {
-        VStack(alignment: .leading, spacing: 7.5) {
-            Text(item.content)
-                .font(.body)
-                .foregroundStyle(item.isEnabled ? .primary : .secondary)
-                .fixedSize(horizontal: false, vertical: true)
+    func itemText(_ item: MemoryItem) -> some View {
+        Text(item.content)
+            .font(.body)
+            .foregroundStyle(item.isEnabled ? .primary : .secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
-            HStack(spacing: 6) {
-                sourceLabel(item.source)
-                Text(item.createdAt.formatted(date: .abbreviated, time: .omitted))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
+    func itemMetadata(_ item: MemoryItem) -> some View {
+        HStack(spacing: 6) {
+            sourceLabel(item.source)
+            Text(item.createdAt.formatted(date: .abbreviated, time: .omitted))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
+    }
+
+    func itemToggle(_ item: MemoryItem) -> some View {
+        Toggle(String(localized: "Use this memory"), isOn: Binding(
+            get: { item.isEnabled },
+            set: { _ in viewModel.send(.toggleItem(id: item.id)) }
+        ))
+        .labelsHidden()
     }
 
     func sourceLabel(_ source: MemoryItem.Source) -> some View {

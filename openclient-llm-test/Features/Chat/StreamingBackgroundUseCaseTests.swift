@@ -81,10 +81,36 @@ final class StreamingBackgroundUseCaseTests: XCTestCase {
         // Then
         XCTAssertEqual(manager.completionResults, [false])
     }
+
+    func test_shouldSendCompletionNotification_continuedTaskActive_returnsFalse() {
+        // Given
+        let manager = MockBackgroundTaskManager()
+        manager.isUsingContinuedTask = true
+        let sut = StreamingBackgroundUseCase(backgroundTaskManager: manager)
+
+        // When
+        let shouldSend = sut.shouldSendCompletionNotification
+
+        // Then
+        XCTAssertFalse(shouldSend)
+    }
+
+    func test_shouldSendCompletionNotification_legacyFallback_returnsTrue() {
+        // Given
+        let manager = MockBackgroundTaskManager()
+        let sut = StreamingBackgroundUseCase(backgroundTaskManager: manager)
+
+        // When
+        let shouldSend = sut.shouldSendCompletionNotification
+
+        // Then
+        XCTAssertTrue(shouldSend)
+    }
 }
 
 @MainActor
 private final class MockBackgroundTaskManager: BackgroundTaskManagerProtocol {
+    var isUsingContinuedTask = false
     private(set) var beginCallCount = 0
     private(set) var titles: [String] = []
     private(set) var subtitles: [String] = []

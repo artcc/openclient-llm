@@ -37,7 +37,10 @@ extension ChatViewModel {
             let didPersist = await persistConversation()
             guard !Task.isCancelled, isActiveStream(assistantMessageId) else { return }
             let didComplete = isPrivateChat || didPersist
-            if didComplete { notifyStreamingCompletedUseCase.execute() } else { scheduleConversationPersistence() }
+            if didComplete, streamingBackgroundUseCase.shouldSendCompletionNotification {
+                notifyStreamingCompletedUseCase.execute()
+            }
+            if !didComplete { scheduleConversationPersistence() }
             streamingBackgroundUseCase.end(success: didComplete)
             completeActiveStream(assistantMessageId)
         } catch is CancellationError {

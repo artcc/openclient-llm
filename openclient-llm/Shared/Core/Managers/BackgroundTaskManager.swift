@@ -12,6 +12,8 @@ import Foundation
 
 @MainActor
 protocol BackgroundTaskManagerProtocol: AnyObject {
+    var isUsingContinuedTask: Bool { get }
+
     func beginTask(title: String, subtitle: String, expirationHandler: @escaping @MainActor @Sendable () -> Void)
     func updateTask(completedUnitCount: Int64, subtitle: String)
     func endTask(success: Bool)
@@ -69,6 +71,10 @@ final class BackgroundTaskManager: BackgroundTaskManagerProtocol {
     }
 
     // MARK: - Public functions
+
+    var isUsingContinuedTask: Bool {
+        activeSession?.isUsingContinuedTask == true
+    }
 
     func beginTask(
         title: String,
@@ -146,6 +152,10 @@ private final class BackgroundTaskSession {
     private var state: State = .registered
     private var completedUnitCount: Int64 = 5
     private var subtitle: String
+
+    var isUsingContinuedTask: Bool {
+        if case .continued = state { true } else { false }
+    }
 
     init(
         identifier: String,
@@ -342,6 +352,8 @@ private final class SystemContinuedProcessingTask: ContinuedProcessingTaskProtoc
 /// macOS stub — background tasks are not required on macOS.
 @MainActor
 final class BackgroundTaskManager: BackgroundTaskManagerProtocol {
+    var isUsingContinuedTask: Bool { false }
+
     func beginTask(
         title: String,
         subtitle: String,

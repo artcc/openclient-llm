@@ -1,13 +1,16 @@
 Hi there! We've got some great new features for you in this update.
 
-***1.6.40:
+***1.6.45:
 
-• 10 new themed app icons for Halloween and Christmas.
-• On macOS, the improved menu bar chat now appears only after server setup and opens your current conversation directly in the main app window.
+• Memory entries in Settings now use the full row width, making longer text easier to read.
+• Select and copy part of a chat message while using the new actions button for whole-message options.
+• On macOS, onboarding now fully covers the Home screen and its navigation toolbar.
 • Minor bug fixes and improvements for a smoother experience.
 
 ***Recent Updates:
 
+• 10 new themed app icons for Halloween and Christmas.
+• On macOS, the improved menu bar chat now appears only after server setup and opens your current conversation directly in the main app window.
 • Choose from 20 app icons in Settings on iPhone and iPad.
 • Long chats now preserve earlier context before the next model response, with safer handling when requests are cancelled or interrupted.
 • Scroll through long conversations and verify that scrolling remains smooth while the floating date indicator updates.
@@ -16,8 +19,6 @@ Hi there! We've got some great new features for you in this update.
 • Fixed an issue that could cause the app to freeze when manually scrolling while a model was responding, or after several responses.
 • On macOS, add OpenClient widgets to the desktop or Notification Center and test New Chat, Search, Quick Actions, Continue Chat, Recent, Pinned, and Tagged Conversations.
 • On macOS, add the New Chat control and verify that it opens the app directly in a new conversation.
-• Chat messages now show their time, with a floating date indicator when scrolling through conversation history.
-• Test the new per-tool MCP permissions and approval flow: set tools to Always Allow, Ask, or Deny, then review requested MCP calls before execution.
 
 Thanks for your continued support and for helping us build the best possible LLM client together.
 

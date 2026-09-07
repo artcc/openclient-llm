@@ -151,7 +151,9 @@ private extension ChatViewModel {
         guard !Task.isCancelled, isActiveStream(assistantMessageId) else { return }
         let didComplete = isPrivateChat || didPersist
         if didComplete {
-            notifyStreamingCompletedUseCase.execute()
+            if streamingBackgroundUseCase.shouldSendCompletionNotification {
+                notifyStreamingCompletedUseCase.execute()
+            }
         } else {
             scheduleConversationPersistence()
         }

@@ -26,6 +26,7 @@ final class BackgroundTaskManagerTests: XCTestCase {
         XCTAssertEqual(system.submittedTitles, ["Title"])
         XCTAssertEqual(system.submittedSubtitles, ["Preparing"])
         XCTAssertTrue(system.legacyTaskNames.isEmpty)
+        XCTAssertFalse(sut.isUsingContinuedTask)
     }
 
     func test_beginTask_registrationFails_startsLegacyFallback() {
@@ -79,6 +80,7 @@ final class BackgroundTaskManagerTests: XCTestCase {
         let sut = makeSUT(system: system)
         sut.beginTask(title: "Title", subtitle: "Preparing", expirationHandler: {})
         system.launch(task)
+        XCTAssertTrue(sut.isUsingContinuedTask)
 
         // When
         sut.updateTask(completedUnitCount: 65, subtitle: "Using tools")
@@ -91,6 +93,7 @@ final class BackgroundTaskManagerTests: XCTestCase {
         XCTAssertEqual(task.progress.totalUnitCount, 100)
         XCTAssertEqual(task.progress.completedUnitCount, 100)
         XCTAssertEqual(task.completionResults, [true])
+        XCTAssertFalse(sut.isUsingContinuedTask)
     }
 
     func test_beginTask_activeSession_doesNotReplaceTask() {

@@ -25,6 +25,7 @@ final class ChatViewModelTests: XCTestCase {
     var mockSetWebSearchEnabled: MockSetWebSearchEnabledUseCase!
     var mockResolveAudioModelIds: MockResolveAudioModelIdsUseCase!
     var mockGetUserProfileContext: MockGetUserProfileContextUseCase!
+    var mockGetMemoryContext: MockGetMemoryContextUseCase!
     var mockGetConversationStarters: MockGetConversationStartersUseCase!
     var mockExportConversation: MockExportConversationUseCase!
     var mockBranchConversation: MockBranchConversationUseCase!
@@ -50,6 +51,7 @@ final class ChatViewModelTests: XCTestCase {
         mockSetWebSearchEnabled = MockSetWebSearchEnabledUseCase()
         mockResolveAudioModelIds = MockResolveAudioModelIdsUseCase()
         mockGetUserProfileContext = MockGetUserProfileContextUseCase()
+        mockGetMemoryContext = MockGetMemoryContextUseCase()
         mockGetConversationStarters = MockGetConversationStartersUseCase()
         mockExportConversation = MockExportConversationUseCase()
         mockBranchConversation = MockBranchConversationUseCase()
@@ -74,6 +76,7 @@ final class ChatViewModelTests: XCTestCase {
             fetchMCPToolsUseCase: mockFetchMCPTools,
             resolveAudioModelIdsUseCase: mockResolveAudioModelIds,
             getUserProfileContextUseCase: mockGetUserProfileContext,
+            getMemoryContextUseCase: mockGetMemoryContext,
             getConversationStartersUseCase: mockGetConversationStarters,
             streamingBackgroundUseCase: mockStreamingBackground,
             notifyStreamingCompletedUseCase: mockNotifyStreamingCompleted,
@@ -94,6 +97,7 @@ final class ChatViewModelTests: XCTestCase {
         mockSetWebSearchEnabled = nil
         mockResolveAudioModelIds = nil
         mockGetUserProfileContext = nil
+        mockGetMemoryContext = nil
         mockGetConversationStarters = nil
         mockExportConversation = nil
         mockBranchConversation = nil

@@ -35,6 +35,9 @@ struct MessageBubbleView: View {
     @State var cursorVisible: Bool = false
     @State var renderedMarkdown = RenderedMarkdown.empty
     @State private var reasoningDisclosureState = ReasoningDisclosureState()
+#if os(iOS)
+    @State private var isShowingTextSelection = false
+#endif
 
     // MARK: - View
 
@@ -44,11 +47,6 @@ struct MessageBubbleView: View {
             userMessageLayout
         case .assistant, .system:
             assistantMessageLayout
-                .popoverTip(
-                    showsMessageActionsTip
-                    ? AppTips.messageActions
-                    : nil
-                )
         case .tool:
             EmptyView()
         }
@@ -75,12 +73,11 @@ private extension MessageBubbleView {
                         .regular.tint(Color.appAccent),
                         in: .rect(cornerRadius: 18)
                     )
-                timestampLabel
-                    .padding(.trailing, 4)
-            }
-            .contentShape(Rectangle())
-            .contextMenu {
-                messageContextMenu(message.content)
+                HStack(spacing: 4) {
+                    timestampLabel
+                    messageActionsMenu
+                }
+                .padding(.trailing, 4)
             }
         }
     }
@@ -123,6 +120,7 @@ private extension MessageBubbleView {
                         Spacer(minLength: 8)
 
                         timestampLabel
+                        messageActionsMenu
                     }
                 }
 
@@ -145,12 +143,6 @@ private extension MessageBubbleView {
                 }
             }
             .frame(minHeight: 28, alignment: .center)
-            .contentShape(Rectangle())
-            .contextMenu {
-                if !message.content.isEmpty {
-                    messageContextMenu(message.content)
-                }
-            }
 
             Spacer(minLength: 0)
         }
@@ -248,7 +240,31 @@ private extension MessageBubbleView {
         .glassEffect(.regular, in: .rect(cornerRadius: 12))
     }
 
-    // MARK: - Context Menu
+    // MARK: - Message Actions
+
+    var messageActionsMenu: some View {
+        Menu {
+            messageContextMenu(message.content)
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "Message actions"))
+        .popoverTip(
+            showsMessageActionsTip
+                ? AppTips.messageActions
+                : nil
+        )
+#if os(iOS)
+        .sheet(isPresented: $isShowingTextSelection) {
+            MessageTextSelectionView(text: message.content)
+        }
+#endif
+    }
 
     @ViewBuilder
     func messageContextMenu(_ content: String) -> some View {
@@ -279,11 +295,20 @@ private extension MessageBubbleView {
 
     @ViewBuilder
     func commonMessageActions(_ content: String) -> some View {
+#if os(iOS)
+        Button {
+            AppTips.messageActions.invalidate(reason: .actionPerformed)
+            isShowingTextSelection = true
+        } label: {
+            Label(String(localized: "Select Text"), systemImage: "text.cursor")
+        }
+#endif
+
         Button {
             AppTips.messageActions.invalidate(reason: .actionPerformed)
             copyToClipboard(content)
         } label: {
-            Label(String(localized: "Copy"), systemImage: "doc.on.doc")
+            Label(String(localized: "Copy Message"), systemImage: "doc.on.doc")
         }
 
         ShareLink(

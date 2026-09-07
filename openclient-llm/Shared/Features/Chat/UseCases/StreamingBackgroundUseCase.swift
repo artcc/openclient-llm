@@ -12,6 +12,8 @@ import Foundation
 
 @MainActor
 protocol StreamingBackgroundUseCaseProtocol: AnyObject {
+    var shouldSendCompletionNotification: Bool { get }
+
     func begin(expirationHandler: @escaping @MainActor @Sendable () -> Void)
     func update(_ phase: StreamingBackgroundPhase)
     func end(success: Bool)
@@ -75,6 +77,10 @@ final class StreamingBackgroundUseCase: StreamingBackgroundUseCaseProtocol {
     }
 
     // MARK: - Execute
+
+    var shouldSendCompletionNotification: Bool {
+        !backgroundTaskManager.isUsingContinuedTask
+    }
 
     func begin(expirationHandler: @escaping @MainActor @Sendable () -> Void) {
         activityEventCount = 0

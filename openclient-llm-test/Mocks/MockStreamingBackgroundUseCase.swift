@@ -19,6 +19,7 @@ final class MockStreamingBackgroundUseCase: StreamingBackgroundUseCaseProtocol {
     var onEnd: ((Bool) -> Void)?
     private var expirationHandler: (@MainActor @Sendable () -> Void)?
     private(set) var isActive = false
+    var shouldSendCompletionNotification = true
 
     // MARK: - StreamingBackgroundUseCaseProtocol
 

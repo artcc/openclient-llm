@@ -34,9 +34,13 @@ struct MessageActionsTip: Tip {
 
     var message: Text? {
 #if os(macOS)
-        Text(String(localized: "Right-click a message to edit, regenerate, branch, or save it as a favourite."))
+        Text(String(
+            localized: "Use the message actions button to edit, regenerate, branch, or save it as a favourite.")
+        )
 #else
-        Text(String(localized: "Touch and hold a message to edit, regenerate, branch, or save it as a favourite."))
+        Text(String(
+            localized: "Tap the message actions button to edit, regenerate, branch, or save it as a favourite.")
+        )
 #endif
     }
 }
