@@ -184,9 +184,9 @@ private extension LaunchView {
 
     var shouldCoverMacOSHome: Bool {
         switch viewModel.state {
-        case .loading, .maintenance, .forceUpdate, .resetFailed:
+        case .loading, .onboarding, .maintenance, .forceUpdate, .resetFailed:
             true
-        case .onboarding, .home:
+        case .home:
             false
         }
     }
