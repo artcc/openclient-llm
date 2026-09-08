@@ -50,7 +50,7 @@ private extension WebContentView {
             Divider()
             MacWebView(url: url)
         }
-        .frame(minWidth: 700, minHeight: 500)
+        .frame(width: 700, height: 500)
     }
 #endif
 

@@ -31,9 +31,15 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 - Memory entries now use more legible metadata and compact native macOS editing controls, with more initial space in the memory editor
 - Prompt template editors now use clearer field headings and make better use of the available vertical editing space
 - iCloud data management now uses clearer action styling and a full-width macOS form that keeps its scrollbar at the content edge
+- Manage iCloud Data now opens in a sheet with a Done button on iOS, iPadOS, and macOS
+- Settings destination rows now use consistent chevrons for internal content and external-link indicators for actions that leave the app
+- macOS Settings sheets and their nested editors now use a fixed 700-by-500-point size
+- macOS web sheets now use a fixed 700-by-500-point size instead of minimum dimensions
+- Help feature tips now group the explanation and a shorter reset button in a single block without a separator between them
 
 ### Fixed
 
+- Help now provides an explicit Done button on iOS, iPadOS, and macOS
 - Markdown table headers and rows now share column widths to keep cells aligned
 - Attachment-only user messages no longer display an empty tinted text bubble
 - Blockquote accent bars now follow the text height instead of stretching the quote and leaving excessive blank space

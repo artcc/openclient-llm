@@ -52,11 +52,17 @@ struct MemoryView: View {
                 MemoryItemEditorView { content in
                     viewModel.send(.addItem(content: content))
                 }
+#if os(macOS)
+                .frame(width: 700, height: 500)
+#endif
             }
             .sheet(item: $editingItem) { item in
                 MemoryItemEditorView(initialContent: item.content) { content in
                     viewModel.send(.editItem(id: item.id, content: content))
                 }
+#if os(macOS)
+                .frame(width: 700, height: 500)
+#endif
             }
         }
         .task {

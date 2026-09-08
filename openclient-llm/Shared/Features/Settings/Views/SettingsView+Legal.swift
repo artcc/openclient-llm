@@ -28,17 +28,7 @@ extension SettingsView {
             Button {
                 presentedWebURL = .authorGitHub
             } label: {
-#if os(macOS)
                 settingsDestinationLabel("Author", systemImage: "person.circle")
-#else
-                HStack {
-                    Label(String(localized: "Author"), systemImage: "person.circle")
-                    Spacer()
-                    Image(systemName: "arrow.up.right.square")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-#endif
             }
             .buttonStyle(.plain)
 

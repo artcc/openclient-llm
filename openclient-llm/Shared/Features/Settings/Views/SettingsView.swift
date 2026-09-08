@@ -26,6 +26,7 @@ struct SettingsView: View {
     @State var isShowingVotice = false
     @State private var isShowingUserProfile = false
     @State private var isShowingMemory = false
+    @State var isShowingCloudData = false
     @State var isShowingHelp = false
     @State var isShowingTipJar = false
     @State private var showResetAlert = false
@@ -92,23 +93,32 @@ private extension SettingsView {
         }
         .sheet(isPresented: $isShowingUserProfile) {
             UserProfileView()
+#if os(macOS)
+                .frame(width: 700, height: 500)
+#endif
         }
         .sheet(isPresented: $isShowingMemory) {
             MemoryView()
 #if os(macOS)
-                .frame(width: 500, height: 460)
+                .frame(width: 700, height: 500)
+#endif
+        }
+        .sheet(isPresented: $isShowingCloudData) {
+            cloudDataSheet
+#if os(macOS)
+                .frame(width: 700, height: 500)
 #endif
         }
         .sheet(isPresented: $isShowingHelp) {
             HelpView()
 #if os(macOS)
-                .frame(width: 500, height: 460)
+                .frame(width: 700, height: 500)
 #endif
         }
         .sheet(isPresented: $isShowingTipJar) {
             TipJarView()
 #if os(macOS)
-                .frame(width: 500, height: 460)
+                .frame(width: 700, height: 500)
 #endif
         }
         .task(id: requestedPresentation) {
@@ -263,7 +273,7 @@ private extension SettingsView {
         .sheet(item: $mcpServerSheet) { server in
             mcpToolSheet(server: server, loadedState: loadedState)
 #if os(macOS)
-                .frame(minWidth: 500, maxWidth: 500, minHeight: 460, maxHeight: 460)
+                .frame(width: 700, height: 500)
 #endif
         }
     }
@@ -296,7 +306,7 @@ private extension SettingsView {
                     guard let url = URL(string: UIApplication.openNotificationSettingsURLString) else { return }
                     UIApplication.shared.open(url)
                 } label: {
-                    Label(String(localized: "Open Settings"), systemImage: "arrow.up.right.square")
+                    settingsDestinationLabel("Open Settings", systemImage: "gearshape", isExternal: true)
                 }
                 .buttonStyle(.plain)
 #endif
@@ -317,7 +327,7 @@ private extension SettingsView {
             Button {
                 isShowingUserProfile = true
             } label: {
-                personalizationLabel("Personal Context", systemImage: "person.text.rectangle")
+                settingsDestinationLabel("Personal Context", systemImage: "person.text.rectangle")
             }
             .buttonStyle(.plain)
 
@@ -325,7 +335,7 @@ private extension SettingsView {
                 AppTips.memory.invalidate(reason: .actionPerformed)
                 isShowingMemory = true
             } label: {
-                personalizationLabel("Memory", systemImage: "brain.head.profile")
+                settingsDestinationLabel("Memory", systemImage: "brain.head.profile")
             }
             .buttonStyle(.plain)
             .popoverTip(canShowMemoryTip ? AppTips.memory : nil)
@@ -340,22 +350,6 @@ private extension SettingsView {
         guard shouldRequestReviewAfterSync else { return }
         shouldRequestReviewAfterSync = false
         appReviewManager.requestReview()
-    }
-
-    @ViewBuilder
-    func personalizationLabel(_ title: LocalizedStringKey, systemImage: String) -> some View {
-#if os(macOS)
-        settingsDestinationLabel(title, systemImage: systemImage)
-#else
-        HStack {
-            Label(title, systemImage: systemImage)
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
-        }
-#endif
     }
 
     func enableNotificationsButton() -> some View {

@@ -9,13 +9,11 @@
 import SwiftUI
 
 extension SettingsView {
-    @ViewBuilder
     func settingsDestinationLabel(
         _ title: LocalizedStringKey,
         systemImage: String,
         isExternal: Bool = false
     ) -> some View {
-#if os(macOS)
         HStack {
             Label(title, systemImage: systemImage)
             Spacer()
@@ -25,8 +23,5 @@ extension SettingsView {
                 .accessibilityHidden(true)
         }
         .contentShape(.rect)
-#else
-        Label(title, systemImage: systemImage)
-#endif
     }
 }
