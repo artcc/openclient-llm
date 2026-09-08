@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## [1.6.50-build-98] - 2026-09-08
+
+### Changed
+
+- Redesigned onboarding on iOS, iPadOS, and macOS with a clearer server setup form, progress feedback, and improved accessibility
+
 ## [1.6.45-build-97] - 2026-09-07
 
 ### Fixed

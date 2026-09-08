@@ -1,14 +1,15 @@
 Hi there! We've got some great new features for you in this update.
 
-***1.6.45:
+***1.6.50:
 
-• Memory entries in Settings now use the full row width, making longer text easier to read.
-• Select and copy part of a chat message while using the new actions button for whole-message options.
-• On macOS, onboarding now fully covers the Home screen and its navigation toolbar.
+• Get started more easily on iPhone, iPad, and Mac with redesigned onboarding, a clearer server setup form, progress feedback, and improved accessibility.
 • Minor bug fixes and improvements for a smoother experience.
 
 ***Recent Updates:
 
+• Memory entries in Settings now use the full row width, making longer text easier to read.
+• Select and copy part of a chat message while using the new actions button for whole-message options.
+• On macOS, onboarding now fully covers the Home screen and its navigation toolbar.
 • 10 new themed app icons for Halloween and Christmas.
 • On macOS, the improved menu bar chat now appears only after server setup and opens your current conversation directly in the main app window.
 • Choose from 20 app icons in Settings on iPhone and iPad.

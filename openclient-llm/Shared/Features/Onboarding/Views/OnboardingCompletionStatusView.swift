@@ -12,35 +12,29 @@ struct OnboardingCompletionStatusView: View {
     let hasPersistenceError: Bool
 
     var body: some View {
-        VStack(spacing: 28) {
-            ZStack {
-                Circle()
-                    .fill(statusColor.opacity(0.15))
-                    .frame(width: 130, height: 130)
-                Circle()
-                    .fill(statusColor.opacity(0.08))
-                    .frame(width: 170, height: 170)
-                Image(systemName: hasPersistenceError
-                    ? "exclamationmark.triangle.fill"
-                    : "checkmark.circle.fill")
-                    .font(.system(size: 64))
-                    .foregroundStyle(statusColor)
-                    .symbolEffect(.bounce)
-            }
+        VStack(alignment: .leading, spacing: 24) {
+            OnboardingConnectionIllustration()
+                .frame(maxWidth: .infinity)
 
-            VStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
+                Label(hasPersistenceError
+                    ? String(localized: "Not saved")
+                    : String(localized: "Connection verified"),
+                    systemImage: hasPersistenceError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(statusColor)
+
                 Text(hasPersistenceError
                     ? String(localized: "Server Configuration Wasn't Saved")
-                    : String(localized: "You're all set!"))
-                    .font(.poppins(.bold, size: 34, relativeTo: .largeTitle))
-                    .multilineTextAlignment(.center)
+                    : String(localized: "Connection ready"))
+                    .font(.poppins(.semiBold, size: 30, relativeTo: .largeTitle))
+                    .accessibilityAddTraits(.isHeader)
                 Text(hasPersistenceError
-                    ? String(localized: "Try starting the chat again to securely save your server settings.")
-                    : String(localized: "Your server is ready. Let's start a conversation."))
+                    ? String(localized: "Try again to save your server settings, or go back to review them.")
+                    : String(localized: "Finish setup to save your server settings and start your first conversation."))
                     .font(.body)
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -52,5 +46,10 @@ private extension OnboardingCompletionStatusView {
 
 #Preview {
     OnboardingCompletionStatusView(hasPersistenceError: true)
+        .padding()
+}
+
+#Preview("Connection ready") {
+    OnboardingCompletionStatusView(hasPersistenceError: false)
         .padding()
 }

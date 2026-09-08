@@ -11,6 +11,7 @@ import SwiftUI
 struct OnboardingView: View {
     // MARK: - Properties
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var viewModel = OnboardingViewModel()
     @State private var serverURL: String = ""
     @State private var apiKey: String = ""
@@ -44,68 +45,88 @@ struct OnboardingView: View {
 // MARK: - Private
 
 private extension OnboardingView {
-    func loadedView(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
-        VStack(spacing: 0) {
-            topBar(loadedState)
+    var backgroundColor: Color {
+#if os(macOS)
+        Color(nsColor: .windowBackgroundColor)
+#else
+        Color(uiColor: .systemBackground)
+#endif
+    }
 
-            GeometryReader { proxy in
+    func loadedView(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
+        GlassEffectContainer(spacing: 24) {
+            VStack(spacing: 0) {
+                topBar(loadedState)
+                    .frame(maxWidth: 520)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 12)
+                    .padding(.bottom, 20)
+
                 ScrollView {
                     stepContent(loadedState)
-                        .frame(maxWidth: 520)
+                        .frame(maxWidth: 520, alignment: .leading)
                         .padding(.horizontal, 24)
-                        .frame(maxWidth: .infinity, minHeight: proxy.size.height, alignment: .center)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .top)
                 }
                 .scrollBounceBehavior(.basedOnSize)
+#if os(iOS)
+                .scrollDismissesKeyboard(.interactively)
+#endif
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    bottomAction(loadedState)
+                        .frame(maxWidth: 520, alignment: .trailing)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 16)
+                        .padding(.bottom, 12)
+                        .frame(maxWidth: .infinity)
+                        .background(backgroundColor)
+                }
             }
-
-            bottomAction(loadedState)
-                .frame(maxWidth: 520)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 8)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 16)
-        .animation(.smooth, value: loadedState.currentStep)
+        .background(backgroundColor.ignoresSafeArea())
+        .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: loadedState.currentStep)
         .tint(Color.appAccent)
     }
 
     func topBar(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
-        ZStack {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 if loadedState.currentStep != .welcome {
                     Button {
-                        withAnimation(.smooth) {
-                            viewModel.send(.backTapped)
-                        }
+                        viewModel.send(.backTapped)
                     } label: {
-                        Image(systemName: "chevron.left")
+                        Label("Back", systemImage: "chevron.left")
+#if os(iOS)
+                            .frame(minHeight: 44)
+#endif
                     }
-                    .accessibilityLabel(String(localized: "Back"))
 #if os(macOS)
                     .buttonStyle(.bordered)
 #else
                     .buttonStyle(.glass)
 #endif
                 } else {
-                    Image(systemName: "chevron.left").hidden()
+                    Text("OpenClient")
+                        .font(.headline)
                 }
 
-                Spacer()
+                Spacer(minLength: 16)
 
                 Button {
                     viewModel.send(.skipTapped)
                 } label: {
-                    HStack(spacing: 4) {
-                        Text(String(localized: "Skip"))
-                        Image(systemName: "forward.fill")
-                            .font(.caption2)
-                    }
+                    Text("Skip")
+#if os(iOS)
+                        .frame(minWidth: 44, minHeight: 44)
+#endif
                 }
 #if os(macOS)
                 .buttonStyle(.bordered)
 #else
                 .buttonStyle(.glass)
 #endif
+                .accessibilityHint("Finish onboarding without saving these server settings.")
             }
 
             stepIndicator(currentStep: loadedState.currentStep)
@@ -113,258 +134,60 @@ private extension OnboardingView {
     }
 
     func stepIndicator(currentStep: OnboardingStep) -> some View {
-        HStack(spacing: 8) {
-            ForEach(OnboardingStep.allCases, id: \.self) { step in
-                Circle()
-                    .fill(step == currentStep ? Color.appAccent : Color.secondary.opacity(0.3))
-                    .frame(width: 8, height: 8)
-                    .scaleEffect(step == currentStep ? 1.2 : 1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentStep)
+        let number = (OnboardingStep.allCases.firstIndex(of: currentStep) ?? 0) + 1
+        return VStack(alignment: .leading, spacing: 8) {
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    Text(stepName(currentStep))
+                    Spacer(minLength: 12)
+                    Text("\(number) of 3")
+                        .monospacedDigit()
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(stepName(currentStep))
+                    Text("\(number) of 3")
+                }
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+
+            HStack(spacing: 6) {
+                ForEach(Array(OnboardingStep.allCases.enumerated()), id: \.offset) { index, _ in
+                    Capsule()
+                        .fill(index < number ? Color.appAccent : Color.secondary.opacity(0.2))
+                        .frame(height: 3)
+                }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .glassEffect(.regular, in: .capsule)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(stepName(currentStep)))
+        .accessibilityValue(Text("Step \(number) of 3"))
+    }
+
+    func stepName(_ step: OnboardingStep) -> String {
+        switch step {
+        case .welcome: String(localized: "Welcome")
+        case .serverConfiguration: String(localized: "Server configuration")
+        case .allSet: String(localized: "Finish setup")
+        }
     }
 
     @ViewBuilder
     func stepContent(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
         switch loadedState.currentStep {
         case .welcome:
-            welcomeStep()
+            OnboardingWelcomeView()
         case .serverConfiguration:
-            serverConfigurationStep(loadedState)
+            OnboardingServerConfigurationView(
+                serverURL: $serverURL,
+                apiKey: $apiKey,
+                isAPIKeyVisible: $isAPIKeyVisible,
+                state: loadedState,
+                onEvent: viewModel.send
+            )
         case .allSet:
             allSetStep(loadedState)
         }
-    }
-
-    func welcomeStep() -> some View {
-        VStack(spacing: 32) {
-            ZStack {
-                Circle()
-                    .fill(Color.appAccent.opacity(0.15))
-                    .frame(width: 120, height: 120)
-                Circle()
-                    .fill(Color.appAccent.opacity(0.08))
-                    .frame(width: 160, height: 160)
-                Image(systemName: "bubble.left.and.bubble.right.fill")
-                    .font(.system(size: 56, weight: .medium))
-                    .foregroundStyle(Color.appAccent)
-                    .symbolEffect(.breathe)
-            }
-
-            VStack(spacing: 10) {
-                Text(String(localized: "Your AI, Your Way"))
-                    .font(.poppins(.bold, size: 34, relativeTo: .largeTitle))
-                    .multilineTextAlignment(.center)
-
-                Text(String(localized: "OpenClient connects to your LiteLLM for privacy-first access to any AI."))
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
-            }
-
-            VStack(spacing: 10) {
-                featureRow(
-                    icon: "server.rack",
-                    tint: Color.appAccent,
-                    title: String(localized: "Any Model"),
-                    subtitle: String(localized: "GPT, Claude, Gemini, Llama and more via LiteLLM, Ollama, LM Studio...")
-                )
-                featureRow(
-                    icon: "lock.shield.fill",
-                    tint: .green,
-                    title: String(localized: "Privacy First"),
-                    subtitle: String(localized: "Your data stays on your own server — no telemetry")
-                )
-                featureRow(
-                    icon: "chevron.left.forwardslash.chevron.right",
-                    tint: .purple,
-                    title: String(localized: "Open Source"),
-                    subtitle: String(localized: "Fully open source on GitHub — inspect or contribute")
-                )
-            }
-            .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    func featureRow(icon: String, tint: Color, title: String, subtitle: String) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(tint)
-                .frame(width: 44, height: 44)
-                .background(tint.opacity(0.12), in: .circle)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.poppins(.semiBold, size: 15, relativeTo: .subheadline))
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(.primary.opacity(0.04), in: .rect(cornerRadius: 14))
-    }
-
-    func serverConfigurationStep(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
-        return VStack(spacing: 28) {
-            VStack(spacing: 12) {
-                Image(systemName: "network")
-                    .font(.system(size: 44, weight: .medium))
-                    .foregroundStyle(Color.appAccent)
-                    .symbolEffect(.pulse)
-                    .frame(width: 80, height: 80)
-                    .background(Color.appAccent.opacity(0.12), in: .circle)
-
-                VStack(spacing: 6) {
-                    Text(String(localized: "Connect Your Server"))
-                        .font(.poppins(.semiBold, size: 28, relativeTo: .title))
-                        .multilineTextAlignment(.center)
-
-                    Text(String(localized: "Enter your LiteLLM proxy URL, the gateway to any AI model."))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary).multilineTextAlignment(.center).lineSpacing(2)
-                }
-            }
-
-            VStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Label(String(localized: "Server URL"), systemImage: "link")
-                        .font(.caption).fontWeight(.medium).foregroundStyle(.secondary)
-
-                    TextField(
-                        Constants.URLs.serverUrl,
-                        text: $serverURL
-                    )
-                    .textFieldStyle(.roundedBorder)
-                    .textSelection(.enabled).textContentType(.URL).autocorrectionDisabled()
-#if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-#endif
-                    .onChange(of: serverURL) { _, newValue in
-                        viewModel.send(.serverURLChanged(newValue))
-                    }
-                }
-
-                apiKeyField
-            }
-
-            connectionSection(loadedState)
-            if loadedState.showLiteLLMHint {
-                liteLLMHintView.transition(.scale(scale: 0.95).combined(with: .opacity))
-            }
-        }
-    }
-
-    var liteLLMHintView: some View {
-        let hint = String(localized: "Optimised for LiteLLM. Any OpenAI-compatible server also works.")
-        return Label(hint, systemImage: "info.circle")
-            .font(.caption)
-            .foregroundStyle(Color.appAccent)
-            .padding(.horizontal, 14).padding(.vertical, 10)
-            .background(Color.appAccent.opacity(0.08), in: .rect(cornerRadius: 12))
-    }
-
-    var apiKeyField: some View {
-        HStack {
-            Group {
-                if isAPIKeyVisible {
-                    TextField(
-                        String(localized: "sk-..."),
-                        text: $apiKey
-                    )
-                } else {
-                    SecureField(
-                        String(localized: "sk-..."),
-                        text: $apiKey
-                    )
-                }
-            }
-            .textFieldStyle(.roundedBorder)
-            .textSelection(.enabled)
-
-            Button {
-                isAPIKeyVisible.toggle()
-            } label: {
-                Image(systemName: isAPIKeyVisible ? "eye.slash" : "eye")
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(
-                isAPIKeyVisible
-                ? String(localized: "Hide API Key")
-                : String(localized: "Show API Key")
-            )
-        }
-        .onChange(of: apiKey) { _, newValue in
-            viewModel.send(.apiKeyChanged(newValue))
-        }
-    }
-
-    func connectionStatusLabel(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
-        HStack(spacing: 8) {
-            if loadedState.connectionStatus == .testing {
-                ProgressView()
-                    .tint(.secondary)
-                    .controlSize(.small)
-            } else {
-                Image(systemName: "bolt.fill")
-            }
-            Text(loadedState.connectionStatus == .testing
-                 ? String(localized: "Testing...")
-                 : String(localized: "Test Connection"))
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    func connectionSection(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
-        VStack(spacing: 12) {
-            Button {
-                viewModel.send(.testConnectionTapped)
-            } label: {
-                connectionStatusLabel(loadedState)
-            }
-#if os(macOS)
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-#else
-            .buttonStyle(.glass)
-            .controlSize(.large)
-#endif
-            .disabled(loadedState.serverURL.isEmpty || loadedState.connectionStatus == .testing)
-
-            switch loadedState.connectionStatus {
-            case .idle, .testing:
-                EmptyView()
-            case .success:
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text(String(localized: "Connection successful — ready to continue"))
-                }
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.green)
-                .transition(.scale(scale: 0.9).combined(with: .opacity))
-            case .failure(let message):
-                HStack(spacing: 6) {
-                    Image(systemName: "xmark.circle.fill")
-                    Text(message)
-                        .lineLimit(2)
-                }
-                .font(.subheadline)
-                .foregroundStyle(.red)
-                .transition(.scale(scale: 0.9).combined(with: .opacity))
-            }
-        }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: loadedState.connectionStatus)
     }
 
     func allSetStep(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
@@ -374,28 +197,24 @@ private extension OnboardingView {
         } else {
             persistenceError = nil
         }
-        return VStack(spacing: 28) {
+        return VStack(alignment: .leading, spacing: 24) {
             OnboardingCompletionStatusView(hasPersistenceError: persistenceError != nil)
 
             if !loadedState.serverURL.isEmpty {
-                HStack(spacing: 8) {
-                    Image(systemName: "server.rack")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.appAccent)
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Server URL", systemImage: "server.rack")
+                        .font(.subheadline.weight(.medium))
                     Text(loadedState.serverURL)
-                        .font(.caption.monospaced())
+                        .font(.system(.subheadline, design: .monospaced))
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-#if os(macOS)
-                .background(Color.appAccent.opacity(0.08), in: .capsule)
-#else
-                .glassEffect(.regular, in: .capsule)
-#endif
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(.background.secondary, in: .rect(cornerRadius: 16))
             }
+
             if let persistenceError {
                 OnboardingPersistenceErrorView(
                     message: persistenceError,
@@ -405,76 +224,53 @@ private extension OnboardingView {
         }
     }
 
-    @ViewBuilder
     func bottomAction(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
-        switch loadedState.currentStep {
-        case .welcome:
-            getStartedButton()
-        case .serverConfiguration:
-            nextButton(loadedState)
-        case .allSet:
-            startChattingButton()
-        }
-    }
+        VStack(alignment: .leading, spacing: 12) {
+            if loadedState.currentStep != .welcome {
+                Text("Skipping won't save these server settings.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
-    func prominentButton<Label: View>(
-        isDisabled: Bool = false,
-        @ViewBuilder label: () -> Label,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action, label: label)
+            Button {
+                switch loadedState.currentStep {
+                case .welcome: viewModel.send(.getStartedTapped)
+                case .serverConfiguration: viewModel.send(.nextTapped)
+                case .allSet: viewModel.send(.startChattingTapped)
+                }
+            } label: {
+                Text(actionTitle(loadedState))
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+#if os(iOS)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+#endif
+            }
 #if os(macOS)
             .buttonStyle(.borderedProminent)
+            .frame(maxWidth: .infinity, alignment: .trailing)
 #else
             .buttonStyle(.glassProminent)
 #endif
             .controlSize(.large)
-            .disabled(isDisabled)
+            .disabled(loadedState.currentStep == .serverConfiguration && loadedState.connectionStatus != .success)
+        }
     }
 
-    func getStartedButton() -> some View {
-        prominentButton(label: {
-            HStack(spacing: 8) {
-                Text(String(localized: "Get Started"))
-                    .font(.poppins(.semiBold, size: 17, relativeTo: .headline))
-                Image(systemName: "arrow.right")
-                    .font(.headline.weight(.semibold))
+    func actionTitle(_ loadedState: OnboardingViewModel.LoadedState) -> String {
+        switch loadedState.currentStep {
+        case .welcome:
+            String(localized: "Set Up Your Server")
+        case .serverConfiguration:
+            String(localized: "Continue")
+        case .allSet:
+            if case .failure = loadedState.connectionStatus {
+                String(localized: "Try Again")
+            } else {
+                String(localized: "Finish Setup")
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-        }, action: {
-            withAnimation(.smooth) { viewModel.send(.getStartedTapped) }
-        })
-    }
-
-    func nextButton(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
-        prominentButton(isDisabled: loadedState.connectionStatus != .success, label: {
-            HStack(spacing: 8) {
-                Text(String(localized: "Continue"))
-                    .font(.poppins(.semiBold, size: 17, relativeTo: .headline))
-                Image(systemName: "arrow.right")
-                    .font(.headline.weight(.semibold))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-        }, action: {
-            withAnimation(.smooth) { viewModel.send(.nextTapped) }
-        })
-    }
-
-    func startChattingButton() -> some View {
-        prominentButton(label: {
-            HStack(spacing: 8) {
-                Image(systemName: "bubble.left.and.bubble.right.fill")
-                    .font(.headline)
-                Text(String(localized: "Start Chatting"))
-                    .font(.poppins(.semiBold, size: 17, relativeTo: .headline))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-        }, action: {
-            withAnimation(.smooth) { viewModel.send(.startChattingTapped) }
-        })
+        }
     }
 }
 
