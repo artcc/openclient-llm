@@ -102,7 +102,8 @@ private extension UserProfileView {
         ) {
             TextField(String(localized: "Your name"), text: $name, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
-                .lineLimit(2...)
+                .accessibilityLabel(String(localized: "Name"))
+                .lineLimit(1...)
                 .autocorrectionDisabled()
                 .onChange(of: name) { _, newValue in
                     if newValue.count > 50 { name = String(newValue.prefix(50)) }
@@ -122,6 +123,7 @@ private extension UserProfileView {
                 axis: .vertical
             )
             .textFieldStyle(.roundedBorder)
+            .accessibilityLabel(String(localized: "Description"))
             .lineLimit(3...)
             .autocorrectionDisabled()
             .onChange(of: profileDescription) { _, newValue in
@@ -146,6 +148,7 @@ private extension UserProfileView {
                 axis: .vertical
             )
             .textFieldStyle(.roundedBorder)
+            .accessibilityLabel(String(localized: "Extra Info"))
             .lineLimit(4...)
             .autocorrectionDisabled()
             .onChange(of: extraInfo) { _, newValue in
@@ -176,10 +179,11 @@ private extension UserProfileView {
         return Section {
             VStack(alignment: .leading, spacing: 4) {
                 TextField(placeholder, text: $name, axis: .vertical)
+                    .accessibilityLabel(String(localized: "Name"))
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .autocorrectionDisabled()
-                    .lineLimit(2...)
+                    .lineLimit(1...)
 #if os(iOS)
                     .textInputAutocapitalization(.words)
 #endif
@@ -205,6 +209,7 @@ private extension UserProfileView {
         return Section {
             VStack(alignment: .leading, spacing: 4) {
                 TextField(placeholder, text: $profileDescription, axis: .vertical)
+                    .accessibilityLabel(String(localized: "Description"))
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .autocorrectionDisabled()
@@ -234,6 +239,7 @@ private extension UserProfileView {
         return Section {
             VStack(alignment: .leading, spacing: 4) {
                 TextField(placeholder, text: $extraInfo, axis: .vertical)
+                    .accessibilityLabel(String(localized: "Extra Info"))
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .autocorrectionDisabled()
@@ -272,8 +278,10 @@ private extension UserProfileView {
         HStack {
             Spacer()
             Text("\(count)/\(max)")
-                .font(.caption2)
+                .font(.caption)
+                .monospacedDigit()
                 .foregroundStyle(count >= max ? .red : .secondary)
+                .accessibilityLabel(String(localized: "\(count) of \(max) characters"))
         }
     }
 
@@ -287,10 +295,12 @@ private extension UserProfileView {
             Text(header)
                 .font(.headline)
                 .foregroundStyle(.primary)
+                .accessibilityAddTraits(.isHeader)
             content()
             Text(footer)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

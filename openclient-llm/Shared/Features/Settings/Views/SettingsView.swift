@@ -20,9 +20,9 @@ struct SettingsView: View {
     @Binding var requestedPresentation: SettingsPresentation?
 
     @State var viewModel = SettingsViewModel()
-    @State private var serverURL: String = ""
-    @State private var apiKey: String = ""
-    @State private var isAPIKeyVisible = false
+    @State var serverURL: String = ""
+    @State var apiKey: String = ""
+    @State var isAPIKeyVisible = false
     @State var isShowingVotice = false
     @State private var isShowingUserProfile = false
     @State private var isShowingMemory = false
@@ -33,11 +33,16 @@ struct SettingsView: View {
     @State var presentedWebURL: WebDestination?
     @State private var canShowMemoryTip = false
     @State private var shouldRequestReviewAfterSync = false
-    @FocusState private var focusedField: Field?
+    @FocusState var focusedField: Field?
     @Environment(\.scenePhase) private var scenePhase
-    private let liteLLMHintText = String(localized: "Optimised for LiteLLM. Any OpenAI-compatible server also works.")
+    let liteLLMHintText = String(localized: "Optimised for LiteLLM. Any OpenAI-compatible server also works.")
     private let settingsManager: SettingsManagerProtocol = SettingsManager()
     private let appReviewManager: AppReviewManagerProtocol = AppReviewManager()
+
+    enum Field {
+        case serverURL
+        case apiKey
+    }
 
     // MARK: - Init
 
@@ -207,11 +212,6 @@ private extension SettingsView {
         .onDisappear(perform: requestReviewAfterSuccessfulSyncIfNeeded)
     }
 
-    enum Field {
-        case serverURL
-        case apiKey
-    }
-
     var cloudSyncConflictBinding: Binding<Bool> {
         Binding(
             get: {
@@ -268,125 +268,6 @@ private extension SettingsView {
         }
     }
 
-    func serverSection(_ loadedState: SettingsViewModel.LoadedState) -> some View {
-        Section {
-            serverURLField()
-            apiKeyField()
-            connectionStatusView(loadedState.connectionStatus)
-            if let error = loadedState.serverPersistenceError {
-                SettingsPersistenceErrorView(message: error, attempt: loadedState.serverPersistenceFailureCount)
-            }
-            Button {
-                focusedField = nil
-                viewModel.send(.testConnectionTapped)
-            } label: {
-                HStack(spacing: 8) {
-                    if loadedState.connectionStatus == .testing {
-                        ProgressView()
-                            .tint(.secondary)
-                            .controlSize(.small)
-                    }
-                    Text(
-                        loadedState.connectionStatus == .testing
-                        ? String(localized: "Testing...")
-                        : String(localized: "Test Connection")
-                    )
-                }
-            }
-            .disabled(loadedState.serverURL.isEmpty || loadedState.connectionStatus == .testing)
-            .buttonStyle(.plain)
-            Button {
-                focusedField = nil
-                viewModel.send(.saveTapped)
-            } label: {
-                HStack {
-                    Text(String(localized: "Save"))
-                    Spacer()
-                    if loadedState.isSaved {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-        } header: {
-            Text(String(localized: "Server"))
-        } footer: {
-            if loadedState.showLiteLLMHint {
-                Label(liteLLMHintText, systemImage: "info.circle").foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    func serverURLField() -> some View {
-        TextField(
-            String(localized: "Server URL"),
-            text: $serverURL
-        )
-        .focused($focusedField, equals: .serverURL)
-        .textSelection(.enabled)
-        .textContentType(.URL)
-        .autocorrectionDisabled()
-#if os(iOS)
-        .textInputAutocapitalization(.never)
-        .keyboardType(.URL)
-#endif
-        .onChange(of: serverURL) { _, newValue in
-            viewModel.send(.serverURLChanged(newValue))
-        }
-    }
-
-    func apiKeyField() -> some View {
-        HStack {
-            Group {
-                if isAPIKeyVisible {
-                    TextField(
-                        String(localized: "API Key (Optional)"),
-                        text: $apiKey
-                    )
-                    .focused($focusedField, equals: .apiKey)
-                } else {
-                    SecureField(
-                        String(localized: "API Key (Optional)"),
-                        text: $apiKey
-                    )
-                    .focused($focusedField, equals: .apiKey)
-                }
-            }
-            .textSelection(.enabled)
-
-            Button {
-                isAPIKeyVisible.toggle()
-            } label: {
-                Image(systemName: isAPIKeyVisible ? "eye.slash" : "eye")
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(
-                isAPIKeyVisible
-                ? String(localized: "Hide API Key")
-                : String(localized: "Show API Key")
-            )
-        }
-        .onChange(of: apiKey) { _, newValue in
-            viewModel.send(.apiKeyChanged(newValue))
-        }
-    }
-
-    @ViewBuilder
-    func connectionStatusView(_ status: SettingsViewModel.ConnectionStatus) -> some View {
-        switch status {
-        case .idle, .testing:
-            EmptyView()
-        case .success:
-            Label(String(localized: "Connection successful"), systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        case .failure(let message):
-            Label(message, systemImage: "xmark.circle.fill")
-                .foregroundStyle(.red)
-        }
-    }
-
     func chatSection(_ loadedState: SettingsViewModel.LoadedState) -> some View {
         Section {
             Toggle(isOn: Binding(
@@ -422,12 +303,7 @@ private extension SettingsView {
             case .notDetermined:
                 Label(String(localized: "Notifications not authorized"), systemImage: "bell.badge.slash")
                     .foregroundStyle(.secondary)
-                Button {
-                    viewModel.send(.requestNotificationPermissionTapped)
-                } label: {
-                    Label(String(localized: "Enable Notifications"), systemImage: "bell")
-                }
-                .buttonStyle(.plain)
+                enableNotificationsButton()
             }
         } header: {
             Text(String(localized: "Chat"))
@@ -441,7 +317,7 @@ private extension SettingsView {
             Button {
                 isShowingUserProfile = true
             } label: {
-                Label(String(localized: "Personal Context"), systemImage: "person.text.rectangle")
+                personalizationLabel("Personal Context", systemImage: "person.text.rectangle")
             }
             .buttonStyle(.plain)
 
@@ -449,7 +325,7 @@ private extension SettingsView {
                 AppTips.memory.invalidate(reason: .actionPerformed)
                 isShowingMemory = true
             } label: {
-                Label(String(localized: "Memory"), systemImage: "brain.head.profile")
+                personalizationLabel("Memory", systemImage: "brain.head.profile")
             }
             .buttonStyle(.plain)
             .popoverTip(canShowMemoryTip ? AppTips.memory : nil)
@@ -466,6 +342,36 @@ private extension SettingsView {
         appReviewManager.requestReview()
     }
 
+    @ViewBuilder
+    func personalizationLabel(_ title: LocalizedStringKey, systemImage: String) -> some View {
+#if os(macOS)
+        settingsDestinationLabel(title, systemImage: systemImage)
+#else
+        HStack {
+            Label(title, systemImage: systemImage)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+#endif
+    }
+
+    func enableNotificationsButton() -> some View {
+        Button {
+            viewModel.send(.requestNotificationPermissionTapped)
+        } label: {
+            Label(String(localized: "Enable Notifications"), systemImage: "bell")
+        }
+#if os(macOS)
+        .buttonStyle(.bordered)
+#else
+        .buttonStyle(.automatic)
+        .tint(.primary)
+#endif
+    }
+
     func dangerSection() -> some View {
         Section {
             Button {
@@ -474,7 +380,11 @@ private extension SettingsView {
                 Label(String(localized: "Reset App Data"), systemImage: "trash")
                     .foregroundStyle(.red)
             }
+#if os(macOS)
+            .buttonStyle(.bordered)
+#else
             .buttonStyle(.plain)
+#endif
             if let resetErrorMessage = currentLoadedState?.resetErrorMessage {
                 Label(resetErrorMessage, systemImage: "exclamationmark.triangle")
                     .font(.caption)

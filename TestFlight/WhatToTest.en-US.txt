@@ -10,6 +10,9 @@ Hi there! We've got some great new features for you in this update.
 • Browse chats and search results with clearer titles, metadata, and compact spacing, while conversation tags wrap to fit.
 • History, search, and model lists now stay comfortably centered in larger iPad windows.
 • Model lists and details have clearer names, capabilities, selection indicators, and refined information and voice controls.
+• Settings now have clearer server field labels, recognizable personalization destinations, and native action buttons on Mac.
+• Personal Context, Memory, and prompt template editors have clearer labels and improved use of editing space.
+• iCloud data management has clearer action styling and keeps its scrollbar at the right edge on Mac.
 • Minor bug fixes and improvements for a smoother experience.
 
 ***Recent Updates:

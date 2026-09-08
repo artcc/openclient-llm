@@ -25,6 +25,12 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 - Model rows now feature clearer name and provider hierarchy, compact capability badges, and accessible selection indicators
 - Model information buttons and voice controls now use platform-specific sizing and refined visual spacing
 - Model details now provide clearer long-name presentation, monospaced numeric values, and an aligned macOS sheet header
+- Server settings now use persistent field labels and native macOS connection and save buttons with clearer visual hierarchy
+- Personalization destinations now have visual chevrons, while notification and reset actions use native macOS buttons
+- Personal Context fields now have stable accessibility labels, a more compact name field, and clearer character counters
+- Memory entries now use more legible metadata and compact native macOS editing controls, with more initial space in the memory editor
+- Prompt template editors now use clearer field headings and make better use of the available vertical editing space
+- iCloud data management now uses clearer action styling and a full-width macOS form that keeps its scrollbar at the content edge
 
 ### Fixed
 
