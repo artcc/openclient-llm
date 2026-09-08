@@ -19,6 +19,12 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 - Pending attachments now use clearer filename truncation and larger accessible removal controls on iOS
 - Message attachments now wrap onto multiple rows while preserving their order and alignment
 - Code blocks now use refined header styling and more horizontal padding
+- Conversation history and search results now use two-line titles, secondary metadata below previews, and platform-specific row spacing
+- Conversation model and tag badges now wrap onto multiple rows when horizontal space is limited
+- History, search, and model lists now use centered, width-limited layouts on larger iPad windows
+- Model rows now feature clearer name and provider hierarchy, compact capability badges, and accessible selection indicators
+- Model information buttons and voice controls now use platform-specific sizing and refined visual spacing
+- Model details now provide clearer long-name presentation, monospaced numeric values, and an aligned macOS sheet header
 
 ### Fixed
 

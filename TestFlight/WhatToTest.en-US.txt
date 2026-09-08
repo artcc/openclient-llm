@@ -7,6 +7,9 @@ Hi there! We've got some great new features for you in this update.
 • Enjoy clearer message details, compact response actions, and improved error and attachment presentation.
 • Multiple attachments now wrap neatly, and sending an attachment without text no longer leaves an empty blue bubble.
 • Markdown tables have aligned columns, code blocks have refined styling, and quotes no longer create excessive blank space.
+• Browse chats and search results with clearer titles, metadata, and compact spacing, while conversation tags wrap to fit.
+• History, search, and model lists now stay comfortably centered in larger iPad windows.
+• Model lists and details have clearer names, capabilities, selection indicators, and refined information and voice controls.
 • Minor bug fixes and improvements for a smoother experience.
 
 ***Recent Updates:

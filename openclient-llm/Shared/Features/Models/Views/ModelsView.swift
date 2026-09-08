@@ -102,6 +102,8 @@ private extension ModelsView {
         .refreshable {
             await viewModel.refreshAsync()
         }
+        .frame(maxWidth: 900)
+        .frame(maxWidth: .infinity)
 #else
         return Form {
             modelSections(
@@ -195,13 +197,15 @@ private extension ModelsView {
             Button {
                 viewModel.send(.modelTapped(model))
             } label: {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 12) {
                         providerLogo(model)
 
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(model.id)
-                                .font(.body)
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.leading)
                             if !model.providerName.isEmpty {
                                 Text(model.providerName)
                                     .font(.caption)
@@ -213,8 +217,13 @@ private extension ModelsView {
                     }
 
                     capabilityTags(model.capabilities.isEmpty ? [.text] : model.capabilities)
+                        .padding(.leading, 44)
                 }
+                #if os(iOS)
+                .padding(.vertical, 6)
+                #else
                 .padding(.vertical, 4)
+                #endif
                 .contentShape(Rectangle())
             }
 #if os(iOS)
@@ -223,27 +232,40 @@ private extension ModelsView {
             .buttonStyle(.borderless)
 #endif
             .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
 
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Color.appAccent)
-                    .font(.title2)
+                    .font(.body.weight(.semibold))
+                    .frame(width: 24)
+                    .accessibilityHidden(true)
             }
 
-            Button {
-                modelForDetail = model
-            } label: {
-                Image(systemName: "info.circle")
-                    .foregroundStyle(.secondary)
-                    .font(.title2)
-            }
-#if os(iOS)
-            .buttonStyle(.plain)
-#else
-            .buttonStyle(.borderless)
-#endif
-            .padding(.leading, 12)
+            modelInfoButton(model)
         }
+    }
+
+    func modelInfoButton(_ model: LLMModel) -> some View {
+        Button {
+            modelForDetail = model
+        } label: {
+            Image(systemName: "info.circle")
+                .foregroundStyle(.secondary)
+                .font(.body)
+                #if os(iOS)
+                .frame(width: 44, height: 44)
+                #else
+                .frame(width: 24, height: 24)
+                #endif
+        }
+#if os(iOS)
+        .buttonStyle(.plain)
+#else
+        .buttonStyle(.borderless)
+#endif
+        .padding(.leading, 4)
+        .accessibilityLabel(String(localized: "Model Info"))
     }
 
     func providerLogo(_ model: LLMModel) -> some View {
@@ -265,7 +287,7 @@ private extension ModelsView {
     }
 
     func capabilityTags(_ capabilities: [LLMModel.Capability]) -> some View {
-        FlowLayout(spacing: 6) {
+        FlowLayout(spacing: 4) {
             ForEach(capabilities.sorted { $0.label < $1.label }, id: \.self) { capability in
                 HStack(spacing: 4) {
                     Image(systemName: capability.icon)
@@ -273,8 +295,8 @@ private extension ModelsView {
                     Text(capability.label)
                         .font(.caption2)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
                 .foregroundStyle(capability.color)
                 .background(capability.color.opacity(0.12), in: .capsule)
             }
@@ -292,9 +314,11 @@ private extension ModelsView {
                     HStack(spacing: 12) {
                         providerLogo(model)
 
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(model.id)
-                                .font(.body)
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.leading)
                             if !model.providerName.isEmpty {
                                 Text(model.providerName)
                                     .font(.caption)
@@ -307,6 +331,9 @@ private extension ModelsView {
                         if isSelected {
                             Image(systemName: "waveform.circle.fill")
                                 .foregroundStyle(Color.appAccent)
+                                .font(.body.weight(.semibold))
+                                .frame(width: 24)
+                                .accessibilityHidden(true)
                         }
                     }
                     if isSelected {
@@ -318,6 +345,7 @@ private extension ModelsView {
 #if os(macOS)
             .buttonStyle(.borderless)
 #endif
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
         }
     }
 
@@ -330,9 +358,11 @@ private extension ModelsView {
             HStack(spacing: 12) {
                 providerLogo(model)
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(model.id)
-                        .font(.body)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
                     if !model.providerName.isEmpty {
                         Text(model.providerName)
                             .font(.caption)
@@ -345,6 +375,9 @@ private extension ModelsView {
                 if isSelected {
                     Image(systemName: "waveform.badge.mic")
                         .foregroundStyle(Color.appAccent)
+                        .font(.body.weight(.semibold))
+                        .frame(width: 24)
+                        .accessibilityHidden(true)
                 }
             }
             .padding(.vertical, 4)
@@ -352,6 +385,7 @@ private extension ModelsView {
 #if os(macOS)
         .buttonStyle(.borderless)
 #endif
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     func voicePicker(model: LLMModel, loadedState: ModelsViewModel.LoadedState) -> some View {
@@ -363,7 +397,7 @@ private extension ModelsView {
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(String(localized: "Voice"))
-                    .font(.subheadline)
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
                 Spacer()
                 voiceMenu(
@@ -379,8 +413,10 @@ private extension ModelsView {
             }
         }
         .padding(.top, 8)
-        .padding(.bottom, 4)
         .padding(.leading, 44)
+        #if os(macOS)
+        .controlSize(.small)
+        #endif
     }
 
     func voiceMenu(
@@ -411,15 +447,19 @@ private extension ModelsView {
                 }
             }
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 Text(isPresetVoice && !ttsCustomModeActive.contains(model.id)
                      ? currentVoice.capitalized
                      : String(localized: "Custom..."))
-                .font(.subheadline)
+                .font(.subheadline.weight(.medium))
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
             .foregroundStyle(Color.appAccent)
+            #if os(iOS)
+            .frame(minHeight: 44)
+            #endif
         }
     }
 
