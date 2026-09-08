@@ -18,7 +18,8 @@ struct OnboardingPersistenceErrorView: View {
         Label(message, systemImage: "exclamationmark.triangle.fill")
             .font(.subheadline)
             .foregroundStyle(.red)
-            .multilineTextAlignment(.center)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.isStaticText)
             .accessibilityFocused($isFocused)
             .task(id: attempt) {
