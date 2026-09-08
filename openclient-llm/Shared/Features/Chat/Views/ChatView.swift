@@ -338,6 +338,8 @@ private extension ChatView {
                         showImageFilePicker: $showImageFilePicker
                     )
                 }
+                .frame(maxWidth: 800)
+                .frame(maxWidth: .infinity)
             }
             .modifier(ChatDropModifier(
                 onText: { viewModel.send(.inputChanged($0)) },

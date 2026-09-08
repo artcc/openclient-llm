@@ -7,11 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## [1.6.50-build-98] - 2026-09-08
+## [1.6.50-build-99] - 2026-09-08
 
 ### Changed
 
 - Redesigned onboarding on iOS, iPadOS, and macOS with a clearer server setup form, progress feedback, and improved accessibility
+- Adaptive chat composer now places attachment and tool controls above the text field when horizontal space is limited
+- Chat messages and composer now share a centered, width-limited column on larger iPad and Mac windows
+- Refined chat message spacing and metadata contrast with a compact layout for Listen and Regenerate Response actions
+- Chat error notices now use a rounded secondary surface with clearer text and a red warning icon
+- Pending attachments now use clearer filename truncation and larger accessible removal controls on iOS
+- Message attachments now wrap onto multiple rows while preserving their order and alignment
+- Code blocks now use refined header styling and more horizontal padding
+- Conversation history and search results now use two-line titles, secondary metadata below previews, and platform-specific row spacing
+- Conversation model and tag badges now wrap onto multiple rows when horizontal space is limited
+- History, search, and model lists now use centered, width-limited layouts on larger iPad windows
+- Model rows now feature clearer name and provider hierarchy, compact capability badges, and accessible selection indicators
+- Model information buttons and voice controls now use platform-specific sizing and refined visual spacing
+- Model details now provide clearer long-name presentation, monospaced numeric values, and an aligned macOS sheet header
+- Server settings now use persistent field labels and native macOS connection and save buttons with clearer visual hierarchy
+- Personalization destinations now have visual chevrons, while notification and reset actions use native macOS buttons
+- Personal Context fields now have stable accessibility labels, a more compact name field, and clearer character counters
+- Memory entries now use more legible metadata and compact native macOS editing controls, with more initial space in the memory editor
+- Prompt template editors now use clearer field headings and make better use of the available vertical editing space
+- iCloud data management now uses clearer action styling and a full-width macOS form that keeps its scrollbar at the content edge
+- Manage iCloud Data now opens in a sheet with a Done button on iOS, iPadOS, and macOS
+- Settings destination rows now use consistent chevrons for internal content and external-link indicators for actions that leave the app
+- macOS Settings sheets and their nested editors now use a fixed 700-by-500-point size
+- macOS web sheets now use a fixed 700-by-500-point size instead of minimum dimensions
+- Help feature tips now group the explanation and a shorter reset button in a single block without a separator between them
+
+### Fixed
+
+- Help now provides an explicit Done button on iOS, iPadOS, and macOS
+- Markdown table headers and rows now share column widths to keep cells aligned
+- Attachment-only user messages no longer display an empty tinted text bubble
+- Blockquote accent bars now follow the text height instead of stretching the quote and leaving excessive blank space
 
 ## [1.6.45-build-97] - 2026-09-07
 

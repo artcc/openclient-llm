@@ -60,19 +60,21 @@ private extension MessageBubbleView {
         HStack {
             Spacer(minLength: 60)
 
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .trailing, spacing: 6) {
                 if !message.attachments.isEmpty {
                     attachmentsView
                 }
-                Text(message.content)
-                    .textSelection(.enabled)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .foregroundStyle(.white)
-                    .glassEffect(
-                        .regular.tint(Color.appAccent),
-                        in: .rect(cornerRadius: 18)
-                    )
+                if !message.content.isEmpty {
+                    Text(message.content)
+                        .textSelection(.enabled)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .foregroundStyle(.white)
+                        .glassEffect(
+                            .regular.tint(Color.appAccent),
+                            in: .rect(cornerRadius: 18)
+                        )
+                }
                 HStack(spacing: 4) {
                     timestampLabel
                     messageActionsMenu
@@ -90,7 +92,7 @@ private extension MessageBubbleView {
                 .frame(width: 28, height: 28)
                 .glassEffect(.regular, in: .circle)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 if !message.attachments.isEmpty {
                     attachmentsView
                 }
@@ -111,35 +113,43 @@ private extension MessageBubbleView {
                     }
                 }
 
-                if !message.content.isEmpty || !message.attachments.isEmpty {
-                    HStack(spacing: 8) {
-                        if let usage = message.tokenUsage, !isStreaming, showTokenUsage {
-                            tokenUsageLabel(usage)
+                VStack(alignment: .leading, spacing: 0) {
+                    if !message.content.isEmpty || !message.attachments.isEmpty {
+                        HStack(spacing: 8) {
+                            if let usage = message.tokenUsage, !isStreaming, showTokenUsage {
+                                tokenUsageLabel(usage)
+                            }
+
+                            Spacer(minLength: 8)
+
+                            timestampLabel
+                            messageActionsMenu
+                        }
+                    }
+
+                    if let results = message.webSearchResults, !results.isEmpty, !isStreaming {
+                        WebSearchSourcesView(results: results)
+                            .padding(.vertical, 10)
+                    }
+
+                    FlowLayout(spacing: 8) {
+                        if !isStreaming && !message.content.isEmpty && message.role == .assistant && hasTTS {
+                            speakButton
                         }
 
-                        Spacer(minLength: 8)
-
-                        timestampLabel
-                        messageActionsMenu
+                        if !isStreaming, !message.content.isEmpty, isLastMessage, let onRegenerateTapped {
+                            Button(action: onRegenerateTapped) {
+                                Label(String(localized: "Regenerate Response"), systemImage: "arrow.clockwise")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+#if os(iOS)
+                                    .frame(minHeight: 44)
+#endif
+                                    .contentShape(.rect)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                }
-
-                if let results = message.webSearchResults, !results.isEmpty, !isStreaming {
-                    WebSearchSourcesView(results: results)
-                }
-
-                if !isStreaming && !message.content.isEmpty && message.role == .assistant && hasTTS {
-                    speakButton
-                }
-
-                if !isStreaming, !message.content.isEmpty, isLastMessage, let onRegenerateTapped {
-                    Button(action: onRegenerateTapped) {
-                        Label(String(localized: "Regenerate Response"), systemImage: "arrow.clockwise")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 2)
                 }
             }
             .frame(minHeight: 28, alignment: .center)
@@ -201,7 +211,7 @@ private extension MessageBubbleView {
 
     @ViewBuilder
     var attachmentsView: some View {
-        HStack(spacing: 8) {
+        FlowLayout(spacing: 10, alignment: message.role == .user ? .trailing : .leading) {
             ForEach(message.attachments) { attachment in
                 switch attachment.type {
                 case .image:
@@ -216,6 +226,7 @@ private extension MessageBubbleView {
     @ViewBuilder
     func imageThumbnail(_ attachment: ChatMessage.Attachment) -> some View {
         AttachmentImageView(attachment: attachment)
+            .frame(maxWidth: 175, alignment: .leading)
     }
 
     func documentCard(_ attachment: ChatMessage.Attachment) -> some View {
@@ -237,6 +248,7 @@ private extension MessageBubbleView {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
+        .frame(maxWidth: 175, alignment: .leading)
         .glassEffect(.regular, in: .rect(cornerRadius: 12))
     }
 
@@ -248,8 +260,12 @@ private extension MessageBubbleView {
         } label: {
             Image(systemName: "ellipsis")
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
+#if os(iOS)
+                .frame(width: 44, height: 44)
+#else
                 .frame(width: 28, height: 28)
+#endif
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -411,13 +427,13 @@ private extension MessageBubbleView {
             Text(String(localized: "\(usage.totalTokens) tokens"))
                 .font(.caption2)
         }
-        .foregroundStyle(.tertiary)
+        .foregroundStyle(.secondary)
     }
 
     var timestampLabel: some View {
         Text(message.timestamp, style: .time)
             .font(.caption2)
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(.secondary)
             .accessibilityLabel(message.timestamp.formatted(date: .long, time: .shortened))
     }
 
@@ -435,9 +451,13 @@ private extension MessageBubbleView {
                 Text(isSpeaking
                      ? String(localized: "Stop")
                      : String(localized: "Listen"))
-                    .font(.caption2)
+                    .font(.caption)
             }
-            .foregroundStyle(isSpeaking ? AnyShapeStyle(.red) : AnyShapeStyle(.tertiary))
+            .foregroundStyle(isSpeaking ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+#if os(iOS)
+            .frame(minHeight: 44)
+#endif
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
     }

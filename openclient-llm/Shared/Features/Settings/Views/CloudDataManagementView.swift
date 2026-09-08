@@ -103,8 +103,6 @@ private extension CloudDataManagementView {
             inventorySections(loadedState)
         }
         .formStyle(.grouped)
-        .frame(maxWidth: 820)
-        .frame(maxWidth: .infinity)
 #endif
     }
 
@@ -122,6 +120,9 @@ private extension CloudDataManagementView {
                     viewModel.send(.retryInventoryTapped)
                 }
                 .disabled(viewModel.isOperationActive)
+#if os(macOS)
+                .buttonStyle(.bordered)
+#endif
             } footer: {
                 Text(String(localized: "Some categories could not be inspected and are not reported as empty."))
             }
@@ -183,6 +184,10 @@ private extension CloudDataManagementView {
             viewModel.send(.retryDeletionTapped)
         }
         .disabled(viewModel.isOperationActive)
+        .tint(.red)
+#if os(macOS)
+        .buttonStyle(.bordered)
+#endif
     }
 
     func categorySection(_ section: CloudDataManagementViewModel.CategorySection) -> some View {
@@ -219,7 +224,7 @@ private extension CloudDataManagementView {
             if section.failure == nil {
                 Text(section.items.count, format: .number)
                     .monospacedDigit()
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
         }
 #endif
@@ -266,14 +271,14 @@ private extension CloudDataManagementView {
         }
         .disabled(viewModel.isOperationActive)
 #if os(macOS)
-        .buttonStyle(.borderless)
-        .foregroundStyle(.secondary)
+        .buttonStyle(.bordered)
+        .controlSize(.small)
 #endif
     }
 
     func itemRow(_ item: CloudDataManagementViewModel.Item) -> some View {
         HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(item.title)
                     .font(.body)
                     .lineLimit(item.kind == .memory ? 2 : nil)
@@ -293,8 +298,10 @@ private extension CloudDataManagementView {
                 viewModel.send(.deleteRequested(item))
             } label: {
                 Image(systemName: "trash")
+                    .foregroundStyle(.red)
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
             .disabled(viewModel.isOperationActive)
             .accessibilityLabel(String(localized: "Delete \(item.title)"))
             .accessibilityHint(String(localized: "Deletes this item from iCloud and all synchronized devices."))

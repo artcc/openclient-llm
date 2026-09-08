@@ -47,3 +47,58 @@ import SwiftUI
     )
     .padding()
 }
+
+#Preview("Multiple attachments, compact") {
+    MessageBubbleView(
+        message: ChatMessage(
+            role: .user,
+            content: "Please compare these documents.",
+            attachments: [
+                .init(type: .pdf, fileName: "First document.pdf", mimeType: "application/pdf", fileRelativePath: ""),
+                .init(type: .pdf, fileName: "Second document.pdf", mimeType: "application/pdf", fileRelativePath: ""),
+                .init(type: .pdf, fileName: "Notes.pdf", mimeType: "application/pdf", fileRelativePath: "")
+            ]
+        )
+    )
+    .padding(16)
+    .frame(width: 320)
+}
+
+#Preview("Assistant actions, compact") {
+    MessageBubbleView(
+        message: ChatMessage(role: .assistant, content: "Would you like the story to continue?"),
+        hasTTS: true,
+        isLastMessage: true,
+        onSpeakTapped: {},
+        onRegenerateTapped: {}
+    )
+    .padding(16)
+    .frame(width: 390)
+}
+
+#Preview("Attachment without text") {
+    MessageBubbleView(
+        message: ChatMessage(
+            role: .user,
+            content: "",
+            attachments: [
+                .init(type: .pdf, fileName: "Document.pdf", mimeType: "application/pdf", fileRelativePath: "")
+            ]
+        )
+    )
+    .padding(16)
+    .frame(width: 390)
+}
+
+#Preview("Assistant actions, large text") {
+    MessageBubbleView(
+        message: ChatMessage(role: .assistant, content: "Would you like the story to continue?"),
+        hasTTS: true,
+        isLastMessage: true,
+        onSpeakTapped: {},
+        onRegenerateTapped: {}
+    )
+    .padding(16)
+    .frame(width: 320)
+    .environment(\.dynamicTypeSize, .accessibility3)
+}

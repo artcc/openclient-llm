@@ -12,20 +12,23 @@ struct HelpView: View {
     // MARK: - Properties
 
     @State private var didResetTips = false
+    @Environment(\.dismiss) private var dismiss
 
     // MARK: - View
 
     var body: some View {
-#if os(iOS)
         NavigationStack {
             helpContent
                 .navigationTitle(String(localized: "Help"))
-                .navigationBarTitleDisplayMode(.large)
-        }
-#else
-        helpContent
-            .navigationTitle(String(localized: "Help"))
+#if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
 #endif
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(String(localized: "Done")) { dismiss() }
+                    }
+                }
+        }
     }
 }
 
@@ -57,8 +60,8 @@ private extension HelpView {
                 Text(String(
                     localized: "Share text, links, images, or PDFs from any app into OpenClient."
                 ))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
 
                 VStack(alignment: .leading, spacing: 6) {
                     HelpStep(number: 1, text: String(localized: "Tap the Share button in any app."))
@@ -143,8 +146,8 @@ private extension HelpView {
                 Text(String(
                     localized: "Automate OpenClient with the Shortcuts app using the URL scheme actions above."
                 ))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
 
                 VStack(alignment: .leading, spacing: 6) {
                     HelpStep(number: 1, text: String(localized: "Open **Shortcuts** and create a new shortcut."))
@@ -166,18 +169,24 @@ private extension HelpView {
 
     var featureTipsSection: some View {
         Section {
-            Button {
-                Task {
-                    await AppTips.resetEligibility()
-                    didResetTips = true
+            VStack(alignment: .leading, spacing: 8) {
+                Text(String(localized: "Tips appear only when their related features are available."))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Button(String(localized: "Show Feature Tips Again")) {
+                    Task {
+                        await AppTips.resetEligibility()
+                        didResetTips = true
+                    }
                 }
-            } label: {
-                Label(String(localized: "Show Feature Tips Again"), systemImage: "lightbulb")
+#if os(macOS)
+                .buttonStyle(.bordered)
+#endif
             }
+            .padding(.vertical, 4)
         } header: {
             Label(String(localized: "Feature Tips"), systemImage: "lightbulb.max")
-        } footer: {
-            Text(String(localized: "Tips appear only when their related features are available."))
         }
     }
 

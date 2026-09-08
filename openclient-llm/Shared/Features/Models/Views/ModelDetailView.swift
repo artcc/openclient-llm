@@ -49,8 +49,6 @@ private extension ModelDetailView {
     var macOSBody: some View {
         VStack(spacing: 0) {
             HStack {
-                Spacer()
-
                 Text(String(localized: "Model Info"))
                     .font(.headline)
 
@@ -95,21 +93,23 @@ private extension ModelDetailView {
 
     var headerSection: some View {
         Section {
-            HStack(spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 providerLogo
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(model.id)
-                        .font(.body)
-                        .fontWeight(.medium)
+                        .font(.headline)
+                        .fixedSize(horizontal: false, vertical: true)
                     if !model.providerName.isEmpty {
                         Text(model.providerName)
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                 }
             }
-            .padding(.vertical, 4)
+            #if os(iOS)
+            .padding(.vertical, 8)
+            #endif
         }
     }
 
@@ -118,12 +118,14 @@ private extension ModelDetailView {
             if let maxInput = model.maxInputTokens {
                 LabeledContent(String(localized: "Input tokens")) {
                     Text(maxInput.formatted())
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
             }
             if let maxOutput = model.maxOutputTokens {
                 LabeledContent(String(localized: "Output tokens")) {
                     Text(maxOutput.formatted())
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
             }
@@ -135,12 +137,14 @@ private extension ModelDetailView {
             if let inputCost = model.inputCostPerToken, inputCost > 0 {
                 LabeledContent(String(localized: "Input")) {
                     Text(String(localized: "$\(inputCost * 1_000, specifier: "%.4f") / 1K tokens"))
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
             }
             if let outputCost = model.outputCostPerToken, outputCost > 0 {
                 LabeledContent(String(localized: "Output")) {
                     Text(String(localized: "$\(outputCost * 1_000, specifier: "%.4f") / 1K tokens"))
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
             }
@@ -174,6 +178,7 @@ private extension ModelDetailView {
                     Text(capability.label)
                 } icon: {
                     Image(systemName: capability.icon)
+                        .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(capability.color)
                 }
             }

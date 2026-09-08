@@ -17,7 +17,7 @@ extension SettingsView {
                 Button {
                     isShowingTipJar = true
                 } label: {
-                    Label(String(localized: "Buy Me a Coffee"), systemImage: "cup.and.saucer")
+                    settingsDestinationLabel("Buy Me a Coffee", systemImage: "cup.and.saucer")
                 }
                 .buttonStyle(.plain)
             }
@@ -25,21 +25,21 @@ extension SettingsView {
             Button {
                 requestAppReview()
             } label: {
-                Label(String(localized: "Rate the App"), systemImage: "star")
+                settingsDestinationLabel("Rate the App", systemImage: "star", isExternal: true)
             }
             .buttonStyle(.plain)
 
             Button {
                 isShowingVotice = true
             } label: {
-                Label(String(localized: "Suggest Features"), systemImage: "lightbulb")
+                settingsDestinationLabel("Suggest Features", systemImage: "lightbulb")
             }
             .buttonStyle(.plain)
 
             Button {
                 isShowingHelp = true
             } label: {
-                Label(String(localized: "Help"), systemImage: "questionmark.circle")
+                settingsDestinationLabel("Help", systemImage: "questionmark.circle")
             }
             .buttonStyle(.plain)
         } header: {

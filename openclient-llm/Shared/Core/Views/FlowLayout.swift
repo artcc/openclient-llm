@@ -12,11 +12,13 @@ struct FlowLayout: Layout {
     // MARK: - Properties
 
     var spacing: CGFloat
+    var alignment: HorizontalAlignment
 
     // MARK: - Init
 
-    init(spacing: CGFloat = 8) {
+    init(spacing: CGFloat = 8, alignment: HorizontalAlignment = .leading) {
         self.spacing = spacing
+        self.alignment = alignment
     }
 
     // MARK: - Layout
@@ -53,6 +55,7 @@ private extension FlowLayout {
         var currentY: CGFloat = 0
         var lineHeight: CGFloat = 0
         var totalSize: CGSize = .zero
+        var lineWidths: [CGFloat: CGFloat] = [:]
 
         for subview in subviews {
             let size = subview.sizeThatFits(.unspecified)
@@ -66,10 +69,16 @@ private extension FlowLayout {
             positions.append(CGPoint(x: currentX, y: currentY))
             lineHeight = max(lineHeight, size.height)
             currentX += size.width + spacing
+            lineWidths[currentY] = currentX - spacing
             totalSize.width = max(totalSize.width, currentX - spacing)
         }
 
         totalSize.height = currentY + lineHeight
+        if alignment == .trailing {
+            for index in positions.indices {
+                positions[index].x += totalSize.width - (lineWidths[positions[index].y] ?? 0)
+            }
+        }
         return ArrangeResult(positions: positions, size: totalSize)
     }
 }
