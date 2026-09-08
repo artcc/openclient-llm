@@ -85,6 +85,9 @@ extension ChatView {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(isTop
+            ? String(localized: "Scroll to top")
+            : String(localized: "Scroll to bottom"))
         .padding(.trailing, 16)
         .padding(isTop ? .top : .bottom, 16)
         .transition(.scale(scale: 0.8).combined(with: .opacity))

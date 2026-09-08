@@ -9,6 +9,9 @@
 import SwiftUI
 import TipKit
 import UniformTypeIdentifiers
+#if os(iOS)
+import UIKit
+#endif
 
 struct ConversationListView: View {
     // MARK: - Properties
@@ -48,6 +51,7 @@ struct ConversationListView: View {
             switch viewModel.state {
             case .loading:
                 ProgressView()
+                    .accessibilityLabel(String(localized: "Loading conversations..."))
                     .tint(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .loaded(let loadedState):
@@ -377,7 +381,13 @@ private extension ConversationListView {
         .padding(.vertical, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
         .listRowInsets(EdgeInsets())
+        #if os(iOS)
+        .background(
+            UIDevice.current.userInterfaceIdiom == .pad ? AnyShapeStyle(Color.clear) : AnyShapeStyle(.bar)
+        )
+        #else
         .background(.bar)
+        #endif
     }
 
     func tagFilterBar(_ loadedState: ConversationListViewModel.LoadedState) -> some View {
@@ -431,6 +441,7 @@ private extension ConversationListView {
 #endif
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
 #if os(iOS)
         .frame(minHeight: 44)
 #endif

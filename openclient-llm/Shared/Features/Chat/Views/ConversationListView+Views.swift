@@ -20,6 +20,7 @@ extension ConversationListView {
         } label: {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: conversation.isPinned ? "pin.fill" : "sparkles")
+                    .accessibilityHidden(true)
                     .font(.system(size: 14))
                     .foregroundStyle(isSelected ? .white : (conversation.isPinned ? .orange : Color.appAccent))
 #if os(macOS)
@@ -27,10 +28,7 @@ extension ConversationListView {
 #else
                     .frame(width: 32, height: 32)
 #endif
-                    .glassEffect(
-                        isSelected ? .regular.tint(Color.appAccent) : .regular,
-                        in: .circle
-                    )
+                    .glassEffect(isSelected ? .regular.tint(Color.appAccent) : .regular, in: .circle)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(conversationTitle(conversation))
                         .font(.headline)
@@ -62,6 +60,8 @@ extension ConversationListView {
             .contentShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityValue(conversation.isPinned ? String(localized: "Pinned") : "")
     }
 
     func conversationMetadata(_ conversation: Conversation) -> some View {
@@ -119,6 +119,7 @@ extension ConversationListView {
             Image(systemName: "arrow.branch")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+                .accessibilityLabel(String(localized: "Forked conversation"))
         }
     }
 }

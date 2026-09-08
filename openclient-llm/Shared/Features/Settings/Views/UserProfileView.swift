@@ -25,6 +25,7 @@ struct UserProfileView: View {
                 switch viewModel.state {
                 case .loading:
                     ProgressView()
+                        .accessibilityLabel(String(localized: "Loading personal context..."))
                         .tint(.secondary)
                 case .loaded:
                     loadedView()

@@ -40,6 +40,7 @@ extension ChatView {
     ) -> some View {
         NavigationStack {
             TextEditor(text: editingMessageText)
+                .accessibilityLabel(String(localized: "Message"))
                 .font(.body)
                 .scrollContentBackground(.hidden)
                 .padding(.horizontal, 16)

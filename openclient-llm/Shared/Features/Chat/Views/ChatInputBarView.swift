@@ -184,6 +184,8 @@ private extension ChatInputBarView {
             recordingIndicator
 
             Text(timerText)
+                .accessibilityLabel(String(localized: "Recording duration"))
+                .accessibilityValue(timerText)
                 .font(.body.monospacedDigit())
                 .foregroundStyle(.primary)
                 .contentTransition(.numericText())
@@ -246,6 +248,8 @@ private extension ChatInputBarView {
                 .frame(width: 10, height: 10)
         }
         .frame(width: 44, height: 44)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "Recording"))
     }
 
     var timerText: String {
@@ -327,6 +331,9 @@ private extension ChatInputBarView {
             ? String(localized: "Disable Web Search")
             : String(localized: "Enable Web Search")
         )
+        .accessibilityValue(!state.isWebSearchToolConfigured
+            ? String(localized: "Web search is not configured")
+            : (!modelSupportsWebSearch ? String(localized: "Not supported by this model") : ""))
         .animation(.easeInOut(duration: 0.2), value: state.isWebSearchEnabled)
     }
 
@@ -355,6 +362,7 @@ private extension ChatInputBarView {
         .accessibilityLabel(showActions
             ? String(localized: "Hide Actions")
             : String(localized: "Show Actions"))
+        .accessibilityValue(hasActive && !showActions ? String(localized: "Tools enabled") : "")
     }
 
     @ViewBuilder

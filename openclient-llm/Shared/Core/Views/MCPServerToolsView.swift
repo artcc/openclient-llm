@@ -94,6 +94,7 @@ private extension MCPServerToolsView {
                                 systemImage: option == commonPermission ? "checkmark" : option.systemImage
                             )
                         }
+                        .accessibilityAddTraits(option == commonPermission ? .isSelected : [])
                     }
                 } label: {
                     Label(

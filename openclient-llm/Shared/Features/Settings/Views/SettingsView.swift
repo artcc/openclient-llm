@@ -77,6 +77,7 @@ private extension SettingsView {
             switch viewModel.state {
             case .loading:
                 ProgressView()
+                    .accessibilityLabel(String(localized: "Loading settings..."))
                     .tint(.secondary)
             case .loaded(let loadedState):
                 loadedView(loadedState)

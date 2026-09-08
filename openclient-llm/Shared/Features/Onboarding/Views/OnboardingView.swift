@@ -26,6 +26,7 @@ struct OnboardingView: View {
             switch viewModel.state {
             case .loading:
                 ProgressView()
+                    .accessibilityLabel(String(localized: "Loading setup..."))
                     .tint(.secondary)
             case .loaded(let loadedState):
                 loadedView(loadedState)

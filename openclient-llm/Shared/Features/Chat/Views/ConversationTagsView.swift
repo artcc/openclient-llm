@@ -77,7 +77,9 @@ struct ConversationTagsView: View {
                             HStack {
                                 Image(systemName: "tag.fill")
                                     .foregroundStyle(tag.color.displayColor)
+                                    .accessibilityHidden(true)
                                 Text(tag.name)
+                                    .accessibilityValue(tag.color.localizedName)
                                 Spacer()
 #if os(macOS)
                                 Button(role: .destructive) {

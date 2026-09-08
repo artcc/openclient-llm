@@ -32,6 +32,9 @@ extension ChatInputBarView {
                 ? String(localized: "MCP Servers")
                 : String(localized: "MCP Servers Unavailable")
         )
+        .accessibilityValue(hasAvailableMCPTool && modelSupportsTools
+            ? (hasEnabledMCPTool ? String(localized: "Tools enabled") : String(localized: "No tools enabled"))
+            : "")
         .animation(.easeInOut(duration: 0.2), value: state.enabledMCPToolIds)
     }
 }

@@ -81,6 +81,9 @@ private extension AttachmentImageView {
                 .contentShape(.rect(cornerRadius: 12))
                 .onTapGesture { showPreview = true }
                 .contextMenu { imageContextMenu(data: data) }
+                .accessibilityLabel(Text("Image attachment \(attachment.fileName)"))
+                .accessibilityAddTraits(.isButton)
+                .accessibilityHint(String(localized: "Opens the image preview"))
         } else {
             fallbackCard
         }
@@ -94,6 +97,9 @@ private extension AttachmentImageView {
                 .contentShape(.rect(cornerRadius: 12))
                 .onTapGesture { showPreview = true }
                 .contextMenu { imageContextMenu(data: data) }
+                .accessibilityLabel(Text("Image attachment \(attachment.fileName)"))
+                .accessibilityAddTraits(.isButton)
+                .accessibilityHint(String(localized: "Opens the image preview"))
         } else {
             fallbackCard
         }
@@ -106,6 +112,7 @@ private extension AttachmentImageView {
                 .fill(.quaternary)
                 .frame(width: thumbnailSize, height: thumbnailSize)
             ProgressView()
+                .accessibilityLabel(Text("Loading image \(attachment.fileName)"))
                 .tint(.secondary)
         }
     }

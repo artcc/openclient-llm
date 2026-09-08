@@ -133,9 +133,11 @@ private extension SettingsView {
                 if loadedState.isSaved {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
+                        .accessibilityHidden(true)
                 }
             }
         }
+        .accessibilityValue(loadedState.isSaved ? String(localized: "Saved") : "")
 #if os(macOS)
         .buttonStyle(.borderedProminent)
 #else
