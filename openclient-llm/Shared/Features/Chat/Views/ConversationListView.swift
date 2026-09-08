@@ -9,6 +9,9 @@
 import SwiftUI
 import TipKit
 import UniformTypeIdentifiers
+#if os(iOS)
+import UIKit
+#endif
 
 struct ConversationListView: View {
     // MARK: - Properties
@@ -378,7 +381,13 @@ private extension ConversationListView {
         .padding(.vertical, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
         .listRowInsets(EdgeInsets())
+        #if os(iOS)
+        .background(
+            UIDevice.current.userInterfaceIdiom == .pad ? AnyShapeStyle(Color.clear) : AnyShapeStyle(.bar)
+        )
+        #else
         .background(.bar)
+        #endif
     }
 
     func tagFilterBar(_ loadedState: ConversationListViewModel.LoadedState) -> some View {

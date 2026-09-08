@@ -7,6 +7,9 @@
 //
 
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 struct ModelsView: View {
     // MARK: - Properties
@@ -44,6 +47,14 @@ private extension ModelsView {
                 loadedView(loadedState)
             }
         }
+#if os(iOS)
+        .background {
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                Color(uiColor: .systemGroupedBackground)
+                    .ignoresSafeArea()
+            }
+        }
+#endif
         .navigationTitle(String(localized: "Models"))
         .toolbar {
             ToolbarItem(placement: .automatic) {
@@ -201,7 +212,6 @@ private extension ModelsView {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 12) {
                         providerLogo(model)
-
                         VStack(alignment: .leading, spacing: 2) {
                             Text(model.id)
                                 .font(.body.weight(.medium))
@@ -213,18 +223,16 @@ private extension ModelsView {
                                     .foregroundStyle(.secondary)
                             }
                         }
-
                         Spacer()
                     }
-
                     capabilityTags(model.capabilities.isEmpty ? [.text] : model.capabilities)
                         .padding(.leading, 44)
                 }
-                #if os(iOS)
+#if os(iOS)
                 .padding(.vertical, 6)
-                #else
+#else
                 .padding(.vertical, 4)
-                #endif
+#endif
                 .contentShape(Rectangle())
             }
 #if os(iOS)
@@ -254,11 +262,11 @@ private extension ModelsView {
             Image(systemName: "info.circle")
                 .foregroundStyle(.secondary)
                 .font(.body)
-                #if os(iOS)
+#if os(iOS)
                 .frame(width: 44, height: 44)
-                #else
+#else
                 .frame(width: 24, height: 24)
-                #endif
+#endif
         }
 #if os(iOS)
         .buttonStyle(.plain)
@@ -314,7 +322,6 @@ private extension ModelsView {
                 VStack(spacing: 0) {
                     HStack(spacing: 12) {
                         providerLogo(model)
-
                         VStack(alignment: .leading, spacing: 2) {
                             Text(model.id)
                                 .font(.body.weight(.medium))
@@ -326,9 +333,7 @@ private extension ModelsView {
                                     .foregroundStyle(.secondary)
                             }
                         }
-
                         Spacer()
-
                         if isSelected {
                             Image(systemName: "waveform.circle.fill")
                                 .foregroundStyle(Color.appAccent)
@@ -359,7 +364,6 @@ private extension ModelsView {
         } label: {
             HStack(spacing: 12) {
                 providerLogo(model)
-
                 VStack(alignment: .leading, spacing: 2) {
                     Text(model.id)
                         .font(.body.weight(.medium))
@@ -371,9 +375,7 @@ private extension ModelsView {
                             .foregroundStyle(.secondary)
                     }
                 }
-
                 Spacer()
-
                 if isSelected {
                     Image(systemName: "waveform.badge.mic")
                         .foregroundStyle(Color.appAccent)
@@ -409,16 +411,15 @@ private extension ModelsView {
                     isPresetVoice: isPresetVoice
                 )
             }
-
             if showCustomInput {
                 voiceCustomField(model: model, currentVoice: currentVoice, isPresetVoice: isPresetVoice)
             }
         }
         .padding(.top, 8)
         .padding(.leading, 44)
-        #if os(macOS)
+#if os(macOS)
         .controlSize(.small)
-        #endif
+#endif
     }
 
     func voiceMenu(
@@ -460,9 +461,9 @@ private extension ModelsView {
                     .foregroundStyle(.secondary)
             }
             .foregroundStyle(Color.appAccent)
-            #if os(iOS)
+#if os(iOS)
             .frame(minHeight: 44)
-            #endif
+#endif
         }
     }
 
