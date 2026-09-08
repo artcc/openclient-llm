@@ -7,11 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## [1.6.50-build-98] - 2026-09-08
+## [1.6.50-build-99] - 2026-09-08
 
 ### Changed
 
 - Redesigned onboarding on iOS, iPadOS, and macOS with a clearer server setup form, progress feedback, and improved accessibility
+- Adaptive chat composer now places attachment and tool controls above the text field when horizontal space is limited
+- Chat messages and composer now share a centered, width-limited column on larger iPad and Mac windows
+- Refined chat message spacing and metadata contrast with a compact layout for Listen and Regenerate Response actions
+- Chat error notices now use a rounded secondary surface with clearer text and a red warning icon
+- Pending attachments now use clearer filename truncation and larger accessible removal controls on iOS
+- Message attachments now wrap onto multiple rows while preserving their order and alignment
+- Code blocks now use refined header styling and more horizontal padding
+
+### Fixed
+
+- Markdown table headers and rows now share column widths to keep cells aligned
+- Attachment-only user messages no longer display an empty tinted text bubble
+- Blockquote accent bars now follow the text height instead of stretching the quote and leaving excessive blank space
 
 ## [1.6.45-build-97] - 2026-09-07
 

@@ -22,18 +22,19 @@ struct BlockquoteView: View {
     // MARK: - View
 
     var body: some View {
-        HStack(alignment: .top, spacing: 0) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.appAccent.opacity(0.5))
-                .frame(width: 3)
-
-            Text(inlineContent[content] ?? AttributedString(content))
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 10)
-        }
+        Text(inlineContent[content] ?? AttributedString(content))
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 13)
+            .overlay(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color.appAccent.opacity(0.5))
+                    .frame(width: 3)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
     }
 }
 

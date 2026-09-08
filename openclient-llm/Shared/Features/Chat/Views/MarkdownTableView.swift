@@ -29,7 +29,7 @@ struct MarkdownTableView: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 0) {
+            Grid(alignment: .topLeading, horizontalSpacing: 0, verticalSpacing: 0) {
                 headerRow
                 ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
                     dataRow(row, isAlternate: index % 2 != 0)
@@ -48,36 +48,40 @@ struct MarkdownTableView: View {
 
 private extension MarkdownTableView {
     var headerRow: some View {
-        HStack(spacing: 0) {
+        GridRow {
             ForEach(Array(headers.enumerated()), id: \.offset) { index, header in
                 cellView(inlineContent[header] ?? AttributedString(header), isBold: true)
                     .background(.ultraThinMaterial)
-                if index < headers.count - 1 {
-                    verticalDivider
-                }
+                    .overlay(alignment: .trailing) {
+                        if index < headers.count - 1 {
+                            verticalDivider
+                        }
+                    }
+                    .overlay(alignment: .bottom) {
+                        Rectangle()
+                            .fill(Color.appAccent.opacity(0.3))
+                            .frame(height: 1)
+                    }
             }
-        }
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.appAccent.opacity(0.3))
-                .frame(height: 1)
         }
     }
 
     func dataRow(_ cells: [String], isAlternate: Bool) -> some View {
-        HStack(spacing: 0) {
+        GridRow {
             ForEach(Array(cells.enumerated()), id: \.offset) { index, cell in
                 cellView(inlineContent[cell] ?? AttributedString(cell), isBold: false)
                     .background(isAlternate ? Color.primary.opacity(0.03) : Color.clear)
-                if index < cells.count - 1 {
-                    verticalDivider
-                }
+                    .overlay(alignment: .trailing) {
+                        if index < cells.count - 1 {
+                            verticalDivider
+                        }
+                    }
+                    .overlay(alignment: .bottom) {
+                        Rectangle()
+                            .fill(Color.primary.opacity(0.06))
+                            .frame(height: 1)
+                    }
             }
-        }
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.primary.opacity(0.06))
-                .frame(height: 1)
         }
     }
 
@@ -86,9 +90,11 @@ private extension MarkdownTableView {
             .font(isBold ? .subheadline.weight(.semibold) : .subheadline)
             .foregroundStyle(Color.primary)
             .textSelection(.enabled)
-            .frame(minWidth: 60, alignment: .leading)
+            .frame(minWidth: 60, maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
+            .frame(maxHeight: .infinity, alignment: .topLeading)
+            .gridCellUnsizedAxes(.vertical)
     }
 
     var verticalDivider: some View {
@@ -127,4 +133,20 @@ private extension MarkdownTableView {
         )
     }
     .padding()
+}
+
+#Preview("Uneven Rows and Long Content") {
+    MarkdownTableView(
+        headers: ["Field", "Description", "Value"],
+        rows: [
+            ["id", "Unique identifier", "42"],
+            ["notificationPreferences", "Delivery settings for all conversation updates", "Enabled"],
+            ["notes", "First line\nSecond line", ""],
+            ["Partial row"],
+            ["Extra cells", "Preserved", "Visible", "Additional value"]
+        ],
+        inlineContent: [:]
+    )
+    .padding()
+    .frame(width: 340)
 }

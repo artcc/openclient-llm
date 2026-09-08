@@ -3,6 +3,10 @@ Hi there! We've got some great new features for you in this update.
 ***1.6.50:
 
 • Get started more easily on iPhone, iPad, and Mac with redesigned onboarding, a clearer server setup form, progress feedback, and improved accessibility.
+• Write more comfortably with chat controls that adapt to narrow windows and a centered reading column on larger iPad and Mac screens.
+• Enjoy clearer message details, compact response actions, and improved error and attachment presentation.
+• Multiple attachments now wrap neatly, and sending an attachment without text no longer leaves an empty blue bubble.
+• Markdown tables have aligned columns, code blocks have refined styling, and quotes no longer create excessive blank space.
 • Minor bug fixes and improvements for a smoother experience.
 
 ***Recent Updates:

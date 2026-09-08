@@ -33,7 +33,8 @@ struct CodeBlockView: View {
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(Color.primary)
                     .textSelection(.enabled)
-                    .padding(12)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -49,10 +50,9 @@ struct CodeBlockView: View {
 
 private extension CodeBlockView {
     var header: some View {
-        HStack {
+        HStack(spacing: 12) {
             Text(language ?? String(localized: "Code"))
-                .font(.caption)
-                .fontWeight(.medium)
+                .font(.system(.caption, design: .monospaced).weight(.semibold))
                 .foregroundStyle(.secondary)
 
             Spacer()
@@ -76,8 +76,12 @@ private extension CodeBlockView {
             .buttonStyle(.plain)
 #endif
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(
+            Color.primary.opacity(0.03),
+            in: UnevenRoundedRectangle(topLeadingRadius: 12, topTrailingRadius: 12)
+        )
     }
 
     func copyCode() {
@@ -105,4 +109,19 @@ private extension CodeBlockView {
         language: "swift"
     )
     .padding()
+}
+
+#Preview("Long Lines and No Language") {
+    VStack(alignment: .leading, spacing: 16) {
+        CodeBlockView(
+            code: "let description = \"A long line of code that remains accessible through horizontal scrolling.\"",
+            language: "swift"
+        )
+        CodeBlockView(
+            code: "First line\n    Indented content\n\nLast line",
+            language: nil
+        )
+    }
+    .padding()
+    .frame(width: 340)
 }
