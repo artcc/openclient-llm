@@ -55,6 +55,9 @@ private extension OnboardingView {
 
     func loadedView(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
         GlassEffectContainer(spacing: 24) {
+#if os(macOS)
+            macOSLayout(loadedState)
+#else
             VStack(spacing: 0) {
                 topBar(loadedState)
                     .frame(maxWidth: 520)
@@ -83,11 +86,53 @@ private extension OnboardingView {
                         .background(backgroundColor)
                 }
             }
+#endif
         }
         .background(backgroundColor.ignoresSafeArea())
         .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: loadedState.currentStep)
         .tint(Color.appAccent)
     }
+
+#if os(macOS)
+    func macOSLayout(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
+        VStack(spacing: 0) {
+            topBar(loadedState)
+                .padding(.horizontal, 24)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ScrollView {
+                stepContent(loadedState)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+
+            VStack(spacing: 16) {
+                Divider()
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 16) {
+                        skippingNotice(loadedState)
+                            .fixedSize()
+                        Spacer(minLength: 0)
+                        primaryAction(loadedState)
+                            .fixedSize()
+                    }
+                    bottomAction(loadedState)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: 568, maxHeight: 660)
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+#endif
 
     func topBar(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -226,36 +271,45 @@ private extension OnboardingView {
 
     func bottomAction(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            if loadedState.currentStep != .welcome {
-                Text("Skipping won't save these server settings.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            skippingNotice(loadedState)
 
-            Button {
-                switch loadedState.currentStep {
-                case .welcome: viewModel.send(.getStartedTapped)
-                case .serverConfiguration: viewModel.send(.nextTapped)
-                case .allSet: viewModel.send(.startChattingTapped)
-                }
-            } label: {
-                Text(actionTitle(loadedState))
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-#if os(iOS)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-#endif
-            }
-#if os(macOS)
-            .buttonStyle(.borderedProminent)
-            .frame(maxWidth: .infinity, alignment: .trailing)
-#else
-            .buttonStyle(.glassProminent)
-#endif
-            .controlSize(.large)
-            .disabled(loadedState.currentStep == .serverConfiguration && loadedState.connectionStatus != .success)
+            primaryAction(loadedState)
         }
+    }
+
+    @ViewBuilder
+    func skippingNotice(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
+        if loadedState.currentStep != .welcome {
+            Text("Skipping won't save these server settings.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    func primaryAction(_ loadedState: OnboardingViewModel.LoadedState) -> some View {
+        Button {
+            switch loadedState.currentStep {
+            case .welcome: viewModel.send(.getStartedTapped)
+            case .serverConfiguration: viewModel.send(.nextTapped)
+            case .allSet: viewModel.send(.startChattingTapped)
+            }
+        } label: {
+            Text(actionTitle(loadedState))
+                .font(.headline)
+                .multilineTextAlignment(.center)
+#if os(iOS)
+                .frame(maxWidth: .infinity, minHeight: 44)
+#endif
+        }
+#if os(macOS)
+        .buttonStyle(.borderedProminent)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+#else
+        .buttonStyle(.glassProminent)
+#endif
+        .controlSize(.large)
+        .disabled(loadedState.currentStep == .serverConfiguration && loadedState.connectionStatus != .success)
     }
 
     func actionTitle(_ loadedState: OnboardingViewModel.LoadedState) -> String {
@@ -274,6 +328,18 @@ private extension OnboardingView {
     }
 }
 
+#if os(macOS)
+#Preview("Onboarding, minimum window") {
+    OnboardingView {}
+        .frame(width: 800, height: 600)
+}
+
+#Preview("Onboarding, large window") {
+    OnboardingView {}
+        .frame(width: 1100, height: 800)
+}
+#else
 #Preview {
     OnboardingView {}
 }
+#endif

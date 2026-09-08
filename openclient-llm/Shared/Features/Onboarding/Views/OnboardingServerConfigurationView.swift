@@ -146,7 +146,11 @@ private extension OnboardingServerConfigurationView {
                 } label: {
                     Image(systemName: isAPIKeyVisible ? "eye.slash" : "eye")
                         .foregroundStyle(.secondary)
+#if os(macOS)
+                        .frame(width: 28, height: 28)
+#else
                         .frame(width: 44, height: 44)
+#endif
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
