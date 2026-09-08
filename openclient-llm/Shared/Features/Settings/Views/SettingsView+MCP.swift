@@ -123,6 +123,7 @@ extension SettingsView {
             Spacer()
             if isAvailable {
                 Text("\(enabled)/\(total)")
+                    .accessibilityLabel(Text("\(enabled) of \(total) tools enabled"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {

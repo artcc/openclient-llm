@@ -145,6 +145,12 @@ private extension MediaFilesGalleryView {
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint(String(localized: "Opens the document preview"))
+            .accessibilityAction {
+                previewDocument = item
+            }
             Spacer()
             goToMessageButton(messageId: item.messageId)
         }
@@ -166,6 +172,7 @@ private extension MediaFilesGalleryView {
                 .background(Color.appAccent.opacity(0.8), in: Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "Go to message"))
     }
 }
 
@@ -200,6 +207,7 @@ struct PDFPreviewView: View {
                     PDFKitRepresentable(data: data)
                 } else {
                     ProgressView()
+                        .accessibilityLabel(String(localized: "Loading document"))
                         .tint(.secondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }

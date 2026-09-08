@@ -104,6 +104,7 @@ private extension ChatSystemPromptView {
                     get: { loadedState.systemPrompt },
                     set: { viewModel.send(.systemPromptChanged($0)) }
                 ))
+                .accessibilityLabel(String(localized: "System Prompt"))
                 .font(.body)
 #if os(macOS)
                 .frame(minHeight: 200)

@@ -70,6 +70,7 @@ private extension WebContentView {
                             Image(systemName: "xmark")
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(String(localized: "Close"))
                     }
                 }
         }

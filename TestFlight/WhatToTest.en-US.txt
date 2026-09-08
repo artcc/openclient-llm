@@ -14,6 +14,7 @@ Hi there! We've got some great new features for you in this update.
 • Reviewing your iCloud data is more straightforward, with clearer actions and a dedicated panel you can close with Done on iPhone, iPad, and Mac.
 • No more hopping between differently sized panels in Mac Settings: editors, settings panels, and web pages now share a consistent size.
 • Help has a tidier home for feature tips and a handy Done button when you're ready to get back to your chats.
+• VoiceOver now describes more buttons, loading states, and selections across the app and widgets, with accessible image zoom controls and easier access to voice selection.
 • Minor bug fixes and improvements for a smoother experience.
 
 ***Recent Updates:

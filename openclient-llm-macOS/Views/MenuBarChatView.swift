@@ -68,6 +68,7 @@ private extension MenuBarChatView {
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
             .disabled(isOpeningInApp || !viewModel.canPrepareForAppHandoff)
+            .accessibilityValue(isOpeningInApp ? String(localized: "Opening in app") : "")
             .help(
                 !viewModel.canPrepareForAppHandoff
                 ? String(localized: "Finish or clear the current input before opening it in the app.")
@@ -84,6 +85,7 @@ private extension MenuBarChatView {
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
             .disabled(isOpeningInApp)
+            .accessibilityLabel(String(localized: "New Chat"))
             .help(String(localized: "New Chat"))
         }
         .padding(.horizontal, 12)

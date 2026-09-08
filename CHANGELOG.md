@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## [1.6.50-build-99] - 2026-09-08
+## [1.6.50-build-100] - 2026-09-08
 
 ### Changed
 
@@ -36,6 +36,7 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 - macOS Settings sheets and their nested editors now use a fixed 700-by-500-point size
 - macOS web sheets now use a fixed 700-by-500-point size instead of minimum dimensions
 - Help feature tips now group the explanation and a shorter reset button in a single block without a separator between them
+- Improved VoiceOver labels, state descriptions, and accessible actions across chat, settings, models, image previews, and widgets on iOS, iPadOS, and macOS
 
 ### Fixed
 
@@ -43,6 +44,7 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 - Markdown table headers and rows now share column widths to keep cells aligned
 - Attachment-only user messages no longer display an empty tinted text bubble
 - Blockquote accent bars now follow the text height instead of stretching the quote and leaving excessive blank space
+- Voice selection controls are no longer nested inside the model selection button, keeping them independently accessible
 
 ## [1.6.45-build-97] - 2026-09-07
 

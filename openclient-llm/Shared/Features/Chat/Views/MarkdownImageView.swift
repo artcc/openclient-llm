@@ -25,6 +25,7 @@ struct MarkdownImageView: View {
                 switch loadState {
                 case .loading:
                     ProgressView()
+                        .accessibilityLabel(String(localized: "Loading image..."))
                         .frame(maxWidth: .infinity, minHeight: 120)
                         .background(.ultraThinMaterial)
                         .clipShape(RoundedRectangle(cornerRadius: 10))

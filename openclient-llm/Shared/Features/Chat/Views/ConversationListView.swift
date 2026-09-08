@@ -48,6 +48,7 @@ struct ConversationListView: View {
             switch viewModel.state {
             case .loading:
                 ProgressView()
+                    .accessibilityLabel(String(localized: "Loading conversations..."))
                     .tint(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .loaded(let loadedState):
@@ -431,6 +432,7 @@ private extension ConversationListView {
 #endif
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
 #if os(iOS)
         .frame(minHeight: 44)
 #endif

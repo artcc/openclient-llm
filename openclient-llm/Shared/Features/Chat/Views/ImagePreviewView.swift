@@ -58,6 +58,21 @@ struct ImagePreviewView: View {
                                 steadyScale = 1.0
                             }
                         }
+                        .accessibilityLabel(String(localized: "Image preview"))
+                        .accessibilityValue(Text("Zoom \(Int(zoomScale * 100)) percent"))
+                        .accessibilityAdjustableAction { direction in
+                            switch direction {
+                            case .increment:
+                                steadyScale = min(steadyScale + 1, 6)
+                            case .decrement:
+                                steadyScale = max(steadyScale - 1, 1)
+                            @unknown default:
+                                break
+                            }
+                        }
+                        .accessibilityAction(named: Text("Reset Zoom")) {
+                            steadyScale = 1.0
+                        }
                 }
 #elseif os(macOS)
                 if let image = NSImage(data: data) {
@@ -65,6 +80,7 @@ struct ImagePreviewView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .accessibilityLabel(String(localized: "Image preview"))
                 }
 #endif
             }

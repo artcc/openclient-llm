@@ -16,6 +16,8 @@ extension MessageBubbleView {
             : Text("")
 
         return Text("\(text)\(cursor)")
+            .accessibilityLabel(Text(verbatim: message.content))
+            .accessibilityValue(isStreaming ? String(localized: "Generating response") : "")
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
     }

@@ -24,6 +24,7 @@ struct MemoryView: View {
                 switch viewModel.state {
                 case .loading:
                     ProgressView()
+                        .accessibilityLabel(String(localized: "Loading memory..."))
                         .tint(.secondary)
                 case .loaded(let loadedState):
                     loadedView(loadedState)

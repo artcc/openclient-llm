@@ -25,6 +25,7 @@ struct SearchConversationsView: View {
                 switch viewModel.state {
                 case .loading:
                     ProgressView()
+                        .accessibilityLabel(String(localized: "Loading conversations..."))
                         .tint(.secondary)
                 case .loaded(let loadedState):
                     searchContent(loadedState)
@@ -102,6 +103,7 @@ private extension SearchConversationsView {
                 } label: {
                     conversationRow(conversation)
                 }
+                .accessibilityValue(conversation.isPinned ? String(localized: "Pinned") : "")
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 4, leading: 2, bottom: 4, trailing: 2))
             }
@@ -114,6 +116,7 @@ private extension SearchConversationsView {
     func conversationRow(_ conversation: Conversation) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: conversation.isPinned ? "pin.fill" : "sparkles")
+                .accessibilityHidden(true)
                 .font(.system(size: 14))
                 .foregroundStyle(conversation.isPinned ? .orange : Color.appAccent)
 #if os(macOS)

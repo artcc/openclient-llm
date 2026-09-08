@@ -132,6 +132,7 @@ private extension MCPToolsSheet {
             Spacer()
             if isServerAvailable {
                 Text(String(localized: "\(enabled)/\(tools.count)"))
+                    .accessibilityLabel(Text("\(enabled) of \(tools.count) tools enabled"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {

@@ -37,6 +37,7 @@ private extension ModelsView {
             switch viewModel.state {
             case .loading:
                 ProgressView()
+                    .accessibilityLabel(String(localized: "Loading models..."))
                     .tint(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .loaded(let loadedState):
@@ -336,17 +337,18 @@ private extension ModelsView {
                                 .accessibilityHidden(true)
                         }
                     }
-                    if isSelected {
-                        voicePicker(model: model, loadedState: loadedState)
-                    }
                 }
-                .padding(.vertical, 4)
             }
 #if os(macOS)
             .buttonStyle(.borderless)
 #endif
             .accessibilityAddTraits(isSelected ? .isSelected : [])
+
+            if isSelected {
+                voicePicker(model: model, loadedState: loadedState)
+            }
         }
+        .padding(.vertical, 4)
     }
 
     func sttModelRow(_ model: LLMModel, loadedState: ModelsViewModel.LoadedState) -> some View {
@@ -438,6 +440,7 @@ private extension ModelsView {
                         Text(preset.capitalized)
                     }
                 }
+                .accessibilityAddTraits(currentVoice == preset ? .isSelected : [])
             }
             Divider()
             Button(String(localized: "Custom...")) {

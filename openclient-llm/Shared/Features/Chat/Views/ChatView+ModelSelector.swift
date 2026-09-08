@@ -28,9 +28,11 @@ extension ChatView {
                             Text(model.id)
                             if model == selectedModel {
                                 Image(systemName: "checkmark")
+                                    .accessibilityHidden(true)
                             }
                         }
                     }
+                    .accessibilityAddTraits(model == selectedModel ? .isSelected : [])
                 }
             } label: {
                 HStack(spacing: 4) {
