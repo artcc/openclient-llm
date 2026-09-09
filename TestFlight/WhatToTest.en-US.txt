@@ -4,6 +4,7 @@ Hi there! We've got some great new features for you in this update.
 
 • Text-to-speech now automatically selects the first available model if you haven't chosen one or your previous choice is no longer available, including when there's only one model.
 • Speech-to-text now automatically selects Apple speech recognition if you haven't chosen a model or your previous choice is no longer available, including when Apple is the only option.
+• Image models with vision now let you attach reference images for editing on iPhone, iPad, and Mac, and trying again keeps your original prompt and references.
 • Minor bug fixes and improvements for a smoother experience.
 
 ***Recent Updates:

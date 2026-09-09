@@ -40,6 +40,14 @@ extension ChatViewModel {
               let model = loadedState.selectedModel else { return }
 
         guard loadedState.messages.last?.role == .assistant else { return }
+        if model.mode == .imageGeneration {
+            guard let userMessage = loadedState.messages.last(where: { $0.role == .user }),
+                  validateImageGenerationInput(
+                    text: userMessage.content,
+                    attachments: userMessage.attachments,
+                    model: model
+                  ) else { return }
+        }
         loadedState.messages.removeLast()
         guard !loadedState.messages.isEmpty else { return }
         invalidateCompactionIfNeeded(in: &loadedState, changedAt: loadedState.messages.count)
@@ -93,6 +101,11 @@ extension ChatViewModel {
         // Find the message index
         guard let messageIndex = loadedState.messages.firstIndex(where: { $0.id == id }),
               loadedState.messages[messageIndex].role == .user else { return }
+        guard validateImageGenerationInput(
+            text: trimmed,
+            attachments: loadedState.messages[messageIndex].attachments,
+            model: model
+        ) else { return }
 
         // Update content and remove all messages after it (including previous assistant response)
         loadedState.messages[messageIndex].content = trimmed

@@ -26,6 +26,16 @@ protocol PrepareImageAttachmentUseCaseProtocol: Sendable {
 }
 
 nonisolated struct PrepareImageAttachmentUseCase: PrepareImageAttachmentUseCaseProtocol {
+    // MARK: - Properties
+
+    private let preservesGIF: Bool
+
+    // MARK: - Init
+
+    init(preservesGIF: Bool = true) {
+        self.preservesGIF = preservesGIF
+    }
+
     // MARK: - Execute
 
     @concurrent
@@ -67,7 +77,7 @@ private extension PrepareImageAttachmentUseCase {
         if type.conforms(to: .png) {
             return SupportedFormat(fileExtension: "png", mimeType: "image/png")
         }
-        if type.conforms(to: .gif) {
+        if preservesGIF, type.conforms(to: .gif) {
             return SupportedFormat(fileExtension: "gif", mimeType: "image/gif")
         }
         if type.conforms(to: .webP) {

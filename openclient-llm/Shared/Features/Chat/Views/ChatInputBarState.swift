@@ -29,6 +29,14 @@ struct ChatInputBarState: Equatable {
     let availableMCPToolIds: Set<String>
     let enabledMCPToolIds: Set<String>
 
+    var canAttachImages: Bool {
+        canUseChatActions || selectedModel?.capabilities.contains(.vision) == true
+    }
+
+    var canUseChatActions: Bool {
+        selectedModel?.mode != .imageGeneration
+    }
+
     init(loadedState: ChatViewModel.LoadedState) {
         inputText = loadedState.inputText
         inputRevision = loadedState.inputRevision

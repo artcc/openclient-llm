@@ -9,7 +9,7 @@
 import Foundation
 
 protocol ImageGenerationRepositoryProtocol: Sendable {
-    func generateImage(prompt: String, model: String) async throws -> GeneratedImage
+    func generateImage(prompt: String, model: String, images: [PreparedImageAttachment]) async throws -> GeneratedImage
 }
 
 struct ImageGenerationRepository: ImageGenerationRepositoryProtocol {
@@ -25,20 +25,24 @@ struct ImageGenerationRepository: ImageGenerationRepositoryProtocol {
 
     // MARK: - Public
 
-    func generateImage(prompt: String, model: String) async throws -> GeneratedImage {
-        let request = ImageGenerationRequest(
-            model: model,
-            prompt: prompt,
-            numberOfImages: 1,
-            size: "1024x1024",
-            responseFormat: "b64_json"
-        )
-        let response: ImageGenerationResponse = try await apiClient.request(
-            endpoint: "images/generations",
-            method: .post,
-            body: request,
-            timeoutInterval: 600
-        )
+    func generateImage(
+        prompt: String,
+        model: String,
+        images: [PreparedImageAttachment]
+    ) async throws -> GeneratedImage {
+        let response: ImageGenerationResponse
+        if images.isEmpty {
+            response = try await generateImageResponse(prompt: prompt, model: model)
+        } else {
+            response = try await apiClient.multipartRequest(
+                endpoint: "images/edits",
+                fields: ["model": model, "prompt": prompt, "n": "1"],
+                files: images.map {
+                    MultipartFileData(field: "image", data: $0.data, fileName: $0.fileName, mimeType: $0.mimeType)
+                },
+                timeoutInterval: 600
+            )
+        }
         guard let image = response.data.first else { throw APIError.invalidResponse }
 
         if let encoded = image.b64Json,
@@ -57,6 +61,23 @@ struct ImageGenerationRepository: ImageGenerationRepositoryProtocol {
             data: downloaded.data,
             mimeType: downloaded.mimeType,
             revisedPrompt: image.revisedPrompt
+        )
+    }
+
+    // MARK: - Private
+
+    private func generateImageResponse(prompt: String, model: String) async throws -> ImageGenerationResponse {
+        let request = ImageGenerationRequest(
+            model: model,
+            prompt: prompt,
+            numberOfImages: 1,
+            responseFormat: "b64_json"
+        )
+        return try await apiClient.request(
+            endpoint: "images/generations",
+            method: .post,
+            body: request,
+            timeoutInterval: 600
         )
     }
 }

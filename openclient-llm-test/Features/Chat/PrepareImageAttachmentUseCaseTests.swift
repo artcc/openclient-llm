@@ -45,6 +45,35 @@ final class PrepareImageAttachmentUseCaseTests: XCTestCase {
         XCTAssertEqual(result.fileName, "photo.png")
     }
 
+    func test_execute_gifWithDefaultConfiguration_preservesOriginalForChat() async throws {
+        // Given
+        let input = try makeImageData(type: .gif)
+        let sut = PrepareImageAttachmentUseCase()
+
+        // When
+        let result = try await sut.execute(data: input, fileName: "animation.gif")
+
+        // Then
+        XCTAssertEqual(result.data, input)
+        XCTAssertEqual(result.mimeType, "image/gif")
+        XCTAssertEqual(result.fileName, "animation.gif")
+    }
+
+    func test_execute_gifForImageEditing_convertsToBoundedJPEG() async throws {
+        // Given
+        let input = try makeImageData(type: .gif)
+        let sut = PrepareImageAttachmentUseCase(preservesGIF: false)
+
+        // When
+        let result = try await sut.execute(data: input, fileName: "animation.gif")
+
+        // Then
+        XCTAssertEqual(result.mimeType, "image/jpeg")
+        XCTAssertEqual(result.fileName, "animation.jpg")
+        XCTAssertEqual(Array(result.data.prefix(2)), [0xFF, 0xD8])
+        XCTAssertLessThanOrEqual(result.data.count, ImageAttachmentConstraints.maximumBytes)
+    }
+
     func test_execute_invalidData_throwsError() async {
         // Given
         let sut = PrepareImageAttachmentUseCase()

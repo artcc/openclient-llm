@@ -9,10 +9,15 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 
 ## [1.6.55-build-103] - 2026-09-09
 
+### Added
+
+- Image generation models with vision now accept one or more image attachments through LiteLLM's image editing endpoint on iOS, iPadOS, and macOS
+
 ### Fixed
 
 - The Models screen now automatically selects and saves the first available text-to-speech model when no valid selection exists, including when only one model is available
 - The Models screen now automatically selects and saves Apple speech recognition when no valid speech-to-text selection exists, including when Apple is the only available option
+- Regenerating an image now reuses the original prompt and reference images
 
 ## [1.6.50-build-102] - 2026-09-09
 

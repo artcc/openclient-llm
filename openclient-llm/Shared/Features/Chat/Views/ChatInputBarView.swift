@@ -139,7 +139,7 @@ private extension ChatInputBarView {
     var normalBar: some View {
         ChatInputLayout(minimumEntryWidth: minimumEntryWidth) {
             HStack(spacing: 5) {
-                if state.selectedModel?.mode != .imageGeneration {
+                if state.canAttachImages {
                     Group {
                         actionsToggleButton
 
@@ -147,11 +147,13 @@ private extension ChatInputBarView {
                             attachmentMenu
                                 .transition(.scale.combined(with: .opacity))
 
-                            webSearchButton
-                                .transition(.scale.combined(with: .opacity))
+                            if state.canUseChatActions {
+                                webSearchButton
+                                    .transition(.scale.combined(with: .opacity))
 
-                            mcpButton
-                                .transition(.scale.combined(with: .opacity))
+                                mcpButton
+                                    .transition(.scale.combined(with: .opacity))
+                            }
                         }
                     }
                     .disabled(state.isStreaming)
@@ -278,11 +280,13 @@ private extension ChatInputBarView {
                 Label(String(localized: "Image File..."), systemImage: "photo.badge.plus")
             }
 #endif
-            Button {
-                AppTips.chatAttachments.invalidate(reason: .actionPerformed)
-                showDocumentPicker = true
-            } label: {
-                Label(String(localized: "Document"), systemImage: "doc")
+            if state.canUseChatActions {
+                Button {
+                    AppTips.chatAttachments.invalidate(reason: .actionPerformed)
+                    showDocumentPicker = true
+                } label: {
+                    Label(String(localized: "Document"), systemImage: "doc")
+                }
             }
 
             Button {
@@ -338,7 +342,7 @@ private extension ChatInputBarView {
     }
 
     var actionsToggleButton: some View {
-        let hasActive = state.isWebSearchEnabled || hasEnabledMCPTool
+        let hasActive = state.canUseChatActions && (state.isWebSearchEnabled || hasEnabledMCPTool)
         return Button {
             withAnimation(.easeInOut(duration: 0.25)) {
                 showActions.toggle()

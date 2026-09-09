@@ -132,25 +132,18 @@ struct APIClient: APIClientProtocol, Sendable {
     func multipartRequest<T: Decodable & Sendable>(
         endpoint: String,
         fields: [String: String],
-        file: MultipartFileData
+        files: [MultipartFileData],
+        timeoutInterval: TimeInterval
     ) async throws -> T {
-        LogManager.network("→ MULTIPART POST /\(endpoint) file=\(file.fileName) (\(file.data.count) bytes)")
-        let baseURL = serverBaseURLProvider()
-        guard let url = URL(string: baseURL)?.appendingPathComponent(endpoint) else {
-            LogManager.error("Invalid URL for multipart /\(endpoint)")
-            throw APIError.invalidURL
-        }
-
+        LogManager.network("→ MULTIPART POST /\(endpoint) files=\(files.count)")
+        var request = try buildRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: nil,
+            timeoutInterval: timeoutInterval
+        )
         let boundary = UUID().uuidString
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 125
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-
-        let apiKey = apiKeyProvider()
-        if !apiKey.isEmpty {
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        }
 
         var body = Data()
 
@@ -160,12 +153,15 @@ struct APIClient: APIClientProtocol, Sendable {
             body.append(Data("\(value)\r\n".utf8))
         }
 
-        body.append(Data("--\(boundary)\r\n".utf8))
-        let disposition = "Content-Disposition: form-data; name=\"\(file.field)\"; filename=\"\(file.fileName)\"\r\n"
-        body.append(Data(disposition.utf8))
-        body.append(Data("Content-Type: \(file.mimeType)\r\n\r\n".utf8))
-        body.append(file.data)
-        body.append(Data("\r\n".utf8))
+        for file in files {
+            body.append(Data("--\(boundary)\r\n".utf8))
+            let disposition = "Content-Disposition: form-data; name=\"\(file.field)\"; "
+                + "filename=\"\(file.fileName)\"\r\n"
+            body.append(Data(disposition.utf8))
+            body.append(Data("Content-Type: \(file.mimeType)\r\n\r\n".utf8))
+            body.append(file.data)
+            body.append(Data("\r\n".utf8))
+        }
         body.append(Data("--\(boundary)--\r\n".utf8))
 
         request.httpBody = body

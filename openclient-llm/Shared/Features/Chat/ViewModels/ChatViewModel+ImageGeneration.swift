@@ -15,10 +15,7 @@ extension ChatViewModel {
         let assistantMessageId = context.assistantId
         streamingBackgroundUseCase.update(.generatingImage)
         do {
-            let generatedImage = try await generateImageUseCase.execute(
-                prompt: context.text,
-                model: context.modelId
-            )
+            let generatedImage = try await generateImage(from: context)
             try Task.checkCancellation()
             guard isActiveStream(assistantMessageId),
                   case .loaded(var currentState) = state,
@@ -63,5 +60,35 @@ extension ChatViewModel {
             streamingBackgroundUseCase.end(success: false)
             completeActiveStream(assistantMessageId)
         }
+    }
+
+    func validateImageGenerationInput(text: String, attachments: [ChatMessage.Attachment], model: LLMModel) -> Bool {
+        guard model.mode == .imageGeneration else { return true }
+        let error: ImageGenerationInputError
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            error = .promptRequired
+        } else if !attachments.isEmpty && !model.capabilities.contains(.vision) {
+            error = .visionRequired
+        } else if !attachments.allSatisfy({ $0.type == .image }) {
+            error = .imagesOnly
+        } else {
+            return true
+        }
+        guard case .loaded(var loadedState) = state else { return false }
+        loadedState.errorMessage = error.localizedDescription
+        state = .loaded(loadedState)
+        scheduleErrorDismiss()
+        return false
+    }
+
+    private func generateImage(from context: SendMessageContext) async throws -> GeneratedImage {
+        guard let userMessage = context.messages.last(where: { $0.role == .user }) else {
+            throw ImageGenerationInputError.promptRequired
+        }
+        return try await generateImageUseCase.execute(
+            prompt: userMessage.content,
+            model: context.modelId,
+            attachments: userMessage.attachments
+        )
     }
 }
