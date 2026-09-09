@@ -83,6 +83,9 @@ extension ConversationListView {
             } label: {
                 Image(systemName: isMacSearchExpanded ? "xmark.circle.fill" : "magnifyingglass")
             }
+            .accessibilityLabel(isMacSearchExpanded
+                ? String(localized: "Close search")
+                : String(localized: "Search conversations"))
             .help(String(localized: "Search"))
         }
     }

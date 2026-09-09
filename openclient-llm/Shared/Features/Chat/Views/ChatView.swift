@@ -102,6 +102,7 @@ private extension ChatView {
             switch viewModel.state {
             case .loading:
                 ProgressView()
+                    .accessibilityLabel(String(localized: "Loading chat..."))
                     .tint(.secondary)
             case .loaded(let loadedState):
                 loadedView(loadedState)
@@ -207,6 +208,7 @@ private extension ChatView {
                 switch viewModel.state {
                 case .loading:
                     ProgressView()
+                        .accessibilityLabel(String(localized: "Loading chat..."))
                         .tint(.secondary)
                 case .loaded(let loadedState):
                     loadedView(loadedState)
@@ -338,6 +340,8 @@ private extension ChatView {
                         showImageFilePicker: $showImageFilePicker
                     )
                 }
+                .frame(maxWidth: 800)
+                .frame(maxWidth: .infinity)
             }
             .modifier(ChatDropModifier(
                 onText: { viewModel.send(.inputChanged($0)) },

@@ -25,6 +25,7 @@ struct SearchConversationsView: View {
                 switch viewModel.state {
                 case .loading:
                     ProgressView()
+                        .accessibilityLabel(String(localized: "Loading conversations..."))
                         .tint(.secondary)
                 case .loaded(let loadedState):
                     searchContent(loadedState)
@@ -102,32 +103,35 @@ private extension SearchConversationsView {
                 } label: {
                     conversationRow(conversation)
                 }
+                .accessibilityValue(conversation.isPinned ? String(localized: "Pinned") : "")
                 .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
+                .listRowInsets(EdgeInsets(top: 4, leading: 2, bottom: 4, trailing: 2))
             }
         }
         .listStyle(.plain)
+        .frame(maxWidth: 900)
+        .frame(maxWidth: .infinity)
     }
 
     func conversationRow(_ conversation: Conversation) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: 10) {
             Image(systemName: conversation.isPinned ? "pin.fill" : "sparkles")
+                .accessibilityHidden(true)
                 .font(.system(size: 14))
                 .foregroundStyle(conversation.isPinned ? .orange : Color.appAccent)
-                .frame(width: 36, height: 36)
+#if os(macOS)
+                .frame(width: 28, height: 28)
+#else
+                .frame(width: 32, height: 32)
+#endif
                 .glassEffect(.regular, in: .circle)
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(conversationTitle(conversation))
-                        .font(.headline)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Text(formattedDate(conversation.updatedAt))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(conversationTitle(conversation))
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 if let lastMessage = conversation.messages.last(where: { $0.role != .system }) {
                     Text(lastMessage.content)
@@ -135,10 +139,20 @@ private extension SearchConversationsView {
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
+                Text(formattedDate(conversation.updatedAt))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
+                    .padding(.vertical, 2)
             }
+            .multilineTextAlignment(.leading)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+#if os(macOS)
+        .padding(.vertical, 6)
+#else
+        .padding(.vertical, 8)
+#endif
         .contentShape(RoundedRectangle(cornerRadius: 14))
         .buttonStyle(.plain)
     }
@@ -172,4 +186,16 @@ private extension SearchConversationsView {
 
 #Preview {
     SearchConversationsView()
+}
+
+#Preview("Search result with large text") {
+    SearchConversationsView()
+        .conversationRow(Conversation(
+            title: "Review the interface across iPhone, iPad, and Mac",
+            modelId: "Preview",
+            messages: [.init(role: .assistant, content: "Compare the layouts at different window sizes.")]
+        ))
+        .frame(width: 320)
+        .padding()
+        .environment(\.dynamicTypeSize, .accessibility1)
 }

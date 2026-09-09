@@ -14,27 +14,21 @@ extension SettingsView {
             Button {
                 presentedWebURL = .privacyPolicy
             } label: {
-                Label(String(localized: "Privacy Policy"), systemImage: "hand.raised")
+                settingsDestinationLabel("Privacy Policy", systemImage: "hand.raised")
             }
             .buttonStyle(.plain)
 
             Button {
                 presentedWebURL = .termsOfUse
             } label: {
-                Label(String(localized: "Terms of Use"), systemImage: "doc.text")
+                settingsDestinationLabel("Terms of Use", systemImage: "doc.text")
             }
             .buttonStyle(.plain)
 
             Button {
                 presentedWebURL = .authorGitHub
             } label: {
-                HStack {
-                    Label(String(localized: "Author"), systemImage: "person.circle")
-                    Spacer()
-                    Image(systemName: "arrow.up.right.square")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                settingsDestinationLabel("Author", systemImage: "person.circle")
             }
             .buttonStyle(.plain)
 

@@ -81,6 +81,7 @@ private extension PromptTemplateEditorView {
                     ? String(localized: "New Template")
                     : String(localized: "Edit Template"))
                     .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
 
                 Spacer()
 
@@ -107,33 +108,31 @@ private extension PromptTemplateEditorView {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(String(localized: "Title"))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.headline)
                     .padding(.horizontal)
 
                 TextField(String(localized: "e.g. Coding Assistant"), text: $title)
                     .textFieldStyle(.roundedBorder)
+                    .accessibilityLabel(String(localized: "Title"))
                     .padding(.horizontal)
             }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(String(localized: "Prompt"))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.headline)
                     .padding(.horizontal)
 
                 TextEditor(text: $content)
                     .font(.body)
-                    .frame(minHeight: 160)
+                    .accessibilityLabel(String(localized: "Prompt"))
+                    .frame(minHeight: 160, maxHeight: .infinity)
                     #if os(macOS)
                     .frame(minHeight: 200)
                     #endif
                     .padding(.horizontal)
             }
-
-            Spacer()
         }
-        .padding(.top)
+        .padding(.vertical)
     }
 }
 

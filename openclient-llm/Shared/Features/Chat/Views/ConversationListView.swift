@@ -9,6 +9,9 @@
 import SwiftUI
 import TipKit
 import UniformTypeIdentifiers
+#if os(iOS)
+import UIKit
+#endif
 
 struct ConversationListView: View {
     // MARK: - Properties
@@ -48,6 +51,7 @@ struct ConversationListView: View {
             switch viewModel.state {
             case .loading:
                 ProgressView()
+                    .accessibilityLabel(String(localized: "Loading conversations..."))
                     .tint(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .loaded(let loadedState):
@@ -308,6 +312,10 @@ private extension ConversationListView {
         }
         .listStyle(.plain)
 #if os(iOS)
+        .frame(maxWidth: 900)
+#endif
+        .frame(maxWidth: .infinity)
+#if os(iOS)
         .refreshable {
             await viewModel.refreshAsync()
         }
@@ -373,7 +381,13 @@ private extension ConversationListView {
         .padding(.vertical, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
         .listRowInsets(EdgeInsets())
+        #if os(iOS)
+        .background(
+            UIDevice.current.userInterfaceIdiom == .pad ? AnyShapeStyle(Color.clear) : AnyShapeStyle(.bar)
+        )
+        #else
         .background(.bar)
+        #endif
     }
 
     func tagFilterBar(_ loadedState: ConversationListViewModel.LoadedState) -> some View {
@@ -427,67 +441,10 @@ private extension ConversationListView {
 #endif
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
 #if os(iOS)
         .frame(minHeight: 44)
 #endif
-    }
-
-    func conversationRow(
-        _ conversation: Conversation,
-        loadedState: ConversationListViewModel.LoadedState
-    ) -> some View {
-        let isSelected = activeConversationId == conversation.id
-
-        return Button {
-            viewModel.send(.conversationTapped(conversation))
-        } label: {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: conversation.isPinned ? "pin.fill" : "sparkles")
-                    .font(.system(size: 14))
-                    .foregroundStyle(isSelected ? .white : (conversation.isPinned ? .orange : Color.appAccent))
-                    .frame(width: 36, height: 36)
-                    .glassEffect(
-                        isSelected ? .regular.tint(Color.appAccent) : .regular,
-                        in: .circle
-                    )
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(conversationTitle(conversation))
-                            .font(.headline)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        branchBadge(for: conversation)
-                        Text(formattedDate(conversation.updatedAt))
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-                    if let lastMessage = conversation.messages.last(where: { $0.role != .system }) {
-                        Text(lastMessage.content)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-                    HStack(spacing: 4) {
-                        modelBadge(conversation.modelId)
-                        ForEach(conversation.tags.prefix(3), id: \.self) { tag in
-                            tagBadge(tag)
-                        }
-                    }
-                    .padding(.top, 2)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.appAccent.opacity(0.12))
-                }
-            }
-            .contentShape(RoundedRectangle(cornerRadius: 14))
-        }
-        .buttonStyle(.plain)
     }
 }
 

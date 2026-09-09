@@ -112,6 +112,7 @@ private extension ConversationsOverviewWidgetView {
                                 .foregroundStyle(Color.accentColor)
                         }
                     }
+                    .accessibilityLabel(String(localized: "New Chat"))
                 }
                 if let searchURL = URL(string: "openclient://search") {
                     Link(destination: searchURL) {
@@ -124,6 +125,7 @@ private extension ConversationsOverviewWidgetView {
                                 .foregroundStyle(Color.accentColor)
                         }
                     }
+                    .accessibilityLabel(String(localized: "Search conversations"))
                 }
             }
         }

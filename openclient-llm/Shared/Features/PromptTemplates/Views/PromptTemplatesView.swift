@@ -43,6 +43,7 @@ struct PromptTemplatesView: View {
                             } label: {
                                 Image(systemName: "plus")
                             }
+                            .accessibilityLabel(String(localized: "New Template"))
                         }
                     }
             }
@@ -74,6 +75,7 @@ private extension PromptTemplatesView {
                     Image(systemName: "plus")
                         .imageScale(.medium)
                 }
+                .accessibilityLabel(String(localized: "New Template"))
 
                 Spacer()
 
@@ -104,6 +106,7 @@ private extension PromptTemplatesView {
         switch viewModel.state {
         case .loading:
             ProgressView()
+                .accessibilityLabel(String(localized: "Loading templates..."))
                 .tint(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .loaded(let loadedState):

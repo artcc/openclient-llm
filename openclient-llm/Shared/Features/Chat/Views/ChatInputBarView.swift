@@ -29,6 +29,7 @@ struct ChatInputBarView: View {
     @State private var isPulsing = false
     @Binding var showActions: Bool
     @Binding var showImageFilePicker: Bool
+    @ScaledMetric(relativeTo: .body) private var minimumEntryWidth: CGFloat = 200
 
     // MARK: - View
 
@@ -136,39 +137,45 @@ private extension ChatInputBarView {
     // MARK: Bar states
 
     var normalBar: some View {
-        HStack(spacing: 5) {
-            if state.selectedModel?.mode != .imageGeneration {
-                Group {
-                    actionsToggleButton
+        ChatInputLayout(minimumEntryWidth: minimumEntryWidth) {
+            HStack(spacing: 5) {
+                if state.selectedModel?.mode != .imageGeneration {
+                    Group {
+                        actionsToggleButton
 
-                    if showActions {
-                        attachmentMenu
-                            .transition(.scale.combined(with: .opacity))
+                        if showActions {
+                            attachmentMenu
+                                .transition(.scale.combined(with: .opacity))
 
-                        webSearchButton
-                            .transition(.scale.combined(with: .opacity))
+                            webSearchButton
+                                .transition(.scale.combined(with: .opacity))
 
-                        mcpButton
-                            .transition(.scale.combined(with: .opacity))
+                            mcpButton
+                                .transition(.scale.combined(with: .opacity))
+                        }
                     }
+                    .disabled(state.isStreaming)
                 }
-                .disabled(state.isStreaming)
             }
+            .fixedSize()
 
-            TextField(
-                String(localized: "Message..."),
-                text: $inputText,
-                axis: .vertical
-            )
-            .textFieldStyle(.plain)
-            .textSelection(.enabled)
-            .lineLimit(1...5)
+            HStack(alignment: .bottom, spacing: 8) {
+                TextField(
+                    String(localized: "Message..."),
+                    text: $inputText,
+                    axis: .vertical
+                )
+                .textFieldStyle(.plain)
+                .textSelection(.enabled)
+                .lineLimit(1...5)
 #if os(iOS)
-            .submitLabel(.send)
+                .submitLabel(.send)
 #endif
-            .onSubmit(sendInput)
+                .onSubmit(sendInput)
+                .frame(maxWidth: .infinity, minHeight: 44)
 
-            actionButton
+                actionButton
+            }
         }
     }
 
@@ -177,6 +184,8 @@ private extension ChatInputBarView {
             recordingIndicator
 
             Text(timerText)
+                .accessibilityLabel(String(localized: "Recording duration"))
+                .accessibilityValue(timerText)
                 .font(.body.monospacedDigit())
                 .foregroundStyle(.primary)
                 .contentTransition(.numericText())
@@ -239,6 +248,8 @@ private extension ChatInputBarView {
                 .frame(width: 10, height: 10)
         }
         .frame(width: 44, height: 44)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "Recording"))
     }
 
     var timerText: String {
@@ -288,6 +299,7 @@ private extension ChatInputBarView {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Add Attachment")
         .popoverTip(canShowInputTips ? AppTips.chatAttachments : nil, arrowEdge: .bottom)
     }
 
@@ -319,6 +331,9 @@ private extension ChatInputBarView {
             ? String(localized: "Disable Web Search")
             : String(localized: "Enable Web Search")
         )
+        .accessibilityValue(!state.isWebSearchToolConfigured
+            ? String(localized: "Web search is not configured")
+            : (!modelSupportsWebSearch ? String(localized: "Not supported by this model") : ""))
         .animation(.easeInOut(duration: 0.2), value: state.isWebSearchEnabled)
     }
 
@@ -347,6 +362,7 @@ private extension ChatInputBarView {
         .accessibilityLabel(showActions
             ? String(localized: "Hide Actions")
             : String(localized: "Show Actions"))
+        .accessibilityValue(hasActive && !showActions ? String(localized: "Tools enabled") : "")
     }
 
     @ViewBuilder

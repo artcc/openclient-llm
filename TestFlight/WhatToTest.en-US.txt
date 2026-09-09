@@ -1,24 +1,37 @@
 Hi there! We've got some great new features for you in this update.
 
-***1.6.45:
+***1.6.50:
 
-• Memory entries in Settings now use the full row width, making longer text easier to read.
-• Select and copy part of a chat message while using the new actions button for whole-message options.
-• On macOS, onboarding now fully covers the Home screen and its navigation toolbar.
+• A warmer welcome: getting started on iPhone, iPad, and Mac is now clearer, with easier server setup, helpful progress updates, and accessibility improvements.
+• A little more breathing room for your chats. Writing controls fit smaller windows better, while conversations stay comfortably centered on larger iPad and Mac screens.
+• The little details are easier to spot, from message information to the buttons for listening to a reply or trying again. Error messages are clearer, too.
+• Bringing a few attachments along? They now fit neatly across rows, with easier-to-read filenames and easier removal on iPhone and iPad. Sending one without text no longer leaves an empty bubble behind.
+• Tables line up properly, code is more comfortable to read, and quotes no longer leave oversized gaps in your conversations.
+• Find your way back to a conversation more easily with clearer chat titles, details, and tags. Chat history, search results, and model lists also make better use of larger iPad screens.
+• Choosing a model is a little easier, with clearer names, a better view of what each model can do, and easier-to-spot information and voice controls.
+• Settings feel more at home on your device, with clearer server fields and familiar Mac buttons. Consistent arrows now help you tell what opens inside OpenClient and what takes you to another app.
+• Make OpenClient your own with clearer Personal Context, Memory, and prompt template editors, plus more comfortable space to write.
+• Reviewing your iCloud data is more straightforward, with clearer actions and a dedicated panel you can close with Done on iPhone, iPad, and Mac.
+• No more hopping between differently sized panels in Mac Settings: editors, settings panels, and web pages now share a consistent size.
+• Help has a tidier home for feature tips and a handy Done button when you're ready to get back to your chats.
+• VoiceOver now describes more buttons, loading states, and selections across the app and widgets, with accessible image zoom controls and easier access to voice selection.
 • Minor bug fixes and improvements for a smoother experience.
 
 ***Recent Updates:
 
+• Memory entries in Settings now use the full row width, making longer text easier to read.
+• Select and copy part of a chat message while using the new actions button for whole-message options.
+• Getting started on Mac is less distracting, with the main app kept out of the way until you're ready.
 • 10 new themed app icons for Halloween and Christmas.
-• On macOS, the improved menu bar chat now appears only after server setup and opens your current conversation directly in the main app window.
+• Your Mac menu bar chat is ready once your server is set up, and you can take the conversation straight into the main app whenever you like.
 • Choose from 20 app icons in Settings on iPhone and iPad.
-• Long chats now preserve earlier context before the next model response, with safer handling when requests are cancelled or interrupted.
-• Scroll through long conversations and verify that scrolling remains smooth while the floating date indicator updates.
-• While a model is responding, scroll through the conversation and verify that the visible history stays stable, then catches up when scrolling stops.
-• Start a model response, leave OpenClient, and verify that its Live Activity shows progress through reasoning, tool use, image generation, and saving.
-• Fixed an issue that could cause the app to freeze when manually scrolling while a model was responding, or after several responses.
-• On macOS, add OpenClient widgets to the desktop or Notification Center and test New Chat, Search, Quick Actions, Continue Chat, Recent, Pinned, and Tagged Conversations.
-• On macOS, add the New Chat control and verify that it opens the app directly in a new conversation.
+• Longer chats hold on to earlier context more reliably, including when a reply is cancelled or interrupted.
+• Browse long conversations more smoothly, with a floating date indicator to help you keep your bearings.
+• Catch up on earlier messages while a reply is arriving: the conversation stays steady as you scroll and catches up when you stop.
+• Step away from OpenClient without losing track of a reply. Live Activities show progress as your model thinks, uses tools, creates images, and saves the result.
+• Fixed a frustrating freeze that could happen when scrolling during a reply or after several responses.
+• Keep OpenClient close at hand with Mac desktop and Notification Center widgets for new chats, search, quick actions, and your ongoing, recent, pinned, or tagged conversations.
+• Start a fresh conversation straight from the New Chat control on Mac.
 
 Thanks for your continued support and for helping us build the best possible LLM client together.
 

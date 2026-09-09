@@ -24,11 +24,12 @@ extension SettingsView {
             }
 
             if loadedState.isCloudSyncEnabled {
-                NavigationLink {
-                    CloudDataManagementView()
+                Button {
+                    isShowingCloudData = true
                 } label: {
-                    Label(String(localized: "Manage iCloud Data"), systemImage: "externaldrive.badge.icloud")
+                    settingsDestinationLabel("Manage iCloud Data", systemImage: "externaldrive.badge.icloud")
                 }
+                .buttonStyle(.plain)
                 .accessibilityHint(String(localized: "Review and delete data stored in iCloud."))
 
                 cloudSyncStatusRow(presentation)
@@ -44,6 +45,17 @@ extension SettingsView {
                 devices. Attachments are synchronized as part of their conversations.
                 """
             ))
+        }
+    }
+
+    var cloudDataSheet: some View {
+        NavigationStack {
+            CloudDataManagementView()
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(String(localized: "Done")) { isShowingCloudData = false }
+                    }
+                }
         }
     }
 }

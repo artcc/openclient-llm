@@ -102,7 +102,11 @@ extension SettingsView {
                 }
             }
         }
+#if os(macOS)
+        .buttonStyle(.bordered)
+#else
         .buttonStyle(.plain)
+#endif
         .disabled(loadedState.isLoadingSearchTools)
     }
 }

@@ -63,6 +63,7 @@ private extension AppIconSelectionView {
                         .fill(.black.opacity(0.35))
                         .frame(width: 112, height: 112)
                     ProgressView()
+                        .accessibilityLabel(String(localized: "Changing app icon..."))
                         .tint(.white)
                 }
             }

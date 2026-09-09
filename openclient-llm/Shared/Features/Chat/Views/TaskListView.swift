@@ -40,11 +40,15 @@ private extension TaskListView {
                 .font(.body)
                 .frame(width: 16, alignment: .center)
                 .padding(.leading, CGFloat(item.depth) * 16)
+                .accessibilityHidden(true)
 
             Text(inlineContent[item.content] ?? AttributedString(item.content))
                 .font(.body)
                 .foregroundStyle(item.isChecked ? Color.primary.opacity(0.6) : Color.primary)
                 .strikethrough(item.isChecked)
+                .accessibilityValue(item.isChecked
+                    ? String(localized: "Completed")
+                    : String(localized: "Not completed"))
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

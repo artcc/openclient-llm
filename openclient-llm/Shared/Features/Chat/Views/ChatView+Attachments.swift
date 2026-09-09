@@ -16,16 +16,19 @@ extension ChatView {
     @ViewBuilder
     func errorBanner(_ errorMessage: String?) -> some View {
         if let errorMessage {
-            HStack(spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
                 Text(errorMessage)
-                    .font(.caption)
-                Spacer()
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(Color.red.opacity(0.85))
-            .foregroundStyle(.white)
+            .font(.subheadline)
+            .padding(12)
+            .background(.background.secondary, in: .rect(cornerRadius: 16))
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
         }
     }
 
@@ -38,7 +41,7 @@ extension ChatView {
     ) -> some View {
         if !attachments.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     ForEach(attachments) { attachment in
                         attachmentThumbnail(attachment, onRemove: { send(.attachmentRemoved(attachment.id)) })
                     }
@@ -58,6 +61,8 @@ extension ChatView {
             Text(attachment.fileName)
                 .font(.caption)
                 .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(maxWidth: 180)
                 .foregroundStyle(.primary)
 
             Button {
@@ -66,11 +71,18 @@ extension ChatView {
                 Image(systemName: "xmark.circle.fill")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+#if os(iOS)
+                    .frame(width: 44, height: 44)
+#else
+                    .frame(width: 28, height: 28)
+#endif
+                    .contentShape(.rect)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(Text("Remove attachment \(attachment.fileName)"))
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.vertical, 2)
         .glassEffect(.regular, in: .capsule)
     }
 }

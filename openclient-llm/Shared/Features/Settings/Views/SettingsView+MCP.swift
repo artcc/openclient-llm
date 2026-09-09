@@ -123,6 +123,7 @@ extension SettingsView {
             Spacer()
             if isAvailable {
                 Text("\(enabled)/\(total)")
+                    .accessibilityLabel(Text("\(enabled) of \(total) tools enabled"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
@@ -130,7 +131,12 @@ extension SettingsView {
                     .font(.caption)
                     .foregroundStyle(.red)
             }
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
+        .contentShape(.rect)
     }
 
     @ViewBuilder

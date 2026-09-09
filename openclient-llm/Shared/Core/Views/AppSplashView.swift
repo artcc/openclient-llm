@@ -35,6 +35,7 @@ struct AppSplashView: View {
                     .frame(width: 125, height: 125)
                     .shadow(color: .cyan.opacity(0.4), radius: 24, x: 0, y: 8)
                     .cornerRadius(25)
+                    .accessibilityHidden(true)
 
                 VStack(spacing: 5) {
                     Text(String(localized: "OpenClient"))
@@ -48,6 +49,7 @@ struct AppSplashView: View {
 
                 if showsLoadingIndicator {
                     ProgressView()
+                        .accessibilityLabel(String(localized: "Loading"))
                         .tint(.secondary)
                         .controlSize(.small)
                         .padding(.top, 5)

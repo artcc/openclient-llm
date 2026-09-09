@@ -24,6 +24,7 @@ struct MemoryView: View {
                 switch viewModel.state {
                 case .loading:
                     ProgressView()
+                        .accessibilityLabel(String(localized: "Loading memory..."))
                         .tint(.secondary)
                 case .loaded(let loadedState):
                     loadedView(loadedState)
@@ -45,17 +46,24 @@ struct MemoryView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .accessibilityLabel(String(localized: "New Memory"))
                 }
             }
             .sheet(isPresented: $isShowingAddSheet) {
                 MemoryItemEditorView { content in
                     viewModel.send(.addItem(content: content))
                 }
+#if os(macOS)
+                .frame(width: 700, height: 500)
+#endif
             }
             .sheet(item: $editingItem) { item in
                 MemoryItemEditorView(initialContent: item.content) { content in
                     viewModel.send(.editItem(id: item.id, content: content))
                 }
+#if os(macOS)
+                .frame(width: 700, height: 500)
+#endif
             }
         }
         .task {
@@ -79,6 +87,9 @@ private extension MemoryView {
                         viewModel.send(.retrySynchronization)
                     }
                     .disabled(loadedState.isSynchronizing)
+#if os(macOS)
+                    .buttonStyle(.bordered)
+#endif
                 }
                 .padding()
             }
@@ -99,6 +110,7 @@ private extension MemoryView {
             Text(String(localized: "No Memory Items"))
                 .font(.title3)
                 .fontWeight(.semibold)
+                .accessibilityAddTraits(.isHeader)
             Text(String(localized: "Add things you want the assistant to remember across all conversations."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -175,14 +187,21 @@ private extension MemoryView {
                 } label: {
                     Image(systemName: "pencil")
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .accessibilityLabel(String(localized: "Edit Memory"))
+                .help(String(localized: "Edit Memory"))
 
                 Button(role: .destructive) {
                     viewModel.send(.deleteItem(id: item.id))
                 } label: {
                     Image(systemName: "trash")
+                        .foregroundStyle(.red)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .accessibilityLabel(String(localized: "Delete Memory Item"))
+                .help(String(localized: "Delete Memory Item"))
 
                 itemToggle(item)
             }
@@ -204,7 +223,7 @@ private extension MemoryView {
         HStack(spacing: 6) {
             sourceLabel(item.source)
             Text(item.createdAt.formatted(date: .abbreviated, time: .omitted))
-                .font(.caption2)
+                .font(.caption)
                 .foregroundStyle(.secondary)
         }
     }
@@ -236,7 +255,7 @@ private extension MemoryView {
             Image(systemName: icon)
             Text(label)
         }
-        .font(.caption2)
+        .font(.caption)
         .foregroundStyle(color)
         .padding(.horizontal, 6)
         .padding(.vertical, 2)
@@ -270,7 +289,8 @@ private struct MemoryItemEditorView: View {
                             text: $content,
                             axis: .vertical
                         )
-                        .lineLimit(4...)
+                        .accessibilityLabel(String(localized: "Memory Content"))
+                        .lineLimit(6...)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.sentences)
                     } header: {
@@ -330,7 +350,8 @@ private struct MemoryItemEditorView: View {
                 axis: .vertical
             )
             .textFieldStyle(.roundedBorder)
-            .lineLimit(4...)
+            .accessibilityLabel(String(localized: "Memory Content"))
+            .lineLimit(6...)
             .autocorrectionDisabled()
         }
     }
@@ -344,10 +365,12 @@ private struct MemoryItemEditorView: View {
             Text(header)
                 .font(.headline)
                 .foregroundStyle(.primary)
+                .accessibilityAddTraits(.isHeader)
             content()
             Text(footer)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
