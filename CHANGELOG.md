@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## [1.6.55-build-103] - 2026-09-09
+
+### Fixed
+
+- The Models screen now automatically selects and saves the first available text-to-speech model when no valid selection exists, including when only one model is available
+- The Models screen now automatically selects and saves Apple speech recognition when no valid speech-to-text selection exists, including when Apple is the only available option
+
 ## [1.6.50-build-102] - 2026-09-09
 
 ### Changed

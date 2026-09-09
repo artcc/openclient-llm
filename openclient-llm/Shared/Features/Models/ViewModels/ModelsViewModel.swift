@@ -95,8 +95,8 @@ private extension ModelsViewModel {
                 let models = try await fetchModelsUseCase.execute()
                 let allModels = [LLMModel.appleSpeechRecognition] + models
                 let selectedModelId = settingsManager.getSelectedModelId()
-                let selectedTTSModelId = settingsManager.getSelectedTTSModelId()
-                let selectedSTTModelId = settingsManager.getSelectedSTTModelId() ?? LLMModel.appleSpeechRecognition.id
+                let selectedTTSModelId = selectDefaultTTSModel(from: allModels)
+                let selectedSTTModelId = resolveSelectedSTTModelId(from: allModels)
                 let ttsVoices = buildTTSVoices(from: allModels)
                 state = .loaded(LoadedState(
                     models: allModels,
@@ -156,8 +156,8 @@ private extension ModelsViewModel {
             let models = try await fetchModelsUseCase.execute()
             let allModels = [LLMModel.appleSpeechRecognition] + models
             let selectedModelId = settingsManager.getSelectedModelId()
-            let selectedTTSModelId = settingsManager.getSelectedTTSModelId()
-            let selectedSTTModelId = settingsManager.getSelectedSTTModelId() ?? LLMModel.appleSpeechRecognition.id
+            let selectedTTSModelId = selectDefaultTTSModel(from: allModels)
+            let selectedSTTModelId = resolveSelectedSTTModelId(from: allModels)
             let ttsVoices = buildTTSVoices(from: allModels)
             state = .loaded(LoadedState(
                 models: allModels,
@@ -173,6 +173,29 @@ private extension ModelsViewModel {
             state = .loaded(currentState)
             scheduleErrorDismiss()
         }
+    }
+
+    func selectDefaultTTSModel(from models: [LLMModel]) -> String? {
+        let savedModelId = settingsManager.getSelectedTTSModelId()
+        if let savedModelId, models.contains(where: { $0.id == savedModelId && $0.mode == .audioSpeech }) {
+            return savedModelId
+        }
+        guard let model = models.first(where: { $0.mode == .audioSpeech }) else { return nil }
+        settingsManager.setSelectedTTSModelId(model.id)
+        return model.id
+    }
+
+    func resolveSelectedSTTModelId(from models: [LLMModel]) -> String {
+        let savedModelId = settingsManager.getSelectedSTTModelId()
+        if let savedModelId, models.contains(where: {
+            $0.id == savedModelId && $0.mode == .audioTranscription
+        }) {
+            return savedModelId
+        }
+
+        let defaultModelId = LLMModel.appleSpeechRecognition.id
+        settingsManager.setSelectedSTTModelId(defaultModelId)
+        return defaultModelId
     }
 
     func buildTTSVoices(from models: [LLMModel]) -> [String: String] {
