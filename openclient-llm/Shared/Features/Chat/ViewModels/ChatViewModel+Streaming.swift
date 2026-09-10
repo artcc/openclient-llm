@@ -13,6 +13,9 @@ import Foundation
 extension ChatViewModel {
     func performStreaming(_ sendContext: SendMessageContext) async {
         let assistantMessageId = sendContext.assistantId
+        let useCase = streamMessageUseCase ?? StreamMessageUseCase(
+            repository: makeChatRepository(generatesImages: sendContext.selectedModel.supportsNativeImageGeneration)
+        )
         streamingBackgroundUseCase.update(.thinking)
         LogManager.debug("performStreaming model=\(sendContext.modelId) messages=\(sendContext.messages.count)")
         do {
@@ -25,7 +28,7 @@ extension ChatViewModel {
             if !requestContext.effectiveSystemPrompt.isEmpty {
                 allMessages.insert(ChatMessage(role: .system, content: requestContext.effectiveSystemPrompt), at: 0)
             }
-            let stream = streamMessageUseCase.execute(
+            let stream = useCase.execute(
                 messages: allMessages,
                 model: sendContext.modelId,
                 parameters: parametersCappedToModelOutput(

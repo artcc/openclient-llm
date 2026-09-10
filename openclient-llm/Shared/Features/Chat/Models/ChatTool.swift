@@ -18,11 +18,14 @@ nonisolated struct ToolExecutionResult: Sendable {
     /// Non-nil when the tool performed a web search — used to display sources in the UI.
     let searchResults: [LiteLLMSearchResult]?
 
+    let images: [GeneratedImage]
+
     // MARK: - Init
 
-    init(text: String, searchResults: [LiteLLMSearchResult]? = nil) {
+    init(text: String, searchResults: [LiteLLMSearchResult]? = nil, images: [GeneratedImage] = []) {
         self.text = text
         self.searchResults = searchResults
+        self.images = images
     }
 }
 
@@ -30,5 +33,10 @@ nonisolated struct ToolExecutionResult: Sendable {
 
 protocol ChatToolProtocol: Sendable {
     var definition: ToolDefinition { get }
+    var isAvailableForAdvertisement: Bool { get }
     func execute(arguments: String) async throws -> ToolExecutionResult
+}
+
+extension ChatToolProtocol {
+    var isAvailableForAdvertisement: Bool { true }
 }

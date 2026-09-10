@@ -38,6 +38,22 @@ final class ImportConversationsUseCaseTests: XCTestCase {
 
     // MARK: - Tests
 
+    func test_execute_userAttemptWithoutTranscript_preservesReservationWithNewMessageId() async throws {
+        // Given
+        let user = ChatMessage(role: .user, content: "Draw a cat", imageGenerationAttempted: true)
+        let document = ConversationExportDocument(conversations: [.init(
+            conversation: Conversation(modelId: "principal", messages: [user]), attachments: []
+        )])
+
+        // When
+        _ = try await sut.execute(try encoded(document))
+
+        // Then
+        let restored = try XCTUnwrap(mockSaveConversation.savedConversations.first?.messages.first)
+        XCTAssertEqual(restored.imageGenerationAttempted, true)
+        XCTAssertNotEqual(restored.id, user.id)
+    }
+
     func test_execute_validDocument_restoresConversationWithNewIdentifiers() async throws {
         // Given
         let attachment = makeAttachment()

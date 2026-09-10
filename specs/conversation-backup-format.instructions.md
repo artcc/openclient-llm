@@ -65,6 +65,36 @@ A single-conversation export contains one element in `conversations`. A complete
 - Conversation IDs and message IDs must be unique across the document.
 - Every attachment payload must reference an attachment on the specified message. Duplicate attachment payloads are invalid.
 - Imported conversations, messages, and attachments receive new UUIDs. Existing local conversations are never overwritten.
+- Messages may contain an optional `imageGenerationAttempted` boolean reservation. Preserve it on import and branching;
+  older Version 1 documents without the key remain valid and decode it as absent. This local metadata is not a model-API
+  field and prevents repeating a generation whose attempt was saved before its tool transcript arrived.
+- Before restoring messages, attachment UUIDs are allocated per conversation for metadata with a present, decodable
+  base64 payload. Repeated original attachment IDs with identical bytes share one new ID within that conversation,
+  including across messages; Version 1 does not reject duplicate attachment metadata. This preserves preexisting
+  ambiguous identity rather than arbitrarily selecting one attachment. If the same original ID has conflicting payload
+  bytes, allocate separate new IDs per message and leave all textual/tool references to that ID unchanged: sharing a
+  persisted path would otherwise introduce a new import failure or data loss. The same old ID in different conversations
+  receives independent new IDs.
+- References to restored image UUIDs are remapped in `contextSummary` and assistant `content`, including later model
+  responses without tool metadata. Text replacement is case-insensitive and limited to complete canonical UUID tokens;
+  UUIDs embedded in identifiers, filenames, or slash/backslash paths are not replaced. Summary cursors continue to use
+  the separate message-ID map. PDF IDs and IDs without any restored image payload are not rewritten in text.
+- For assistant `analyze_images` calls, structurally remap only `attachment_ids` array entries and explicit UUID tokens in
+  `question`. For tool results, structurally remap `list_image_attachments.image_attachment_ids`, and UUID tokens in the
+  `analyze_images` wrapper's `untrustedExternalToolResult` string or legacy plain-text analysis. Follow recognized nested
+  wrappers up to eight levels, covering the tool's wrapper plus the agent's result wrapper. Deeper, malformed, or
+  unrecognized wrappers stay unchanged.
+- JSON remapping replaces only selected string tokens; preserve other bytes, including whitespace, key order, array
+  order, unknown fields, and numeric precision/range. Do not decode unknown numbers into fixed-precision numeric types.
+  The local scanner leaves JSON deeper than 128 levels unchanged rather than rejecting the backup. Replacement strings
+  may use equivalent JSON escaping; unrelated tokens retain their original spelling.
+- Tool results are identified by their explicit `toolName`, or, when absent, by an unambiguous assistant call name for
+  their `toolCallId` in the same conversation. Other tools (including image generation and external tools), user/system
+  message content, system prompts, reasoning, filenames, and unrelated metadata remain unchanged. No tool is executed
+  during import. Malformed JSON arguments/results and unrecognized JSON wrappers remain unchanged, without rejecting
+  an otherwise valid backup. Missing image payloads can therefore leave historical references unresolved; never invent
+  replacement references for omitted attachments. Version 1 has no finer provenance for UUID mentions in assistant text
+  or summaries, so exact tokens matching restored images are treated as references there, even when quoted by the model.
 - Imported attachment data is written to a new local path. Exported `fileRelativePath` values are ignored.
 - After the document has decoded and validated, a missing payload for attachment metadata or an invalid base64 payload omits only that attachment and increments `skippedAttachmentCount`. A missing required `data` field in an exported attachment object fails document decoding instead.
 - Branch references are remapped when the referenced conversation or message is present in the document; external references are removed.

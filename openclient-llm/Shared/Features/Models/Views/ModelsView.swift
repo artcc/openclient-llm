@@ -157,6 +157,8 @@ private extension ModelsView {
                 modelSectionHeader(String(localized: "Cloud"), systemImage: "cloud", count: cloudModels.count)
             }
         }
+        ImageAndVisionSection(loadedState: loadedState, sendEvent: viewModel.send)
+
         if !ttsModels.isEmpty {
             Section {
                 ForEach(ttsModels) { model in

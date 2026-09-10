@@ -116,6 +116,18 @@ private extension ChatInputBarView {
         }
         guard let toolName = activeToolNames.first else { return nil }
         switch toolName {
+        case "list_image_attachments":
+            return String(localized: "Finding image attachments...")
+        case "analyze_images":
+            if let model = state.imageToolModelNames[toolName] {
+                return String(localized: "Analyzing images with \(model)...")
+            }
+            return String(localized: "Analyzing images...")
+        case "generate_image":
+            if let model = state.imageToolModelNames[toolName] {
+                return String(localized: "Generating an image with \(model)...")
+            }
+            return String(localized: "Generating an image...")
         case "get_current_datetime":
             return String(localized: "Getting the current date and time...")
         case "save_memory":
@@ -139,7 +151,7 @@ private extension ChatInputBarView {
     var normalBar: some View {
         ChatInputLayout(minimumEntryWidth: minimumEntryWidth) {
             HStack(spacing: 5) {
-                if state.selectedModel?.mode != .imageGeneration {
+                if state.canAttachImages {
                     Group {
                         actionsToggleButton
 
@@ -147,11 +159,13 @@ private extension ChatInputBarView {
                             attachmentMenu
                                 .transition(.scale.combined(with: .opacity))
 
-                            webSearchButton
-                                .transition(.scale.combined(with: .opacity))
+                            if state.canUseChatActions {
+                                webSearchButton
+                                    .transition(.scale.combined(with: .opacity))
 
-                            mcpButton
-                                .transition(.scale.combined(with: .opacity))
+                                mcpButton
+                                    .transition(.scale.combined(with: .opacity))
+                            }
                         }
                     }
                     .disabled(state.isStreaming)
@@ -278,11 +292,13 @@ private extension ChatInputBarView {
                 Label(String(localized: "Image File..."), systemImage: "photo.badge.plus")
             }
 #endif
-            Button {
-                AppTips.chatAttachments.invalidate(reason: .actionPerformed)
-                showDocumentPicker = true
-            } label: {
-                Label(String(localized: "Document"), systemImage: "doc")
+            if state.canUseChatActions {
+                Button {
+                    AppTips.chatAttachments.invalidate(reason: .actionPerformed)
+                    showDocumentPicker = true
+                } label: {
+                    Label(String(localized: "Document"), systemImage: "doc")
+                }
             }
 
             Button {
@@ -338,7 +354,7 @@ private extension ChatInputBarView {
     }
 
     var actionsToggleButton: some View {
-        let hasActive = state.isWebSearchEnabled || hasEnabledMCPTool
+        let hasActive = state.canUseChatActions && (state.isWebSearchEnabled || hasEnabledMCPTool)
         return Button {
             withAnimation(.easeInOut(duration: 0.25)) {
                 showActions.toggle()

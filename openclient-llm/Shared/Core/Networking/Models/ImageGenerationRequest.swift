@@ -12,14 +12,12 @@ nonisolated struct ImageGenerationRequest: Encodable, Sendable {
     let model: String
     let prompt: String
     let numberOfImages: Int
-    let size: String
     let responseFormat: String
 
     enum CodingKeys: String, CodingKey {
         case model
         case prompt
         case numberOfImages = "n"
-        case size
         case responseFormat = "response_format"
     }
 }

@@ -6,6 +6,7 @@
 //  Copyright © 2026 Arturo Carretero Calvo. All rights reserved.
 //
 
+import Observation
 import XCTest
 @testable import openclient_llm
 
@@ -141,6 +142,125 @@ final class ModelsViewModelTTSTests: XCTestCase {
     }
 
     // MARK: - Tests — loaded state population
+
+    func test_send_viewAppearedWithSingleTTSModel_selectsAndPersistsModel() async {
+        // Given
+        mockFetchModels.result = .success([
+            LLMModel(id: "gpt-4"),
+            LLMModel(id: "tts-1", mode: .audioSpeech)
+        ])
+        let loaded = expectation(description: "Models loaded")
+
+        // When
+        sut.send(.viewAppeared)
+        withObservationTracking {
+            _ = sut.state
+        } onChange: {
+            loaded.fulfill()
+        }
+        await fulfillment(of: [loaded], timeout: 1)
+
+        // Then
+        guard case .loaded(let loadedState) = sut.state else {
+            XCTFail("Expected loaded state")
+            return
+        }
+        XCTAssertEqual(loadedState.selectedTTSModelId, "tts-1")
+        XCTAssertEqual(mockSettingsManager.selectedTTSModelId, "tts-1")
+    }
+
+    func test_refreshAsync_withoutTTSSelection_selectsAndPersistsFirstTTSModel() async {
+        // Given
+        mockFetchModels.result = .success([
+            LLMModel(id: "gpt-4"),
+            LLMModel(id: "tts-1", mode: .audioSpeech),
+            LLMModel(id: "tts-2", mode: .audioSpeech)
+        ])
+        sut = ModelsViewModel(
+            state: .loaded(.init()),
+            fetchModelsUseCase: mockFetchModels,
+            settingsManager: mockSettingsManager
+        )
+
+        // When
+        await sut.refreshAsync()
+
+        // Then
+        guard case .loaded(let loadedState) = sut.state else {
+            XCTFail("Expected loaded state")
+            return
+        }
+        XCTAssertEqual(loadedState.selectedTTSModelId, "tts-1")
+        XCTAssertEqual(mockSettingsManager.selectedTTSModelId, "tts-1")
+    }
+
+    func test_refreshAsync_withSavedTTSSelection_preservesSelection() async {
+        // Given
+        mockFetchModels.result = .success([
+            LLMModel(id: "tts-1", mode: .audioSpeech),
+            LLMModel(id: "tts-2", mode: .audioSpeech)
+        ])
+        mockSettingsManager.selectedTTSModelId = "tts-2"
+        sut = ModelsViewModel(
+            state: .loaded(.init()),
+            fetchModelsUseCase: mockFetchModels,
+            settingsManager: mockSettingsManager
+        )
+
+        // When
+        await sut.refreshAsync()
+
+        // Then
+        guard case .loaded(let loadedState) = sut.state else {
+            XCTFail("Expected loaded state")
+            return
+        }
+        XCTAssertEqual(loadedState.selectedTTSModelId, "tts-2")
+        XCTAssertEqual(mockSettingsManager.selectedTTSModelId, "tts-2")
+    }
+
+    func test_refreshAsync_withUnavailableTTSSelection_selectsOnlyTTSModel() async {
+        // Given
+        mockFetchModels.result = .success([LLMModel(id: "tts-1", mode: .audioSpeech)])
+        mockSettingsManager.selectedTTSModelId = "removed-tts"
+        sut = ModelsViewModel(
+            state: .loaded(.init()),
+            fetchModelsUseCase: mockFetchModels,
+            settingsManager: mockSettingsManager
+        )
+
+        // When
+        await sut.refreshAsync()
+
+        // Then
+        guard case .loaded(let loadedState) = sut.state else {
+            XCTFail("Expected loaded state")
+            return
+        }
+        XCTAssertEqual(loadedState.selectedTTSModelId, "tts-1")
+        XCTAssertEqual(mockSettingsManager.selectedTTSModelId, "tts-1")
+    }
+
+    func test_refreshAsync_withoutTTSModels_leavesSelectionEmpty() async {
+        // Given
+        mockFetchModels.result = .success([LLMModel(id: "gpt-4")])
+        sut = ModelsViewModel(
+            state: .loaded(.init()),
+            fetchModelsUseCase: mockFetchModels,
+            settingsManager: mockSettingsManager
+        )
+
+        // When
+        await sut.refreshAsync()
+
+        // Then
+        guard case .loaded(let loadedState) = sut.state else {
+            XCTFail("Expected loaded state")
+            return
+        }
+        XCTAssertNil(loadedState.selectedTTSModelId)
+        XCTAssertNil(mockSettingsManager.selectedTTSModelId)
+    }
 
     func test_viewAppeared_populatesSelectedTTSModelIdFromSettings() async throws {
         // Given

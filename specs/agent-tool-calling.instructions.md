@@ -191,7 +191,10 @@ Some models can request multiple tool calls in a single response:
 - **Tool-result budget**: Rebuild the request context after every tool round and bound each result from the remaining input budget so tool output cannot consume the final-response space.
 - **Continuous context**: Preserve the latest complete user turn and its assistant/tool messages atomically; never skip a recent turn to include an older one.
 - **Transcript persistence**: Emit and persist every assistant `tool_calls` message and matching tool result before continuing the loop.
-- **Timeout**: Allow up to 300 seconds of active time for the entire agentic flow; pause the timer while waiting for user authorization.
+- **Timeout**: The base active-time limit is 300 seconds plus `AgentToolContext.additionalExecutionTime` (default `.zero`).
+  `ChatViewModel` adds 600 seconds when the principal supports native image generation or the turn's initial registry
+  advertises `generate_image`, for 900 seconds total. Vision-only delegation does not add this allowance.
+  Pause the timer during user authorization.
 - **User cancellation**: Allow the user to stop the loop at any point
 - **Error in tool execution**: Return error message as tool content, let the model handle it
 
@@ -261,16 +264,23 @@ struct ToolCallFunction: Codable, Sendable, Equatable {
 nonisolated struct ToolExecutionResult: Sendable {
     let text: String
     let searchResults: [LiteLLMSearchResult]?
+    let images: [GeneratedImage]
 
-    init(text: String, searchResults: [LiteLLMSearchResult]? = nil) {
+    init(text: String, searchResults: [LiteLLMSearchResult]? = nil, images: [GeneratedImage] = []) {
         self.text = text
         self.searchResults = searchResults
+        self.images = images
     }
 }
 
 protocol ChatToolProtocol: Sendable {
     var definition: ToolDefinition { get }
+    var isAvailableForAdvertisement: Bool { get }
     func execute(arguments: String) async throws -> ToolExecutionResult
+}
+
+extension ChatToolProtocol {
+    var isAvailableForAdvertisement: Bool { true }
 }
 
 struct ToolDefinition: Codable, Sendable {
@@ -287,10 +297,143 @@ struct ToolFunctionDefinition: Codable, Sendable {
 
 The default registry always includes `get_current_datetime`. Outside Private Chat it also includes `save_memory` and `delete_memory`. It includes `web_search` only while web search is enabled. When MCP tools are configured on the LiteLLM server and enabled by the user, each enabled tool is wrapped in an `MCPTool` instance (conforming to `ChatToolProtocol`) and added to the registry. `ToolRegistry.execute` returns an "Unknown tool" result rather than throwing when a name is not registered.
 
+`ToolRegistry.definitions` filters all tools through `isAvailableForAdvertisement` on every access, in addition to MCP
+availability checks. Image tools are conditionally added by `ChatViewModel+ImageTools`; their availability is not static
+for the lifetime of a turn.
+
+### Image And Vision Delegation
+
+- Models has an **Image and Vision** section with independent optional `Vision` and `Image Generation` defaults,
+  persisted as `selectedVisionModelId` and `selectedImageGenerationModelId`. Neither changes the principal chat model.
+- `None` disables delegation for that role only. Missing or ineligible selections remain stored and visible as unavailable;
+  never silently choose another specialist or another transport. A failed native operation does not trigger delegation.
+- Vision specialists need `.vision` and a chat-compatible mode (`.chat`, `.completion`, or `.unknown`). Image specialists
+  are dedicated `.imageGeneration` models or chat-compatible models with `.imageGeneration` capability.
+- One dual-capability chat model can be selected for both roles. The defaults are independent, not mutually exclusive.
+- Prioritize each native capability independently. `supportsNativeVision` checks `.vision`;
+  `supportsNativeImageGeneration` checks dedicated image mode or `.imageGeneration` capability.
+- LiteLLM `supported_output_modalities` containing `image` adds generation capability without changing the model's mode.
+  Vision alone never implies generation support; missing output metadata does not infer a dual-capability model.
+
+| Tool | Conditions for advertisement |
+|---|---|
+| `analyze_images` | Principal has `.functionCalling`, lacks native vision, a selected eligible vision specialist is present in the current catalog, and the conversation/turn has image attachments. |
+| `list_image_attachments` | Same availability as `analyze_images`; lists existing image UUIDs locally without a specialist request. |
+| `generate_image` | Principal has `.functionCalling`, lacks native image generation, and a selected eligible dedicated or chat image specialist is present in the current catalog. No source attachment is required; a reused turn with an existing generation result does not advertise another attempt. |
+
+Models without function calling never receive these tools. A principal with both native capabilities receives neither,
+even when specialist defaults are configured. Delegation is automatic once configured, without MCP approval prompts;
+the Models section warns that additional provider requests may incur costs.
+
+### Image References And Context
+
+- Keep original attachment UUIDs, metadata, and data in conversation state and normal persistence. Delegation does not
+  replace stored images with descriptions or remove them from the visible conversation.
+- For principals without native vision, `ImageAttachmentContext.messagesForModel` projects image attachments into textual
+  `image_attachment_ids` references. Only canonical UUIDs enter this reference JSON, never names, paths, MIME types,
+  URLs, or bytes. References explicitly distinguish uninspected images from actual analysis results.
+- Apply the projection across history, including earlier user and assistant images, not just the latest user message.
+  Use projected messages before context budgeting/usage estimation and before automatic compaction. Native-vision
+  requests retain multimodal attachments; PDF text extraction stays on its existing path.
+- Build the tool's attachment inventory from original history before request budgeting or compaction drops old turns.
+  Never embed the inventory as an `attachment_ids` enum: definitions must have constant cost as history grows.
+  Use UUIDs already present in context or discover missing historical references through `list_image_attachments`.
+  Pending attachments are included in the local inventory when estimating definitions in the UI.
+- Compaction instructions preserve relevant UUIDs exactly and distinguish findings from uninspected references. Persist
+  original history, not the model-only projection; references alone must never be treated as visual evidence.
+
+### Image Tool Contracts
+
+- `analyze_images` accepts a nonblank `question` of 1 to 4000 characters and 1 to 4 distinct `attachment_ids`; JSON arguments
+  are limited to 64 KiB. Each UUID must uniquely resolve to an image from the captured conversation inventory, not a URL,
+  arbitrary file path, or PDF. Persisted paths are checked against the conversation; transient data is also supported.
+- `list_image_attachments` accepts an optional integer `offset` in a JSON object of at most 1024 bytes. The offset defaults
+  to zero and must be between zero and the captured inventory count, inclusive. Results contain up to 10 UUIDs in
+  chronological attachment order, `offset`, `total`, and `next_offset` only if more images remain. Listing loads no image
+  data and discloses no filenames, paths, MIME types, or bytes. It shares analysis availability and cancellation checks.
+  Only list references when needed; do not scan every page by default. Listing consumes the normal agent tool-call budget.
+- Load and prepare each selected image through the existing attachment pipeline. Each prepared image must be nonempty,
+  at most 5 MB (`ImageAttachmentConstraints.maximumBytes`), and JPEG, PNG, GIF, or WebP. Preparation retains the UUID.
+- Analysis sends only a specialist system instruction, the question, and prepared images through `sendMessage`, without
+  tools or a recursive agent loop. Append an explicit numbered UUID-to-image mapping to the question, preserving requested
+  attachment order so the specialist can identify references in comparisons. Output is capped at the smaller of 2048
+  tokens and the specialist's positive catalog output limit, defaulting to 2048 when no valid limit is available.
+  Results are wrapped as untrusted analysis/OCR within 16000 bytes before the agent's own remaining-budget bound.
+  Image content and OCR must never become tool instructions.
+- When the specialist declares a positive input limit, estimate its complete prepared request (system instruction,
+  question, numbered UUID mapping, and all images) with `ContextWindowBuilder`. Apply the builder's safety margin and
+  reserve the effective output allowance. If it does not fit, return a local actionable error before `sendMessage`,
+  asking for fewer images, a shorter question, or a larger-context specialist. Do not drop images or truncate the question.
+  Missing or nonpositive input limits retain the existing request behavior; visual token counts remain estimates.
+- `generate_image` accepts only a nonblank text `prompt` of 1 to 8000 characters within a 64 KiB JSON argument limit.
+  It generates one new image, without source attachments or editing. Reuse one `GenerateImageTool` instance across
+  all rounds of the user turn and reserve its single generation attempt before the first suspension. A failed request
+  still consumes the attempt because it may have incurred a charge; do not retry or switch specialists in that turn.
+- After argument validation and reservation, await the `onAttempt` callback before the specialist request. The ViewModel
+  sets the current user's optional `imageGenerationAttempted` flag and checkpoints conversation persistence, then
+  revalidates cancellation, configuration, and the captured conversation/user IDs. This flag is local metadata, never
+  sent to the model API, and survives normal saves, branching, and import. Older messages decode it as absent.
+  Private Chat keeps the reservation in memory. Existing save-failure behavior also retains the in-memory flag, but
+  cannot guarantee it survives an app restart if persistence failed.
+- After an attempt, `generate_image` is no longer advertised and repeated execution is rejected. Argument rejection before
+  reservation does not issue a generation request. Dedicated specialists use `GenerateImageUseCase`; chat specialists use
+  `GenerateChatImageUseCase`, which returns the first native image and never invokes tools recursively.
+- When recreating the registry for an existing user turn, initialize the generation tool as consumed if that turn already
+  has `imageGenerationAttempted == true` on its user message or a `generate_image` tool result, including an error result.
+  Keep it registered to reject explicit repeated calls,
+  but omit it from advertised definitions and the additional generation timeout. Use the request's latest user turn, not
+  results from older turns. A new user message, explicit edit-and-resend, or the native-generation restart path starts a
+  fresh turn and clears the reservation; merely regenerating text or selecting another specialist does not reset it.
+- Both tools check cancellation and availability before execution, around preparation where applicable, and after the
+  specialist request, including failure paths. A stale response must not be published as a successful result.
+- Availability captures the principal, specialist, and model-catalog authorization scope, then rechecks current selected
+  IDs, conversation identity, catalog presence/eligibility, principal capabilities, and endpoint/credential scope.
+  Specialist API clients capture
+  the endpoint and credential pair rather than rereading mutable settings during requests. The loop's
+  `isConfigurationCurrent` check and server-change cancellation provide an additional boundary against cross-endpoint data.
+
+### Generated Image Delivery
+
+- `ToolExecutionResult.images` is a typed, out-of-band `[GeneratedImage]` channel. Return only bounded textual status or
+  analysis to the principal; never embed generated image bytes, base64, or data URLs in tool text, hidden tool transcripts,
+  or model-facing tool results. Text truncation, including a zero-byte budget and untrusted-result wrapping, preserves images.
+- Emit `.generatedImage(GeneratedImage)` as soon as a tool returns, before collecting sibling task-group results, so a
+  later sibling failure cannot discard an already completed image. Native final chat images use the same typed event.
+  Keep legacy `.image(Data)` support; typed delivery preserves the actual decoded MIME type.
+- Attach images to the visible assistant message, not hidden tool-call messages. Checkpoint normal conversation persistence
+  after every image event and `.transcriptAppended`, without waiting for final text. Image-only answers remain presentable,
+  and already received attachments survive subsequent failure or cancellation. Private Chat retains them only in memory.
+- The loop continues with the textual tool result to produce the principal's response. Do not invent image URLs or claim
+  the principal inspected a generated image merely because generation succeeded.
+- Regenerating text with a generation reservation or `generate_image` result in the latest user turn retains its images,
+  even when cancellation occurred after image delivery but before sibling tools completed and the transcript was saved,
+  before the replacement response starts, including on failure or cancellation. Results from older turns do not retain
+  unrelated images. If the selected principal supports native generation, restart that latest turn from the user message
+  instead: remove its reused assistant/tool messages and regenerate natively without accumulating earlier images.
+- `.usage` aggregates only principal completion usage; `.promptUsage` calibrates the principal context. Specialist analysis
+  usage and specialist generation usage are not added to that model's tokens or priced as its consumption. Additional
+  provider charges can exist without being represented by the principal's usage counters.
+
 ### Agentic UseCase
 
 ```swift
 // Shared/Features/Chat/UseCases/AgentStreamUseCase.swift
+
+nonisolated struct AgentToolContext: Sendable {
+    let toolRegistry: ToolRegistry
+    let additionalExecutionTime: Duration
+    let isConfigurationCurrent: @MainActor @Sendable () -> Bool
+
+    init(
+        toolRegistry: ToolRegistry,
+        additionalExecutionTime: Duration = .zero,
+        isConfigurationCurrent: @escaping @MainActor @Sendable () -> Bool = { true }
+    ) {
+        self.toolRegistry = toolRegistry
+        self.additionalExecutionTime = additionalExecutionTime
+        self.isConfigurationCurrent = isConfigurationCurrent
+    }
+}
 
 protocol AgentStreamUseCaseProtocol: Sendable {
     func execute(
@@ -311,6 +454,7 @@ enum AgentEvent: Sendable {
     case usage(TokenUsage)
     case promptUsage(Int?)
     case image(Data)
+    case generatedImage(GeneratedImage)
     case completed
 }
 ```
@@ -405,6 +549,8 @@ When persisting conversations with tool calling:
 - **Rate limiting**: Apply rate limits to tool executions (especially web search)
 - **Content sanitization**: Sanitize tool results before injecting into messages
 - **Tool scope**: Function-calling models receive built-in datetime and, outside Private Chat, memory tools automatically. Web search remains explicit opt-in through its toggle.
+- **Image scope**: Specialist defaults authorize only the eligible image tools described above; preserve native priority,
+  per-turn generation limits, captured configuration, UUID-only analysis inputs, and untrusted-result boundaries.
 
 ## Relationship with Web Browsing
 
@@ -412,7 +558,8 @@ Web search (`web_search`) is the **first and primary tool** in the agent system:
 
 - A model with `.functionCalling` always uses the agent loop. When web search is ON, `web_search` joins the default registry and executes through `/v1/search/{search_tool_name}`.
 - Web search cannot be enabled unless the model has `.functionCalling` and a search tool name is configured; an unavailable globe is shown in red.
-- When web search is OFF, function-calling models still use the agent loop with datetime and eligible memory tools. Models without `.functionCalling` use regular streaming.
+- When web search is OFF, function-calling models still use the agent loop with datetime, eligible memory/image tools,
+  and enabled MCP tools. Models without `.functionCalling` use regular streaming.
 
 ## MCP Tools
 

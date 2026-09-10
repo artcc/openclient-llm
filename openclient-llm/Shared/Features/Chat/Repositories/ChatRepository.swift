@@ -39,15 +39,21 @@ struct ChatRepository: ChatRepositoryProtocol {
 
     private let apiClient: APIClientProtocol
     private let attachmentRepository: AttachmentRepositoryProtocol
+    private let responseModalities: [String]?
+    private let requestTimeoutInterval: TimeInterval
 
     // MARK: - Init
 
     init(
         apiClient: APIClientProtocol = APIClient(),
-        attachmentRepository: AttachmentRepositoryProtocol = AttachmentRepository()
+        attachmentRepository: AttachmentRepositoryProtocol = AttachmentRepository(),
+        responseModalities: [String]? = nil,
+        requestTimeoutInterval: TimeInterval = 60
     ) {
         self.apiClient = apiClient
         self.attachmentRepository = attachmentRepository
+        self.responseModalities = responseModalities
+        self.requestTimeoutInterval = requestTimeoutInterval
     }
 
     // MARK: - Public
@@ -107,7 +113,7 @@ struct ChatRepository: ChatRepositoryProtocol {
             maxTokens: parameters.maxTokens,
             topP: parameters.topP,
             streamOptions: ChatStreamOptions(includeUsage: true),
-            modalities: nil,
+            modalities: responseModalities,
             tools: nil,
             toolChoice: nil
         )
@@ -141,14 +147,15 @@ struct ChatRepository: ChatRepositoryProtocol {
             maxTokens: parameters.maxTokens,
             topP: parameters.topP,
             streamOptions: nil,
-            modalities: nil,
+            modalities: responseModalities,
             tools: tools,
             toolChoice: tools != nil ? "auto" : nil
         )
         let response: ChatCompletionResponse = try await apiClient.request(
             endpoint: "chat/completions",
             method: .post,
-            body: request
+            body: request,
+            timeoutInterval: requestTimeoutInterval
         )
         LogManager.success("agentCompletion done finishReason=\(response.choices.first?.finishReason ?? "nil")")
         return response
@@ -185,14 +192,10 @@ private extension ChatRepository {
                 }
                 if let images = chunk.choices.first?.delta.images {
                     for item in images {
-                        if let imgData = imageData(from: item.imageUrl.url) {
-                            imageChunks += 1
-                            LogManager.debug("streamMessage image chunk \(imageChunks) \(imgData.count) bytes")
-                            continuation.yield(.image(imgData))
-                        } else {
-                            let urlPreview = item.imageUrl.url.prefix(80)
-                            LogManager.warning("streamMessage image chunk decode failed url=\(urlPreview)")
-                        }
+                        let image = try GeneratedImageDecoder.decode(dataURL: item.imageUrl.url)
+                        imageChunks += 1
+                        LogManager.debug("streamMessage image chunk \(imageChunks) \(image.data.count) bytes")
+                        continuation.yield(.image(image.data))
                     }
                 }
                 if let usage = chunk.usage {
@@ -273,11 +276,5 @@ private extension ChatRepository {
             role: message.role.rawValue,
             content: .multimodal(parts)
         )
-    }
-
-    func imageData(from dataURL: String) -> Data? {
-        guard let commaIndex = dataURL.firstIndex(of: ",") else { return nil }
-        let base64 = String(dataURL[dataURL.index(after: commaIndex)...])
-        return Data(base64Encoded: base64)
     }
 }

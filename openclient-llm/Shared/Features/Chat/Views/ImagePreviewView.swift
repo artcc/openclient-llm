@@ -30,6 +30,9 @@ struct ImagePreviewView: View {
     @Environment(\.dismiss) private var dismiss
     @GestureState private var gestureScale: CGFloat = 1.0
     @State private var steadyScale: CGFloat = 1.0
+#if os(macOS)
+    @State private var imageToExport: Data?
+#endif
 
     private var zoomScale: CGFloat { max(1.0, min(steadyScale * gestureScale, 6.0)) }
 
@@ -103,6 +106,11 @@ struct ImagePreviewView: View {
                 }
             }
         }
+#if os(macOS)
+        .imageExporter(data: $imageToExport) {
+            dismiss()
+        }
+#endif
     }
 }
 
@@ -118,9 +126,9 @@ private extension ImagePreviewView {
         }
 #elseif os(macOS)
         Button {
-            saveImageToDownloads(data)
+            imageToExport = data
         } label: {
-            Label(String(localized: "Save to Downloads"), systemImage: "square.and.arrow.down")
+            Label(String(localized: "Save Image..."), systemImage: "square.and.arrow.down")
         }
 #endif
     }
@@ -129,13 +137,6 @@ private extension ImagePreviewView {
     func saveImageToPhotos(_ imageData: Data) {
         guard let image = UIImage(data: imageData) else { return }
         UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-    }
-#elseif os(macOS)
-    func saveImageToDownloads(_ imageData: Data) {
-        let timestamp = Int(Date().timeIntervalSince1970)
-        guard let url = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)
-            .first?.appendingPathComponent("generated-image-\(timestamp).png") else { return }
-        try? imageData.write(to: url)
     }
 #endif
 }

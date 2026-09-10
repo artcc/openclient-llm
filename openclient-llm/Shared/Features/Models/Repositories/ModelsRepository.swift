@@ -143,7 +143,10 @@ private extension ModelsRepository {
         }
         if modelInfo?.supportsResponseSchema == true { caps.append(.jsonSchema) }
         if modelInfo?.supportsWebSearch == true { caps.append(.webSearch) }
-        if modelInfo?.mode == LLMModel.Mode.imageGeneration.rawValue { caps.append(.imageGeneration) }
+        if modelInfo?.mode == LLMModel.Mode.imageGeneration.rawValue ||
+            modelInfo?.supportedOutputModalities?.contains("image") == true {
+            caps.append(.imageGeneration)
+        }
         return caps
     }
 

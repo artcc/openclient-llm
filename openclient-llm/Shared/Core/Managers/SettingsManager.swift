@@ -23,6 +23,8 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         static let isWebSearchEnabled = "isWebSearchEnabled"
         static let selectedTTSModelId = "selectedTTSModelId"
         static let selectedSTTModelId = "selectedSTTModelId"
+        static let selectedVisionModelId = "selectedVisionModelId"
+        static let selectedImageGenerationModelId = "selectedImageGenerationModelId"
         static let webSearchToolName = "webSearchToolName"
         static let webSearchMaxResults = "webSearchMaxResults"
         static let availableSearchTools = "availableSearchTools"
@@ -200,6 +202,22 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         defaults.set(value, forKey: Keys.selectedSTTModelId)
     }
 
+    func getSelectedVisionModelId() -> String? {
+        defaults.string(forKey: Keys.selectedVisionModelId)
+    }
+
+    func setSelectedVisionModelId(_ value: String?) {
+        defaults.set(value, forKey: Keys.selectedVisionModelId)
+    }
+
+    func getSelectedImageGenerationModelId() -> String? {
+        defaults.string(forKey: Keys.selectedImageGenerationModelId)
+    }
+
+    func setSelectedImageGenerationModelId(_ value: String?) {
+        defaults.set(value, forKey: Keys.selectedImageGenerationModelId)
+    }
+
     func getWebSearchToolName() -> String {
         defaults.string(forKey: Keys.webSearchToolName) ?? ""
     }
@@ -266,6 +284,8 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         defaults.removeObject(forKey: Keys.isWebSearchEnabled)
         defaults.removeObject(forKey: Keys.selectedTTSModelId)
         defaults.removeObject(forKey: Keys.selectedSTTModelId)
+        defaults.removeObject(forKey: Keys.selectedVisionModelId)
+        defaults.removeObject(forKey: Keys.selectedImageGenerationModelId)
         defaults.removeObject(forKey: Keys.webSearchToolName)
         defaults.removeObject(forKey: Keys.webSearchMaxResults)
         defaults.removeObject(forKey: Keys.availableSearchTools)

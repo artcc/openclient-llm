@@ -28,8 +28,8 @@ nonisolated struct ChatCompletionResponse: Decodable, Sendable {
 
     struct ImageItem: Decodable, Sendable {
         let imageUrl: ImageItemURL
-        let index: Int
-        let type: String
+        let index: Int?
+        let type: String?
     }
 
     struct ImageItemURL: Decodable, Sendable {
