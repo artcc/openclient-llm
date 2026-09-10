@@ -116,6 +116,8 @@ private extension ChatInputBarView {
         }
         guard let toolName = activeToolNames.first else { return nil }
         switch toolName {
+        case "list_image_attachments":
+            return String(localized: "Finding image attachments...")
         case "analyze_images":
             if let model = state.imageToolModelNames[toolName] {
                 return String(localized: "Analyzing images with \(model)...")

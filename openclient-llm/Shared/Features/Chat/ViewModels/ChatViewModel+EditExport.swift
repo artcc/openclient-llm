@@ -48,14 +48,16 @@ extension ChatViewModel {
                     model: model
                   ) else { return }
         }
-        loadedState.messages.removeLast()
+        let previousAssistant = loadedState.messages.removeLast()
         guard !loadedState.messages.isEmpty else { return }
+        let retainedImages = regenerationAttachments(
+            previousAssistant: previousAssistant, model: model, messages: &loadedState.messages
+        )
         invalidateCompactionIfNeeded(in: &loadedState, changedAt: loadedState.messages.count)
 
         loadedState.isStreaming = true
         loadedState.errorMessage = nil
-
-        let assistantMessage = ChatMessage(role: .assistant, content: "")
+        let assistantMessage = ChatMessage(role: .assistant, content: "", attachments: retainedImages)
         loadedState.messages.append(assistantMessage)
         loadedState.responseRevision += 1
         refreshContextUsage(in: &loadedState)
@@ -63,11 +65,6 @@ extension ChatViewModel {
 
         let assistantMessageId = assistantMessage.id
         let currentMessages = loadedState.messages.filter { $0.id != assistantMessageId }
-        let systemPrompt = loadedState.systemPrompt
-        let parameters = loadedState.modelParameters
-        let webSearchEnabled = loadedState.isWebSearchEnabled
-        let modelCapabilities = model.capabilities
-
         LogManager.info("regenerateLastResponse model=\(model.id) messages=\(currentMessages.count)")
         streamTask?.cancel()
         activeAssistantMessageId = assistantMessageId
@@ -78,10 +75,10 @@ extension ChatViewModel {
                 messages: currentMessages,
                 modelId: model.id,
                 assistantId: assistantMessageId,
-                systemPrompt: systemPrompt,
-                parameters: parameters,
-                webSearchEnabled: webSearchEnabled,
-                modelCapabilities: modelCapabilities,
+                systemPrompt: loadedState.systemPrompt,
+                parameters: loadedState.modelParameters,
+                webSearchEnabled: loadedState.isWebSearchEnabled,
+                modelCapabilities: model.capabilities,
                 selectedModel: model,
                 contextWindowTokens: loadedState.contextWindowTokens,
                 contextSummary: loadedState.conversation?.contextSummary,
@@ -222,5 +219,27 @@ extension ChatViewModel {
             state.conversation = conversation
             return
         }
+    }
+}
+
+// MARK: - Private
+
+private extension ChatViewModel {
+    func regenerationAttachments(
+        previousAssistant: ChatMessage,
+        model: LLMModel,
+        messages: inout [ChatMessage]
+    ) -> [ChatMessage.Attachment] {
+        guard let userIndex = messages.lastIndex(where: { $0.role == .user }),
+              messages[userIndex...].contains(where: {
+                  $0.role == .tool && $0.toolName == "generate_image"
+              }) else { return [] }
+
+        if model.supportsNativeImageGeneration {
+            // Native regeneration restarts the turn instead of reusing completed tool generation.
+            messages = Array(messages.prefix(userIndex + 1))
+            return []
+        }
+        return previousAssistant.attachments.filter { $0.type == .image }
     }
 }

@@ -340,6 +340,8 @@ private extension ChatViewModel {
         You have access to the following tools:
         \(toolDescriptions)
         Use analyze_images, when available, to inspect image attachment IDs rather than guessing their contents. \
+        If an earlier image's ID is missing from context, use list_image_attachments to retrieve a page of references. \
+        Do not list images when the required IDs are already present, and do not scan every page without a user need. \
         Use generate_image, when available, only when the user requests a new image. Its output is already displayed \
         in this chat; do not invent image URLs or claim to have inspected a generated image. \
         These tools delegate only capabilities the current model lacks. If an image operation is unavailable, \

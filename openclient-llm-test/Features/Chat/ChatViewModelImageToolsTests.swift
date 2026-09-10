@@ -93,7 +93,7 @@ final class ChatViewModelImageToolsTests: XCTestCase {
         let names = try visualToolNames(sut)
 
         // Then
-        XCTAssertEqual(names, ["analyze_images"])
+        XCTAssertEqual(names, ["analyze_images", "list_image_attachments"])
     }
 
     func test_agentToolDefinitions_dualNativeModel_omitsBothVisualTools() throws {
@@ -119,8 +119,8 @@ final class ChatViewModelImageToolsTests: XCTestCase {
         let analysis = try XCTUnwrap(definitions.first { $0.function.name == "analyze_images" })
 
         // Then
-        XCTAssertEqual(try visualToolNames(sut), ["analyze_images", "generate_image"])
-        XCTAssertEqual(analysis.function.parameters.properties["attachment_ids"]?.items?.enum, [image.id.uuidString])
+        XCTAssertEqual(try visualToolNames(sut), ["analyze_images", "generate_image", "list_image_attachments"])
+        XCTAssertNil(analysis.function.parameters.properties["attachment_ids"]?.items?.enum)
     }
 
     func test_agentToolDefinitions_withoutImage_exposesOnlyGeneration() throws {
@@ -236,7 +236,7 @@ final class ChatViewModelImageToolsTests: XCTestCase {
 
     func visualToolNames(_ sut: ChatViewModel) throws -> Set<String> {
         Set(sut.agentToolDefinitions(for: try loadedState(sut)).map(\.function.name))
-            .intersection(["analyze_images", "generate_image"])
+            .intersection(["analyze_images", "generate_image", "list_image_attachments"])
     }
 
     func sendMessage(_ sut: ChatViewModel, prompt: String = "Describe the images") async throws {

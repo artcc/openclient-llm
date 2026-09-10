@@ -51,7 +51,7 @@ extension ChatViewModelImageToolsTests {
         settings.setSelectedImageGenerationModelId(nil)
 
         // Then
-        XCTAssertEqual(try visualToolNames(sut), ["analyze_images"])
+        XCTAssertEqual(try visualToolNames(sut), ["analyze_images", "list_image_attachments"])
         XCTAssertFalse(registry.definitions.contains { $0.function.name == "generate_image" })
         do {
             _ = try await registry.execute(invocation)
@@ -84,7 +84,7 @@ extension ChatViewModelImageToolsTests {
         XCTAssertFalse(context.isConfigurationCurrent())
         XCTAssertTrue(try visualToolNames(sut).isEmpty)
         XCTAssertFalse(context.toolRegistry.definitions.contains {
-            ["analyze_images", "generate_image"].contains($0.function.name)
+            ["analyze_images", "generate_image", "list_image_attachments"].contains($0.function.name)
         })
         await assertUnavailable(context.toolRegistry, analyze: analyze, generate: generate)
     }
@@ -92,7 +92,7 @@ extension ChatViewModelImageToolsTests {
     func test_agentToolDefinitions_missingOrStaleCatalogScope_doesNotAdvertiseSpecialists() throws {
         // Given
         let sut = makeViewModel(pending: [imageAttachment()])
-        XCTAssertEqual(try visualToolNames(sut), ["analyze_images", "generate_image"])
+        XCTAssertEqual(try visualToolNames(sut), ["analyze_images", "generate_image", "list_image_attachments"])
 
         // When / Then
         for scope in [nil, "stale-scope"] as [String?] {

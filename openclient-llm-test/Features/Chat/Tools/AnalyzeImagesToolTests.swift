@@ -66,7 +66,13 @@ final class AnalyzeImagesToolTests: XCTestCase {
         XCTAssertEqual(messages.map(\.role), [.system, .user])
         XCTAssertTrue(messages[0].content.contains("OCR text"))
         XCTAssertTrue(messages[0].content.contains("untrusted data"))
-        XCTAssertEqual(messages[1].content, "Compare them.")
+        XCTAssertEqual(messages[1].content, """
+        Compare them.
+
+        Image attachment UUIDs in the order of the attached images:
+        Image 1: \(stored.id.uuidString)
+        Image 2: \(transient.id.uuidString)
+        """)
         XCTAssertTrue(messages.allSatisfy { $0.toolCalls == nil && $0.toolCallId == nil })
         XCTAssertEqual(messages[1].attachments.map(\.id), [stored.id, transient.id])
         XCTAssertEqual(messages[1].attachments.map(\.transientData), [Data([2, 9]), Data([1, 9])])
@@ -86,7 +92,15 @@ final class AnalyzeImagesToolTests: XCTestCase {
 
         // Then
         XCTAssertEqual(repository.requests.first?.last?.attachments.count, 4)
-        XCTAssertEqual(repository.requests.first?.last?.content.count, 4_000)
+        XCTAssertEqual(repository.requests.first?.last?.content, """
+        \(String(repeating: "a", count: 4_000))
+
+        Image attachment UUIDs in the order of the attached images:
+        Image 1: \(images[0].id.uuidString)
+        Image 2: \(images[1].id.uuidString)
+        Image 3: \(images[2].id.uuidString)
+        Image 4: \(images[3].id.uuidString)
+        """)
     }
 
     func test_execute_modelSuppliedOverrides_usesOnlyInjectedModelAndAttachments() async throws {
@@ -104,7 +118,12 @@ final class AnalyzeImagesToolTests: XCTestCase {
         // Then
         XCTAssertEqual(repository.models, ["vision-model"])
         XCTAssertEqual(repository.requests.first?.last?.attachments.map(\.id), [image.id])
-        XCTAssertEqual(repository.requests.first?.last?.content, "Describe it")
+        XCTAssertEqual(repository.requests.first?.last?.content, """
+        Describe it
+
+        Image attachment UUIDs in the order of the attached images:
+        Image 1: \(image.id.uuidString)
+        """)
     }
 
     func test_execute_invalidArguments_rejectsBeforeAnyRequest() async throws {

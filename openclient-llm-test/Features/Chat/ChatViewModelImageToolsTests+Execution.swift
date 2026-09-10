@@ -82,8 +82,11 @@ extension ChatViewModelImageToolsTests {
         let result = try await registry.execute(invocation)
 
         // Then
-        XCTAssertEqual(definition.function.parameters.properties["attachment_ids"]?.items?.enum,
-                       [stored.id.uuidString, transient.id.uuidString])
+        XCTAssertNil(definition.function.parameters.properties["attachment_ids"]?.items?.enum)
+        let list = try await authorizedInvocation(registry, name: "list_image_attachments", arguments: "{}")
+        let inventory = try await registry.execute(list)
+        XCTAssertTrue(inventory.text.contains(stored.id.uuidString))
+        XCTAssertTrue(inventory.text.contains(transient.id.uuidString))
         XCTAssertEqual(loadedIds, [stored.id])
         let request = try XCTUnwrap(apiClient.lastRequestBody as? ChatCompletionRequest)
         XCTAssertEqual(request.model, vision.id)

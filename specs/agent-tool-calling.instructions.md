@@ -318,6 +318,7 @@ for the lifetime of a turn.
 | Tool | Conditions for advertisement |
 |---|---|
 | `analyze_images` | Principal has `.functionCalling`, lacks native vision, a selected eligible vision specialist is present in the current catalog, and the conversation/turn has image attachments. |
+| `list_image_attachments` | Same availability as `analyze_images`; lists existing image UUIDs locally without a specialist request. |
 | `generate_image` | Principal has `.functionCalling`, lacks native image generation, and a selected eligible dedicated or chat image specialist is present in the current catalog. No source attachment is required. |
 
 Models without function calling never receive these tools. A principal with both native capabilities receives neither,
@@ -335,8 +336,9 @@ the Models section warns that additional provider requests may incur costs.
   Use projected messages before context budgeting/usage estimation and before automatic compaction. Native-vision
   requests retain multimodal attachments; PDF text extraction stays on its existing path.
 - Build the tool's attachment inventory from original history before request budgeting or compaction drops old turns.
-  The `attachment_ids` item enum lists eligible historical image UUIDs, so earlier images remain addressable even when
-  their messages no longer fit in the request. Pending attachments are included when estimating definitions in the UI.
+  Never embed the inventory as an `attachment_ids` enum: definitions must have constant cost as history grows.
+  Use UUIDs already present in context or discover missing historical references through `list_image_attachments`.
+  Pending attachments are included in the local inventory when estimating definitions in the UI.
 - Compaction instructions preserve relevant UUIDs exactly and distinguish findings from uninspected references. Persist
   original history, not the model-only projection; references alone must never be treated as visual evidence.
 
@@ -345,11 +347,19 @@ the Models section warns that additional provider requests may incur costs.
 - `analyze_images` accepts a nonblank `question` of 1 to 4000 characters and 1 to 4 distinct `attachment_ids`; JSON arguments
   are limited to 64 KiB. Each UUID must uniquely resolve to an image from the captured conversation inventory, not a URL,
   arbitrary file path, or PDF. Persisted paths are checked against the conversation; transient data is also supported.
+- `list_image_attachments` accepts an optional integer `offset` in a JSON object of at most 1024 bytes. The offset defaults
+  to zero and must be between zero and the captured inventory count, inclusive. Results contain up to 10 UUIDs in
+  chronological attachment order, `offset`, `total`, and `next_offset` only if more images remain. Listing loads no image
+  data and discloses no filenames, paths, MIME types, or bytes. It shares analysis availability and cancellation checks.
+  Only list references when needed; do not scan every page by default. Listing consumes the normal agent tool-call budget.
 - Load and prepare each selected image through the existing attachment pipeline. Each prepared image must be nonempty,
   at most 5 MB (`ImageAttachmentConstraints.maximumBytes`), and JPEG, PNG, GIF, or WebP. Preparation retains the UUID.
 - Analysis sends only a specialist system instruction, the question, and prepared images through `sendMessage`, without
-  tools or a recursive agent loop. Output is capped at 2048 tokens and wrapped as untrusted analysis/OCR within 16000
-  bytes before the agent's own remaining-budget bound. Image content and OCR must never become tool instructions.
+  tools or a recursive agent loop. Append an explicit numbered UUID-to-image mapping to the question, preserving requested
+  attachment order so the specialist can identify references in comparisons. Output is capped at the smaller of 2048
+  tokens and the specialist's positive catalog output limit, defaulting to 2048 when no valid limit is available.
+  Results are wrapped as untrusted analysis/OCR within 16000 bytes before the agent's own remaining-budget bound.
+  Image content and OCR must never become tool instructions.
 - `generate_image` accepts only a nonblank text `prompt` of 1 to 8000 characters within a 64 KiB JSON argument limit.
   It generates one new image, without source attachments or editing. Reuse one `GenerateImageTool` instance across
   all rounds of the user turn and reserve its single generation attempt before the first suspension. A failed request
@@ -378,6 +388,10 @@ the Models section warns that additional provider requests may incur costs.
   and already received attachments survive subsequent failure or cancellation. Private Chat retains them only in memory.
 - The loop continues with the textual tool result to produce the principal's response. Do not invent image URLs or claim
   the principal inspected a generated image merely because generation succeeded.
+- Regenerating text while reusing a `generate_image` result from the latest user turn retains the visible image attachments
+  before the replacement response starts, including on failure or cancellation. Results from older turns do not retain
+  unrelated images. If the selected principal supports native generation, restart that latest turn from the user message
+  instead: remove its reused assistant/tool messages and regenerate natively without accumulating earlier images.
 - `.usage` aggregates only principal completion usage; `.promptUsage` calibrates the principal context. Specialist analysis
   usage and specialist generation usage are not added to that model's tokens or priced as its consumption. Additional
   provider charges can exist without being represented by the principal's usage counters.

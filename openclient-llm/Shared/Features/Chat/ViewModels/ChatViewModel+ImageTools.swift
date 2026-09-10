@@ -55,17 +55,10 @@ extension ChatViewModel {
            let specialist = loadedState.availableModels.first(where: {
                $0.id == settingsManager.getSelectedVisionModelId() && $0.isVisionSpecialist
            }) {
-            tools.append(AnalyzeImagesTool(
-                modelId: specialist.id,
-                attachments: attachments,
-                conversationId: loadedState.conversation?.id ?? loadedState.pendingSessionId,
-                chatRepository: repository,
-                attachmentRepository: attachmentRepository,
-                prepareImageAttachmentUseCase: prepareImageAttachmentUseCase,
-                isAvailable: imageToolAvailability(
-                    model: specialist, principal: principal, state: loadedState, vision: true
-                )
-            ))
+            tools += visionTools(
+                specialist: specialist, principal: principal, state: loadedState,
+                attachments: attachments, repository: repository
+            )
         }
         if !principal.supportsNativeImageGeneration,
            let specialist = loadedState.availableModels.first(where: {
@@ -88,6 +81,29 @@ extension ChatViewModel {
                 )
             ))
         }
+    }
+
+    private func visionTools(
+        specialist: LLMModel,
+        principal: LLMModel,
+        state: LoadedState,
+        attachments: [ChatMessage.Attachment],
+        repository: ChatRepositoryProtocol
+    ) -> [any ChatToolProtocol] {
+        let isAvailable = imageToolAvailability(model: specialist, principal: principal, state: state, vision: true)
+        return [
+            AnalyzeImagesTool(
+                modelId: specialist.id,
+                attachments: attachments,
+                conversationId: state.conversation?.id ?? state.pendingSessionId,
+                chatRepository: repository,
+                attachmentRepository: attachmentRepository,
+                prepareImageAttachmentUseCase: prepareImageAttachmentUseCase,
+                maxOutputTokens: specialist.maxOutputTokens,
+                isAvailable: isAvailable
+            ),
+            ListImageAttachmentsTool(attachments: attachments, isAvailable: isAvailable)
+        ]
     }
 
     private func imageToolAvailability(
