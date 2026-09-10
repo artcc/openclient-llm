@@ -64,22 +64,65 @@ extension ChatViewModel {
            let specialist = loadedState.availableModels.first(where: {
                $0.id == settingsManager.getSelectedImageGenerationModelId() && $0.isImageGenerationSpecialist
            }) {
-            let generation: any GenerateImageUseCaseProtocol = imageToolGenerationUseCase ?? (
-                specialist.mode == .imageGeneration
-                    ? GenerateImageUseCase(repository: ImageGenerationRepository(apiClient: client))
-                        as any GenerateImageUseCaseProtocol
-                    : GenerateChatImageUseCase(
-                        repository: imageToolChatRepository ?? makeChatRepository(generatesImages: true)
-                    )
-                        as any GenerateImageUseCaseProtocol
-            )
-            tools.append(GenerateImageTool(
-                modelId: specialist.id,
-                generateImageUseCase: generation,
-                isAvailable: imageToolAvailability(
-                    model: specialist, principal: principal, state: loadedState, vision: false
-                )
+            tools.append(generationTool(
+                specialist: specialist, principal: principal, state: loadedState,
+                messages: messages ?? loadedState.messages, client: client
             ))
+        }
+    }
+
+    private func generationTool(
+        specialist: LLMModel,
+        principal: LLMModel,
+        state: LoadedState,
+        messages: [ChatMessage],
+        client: APIClient
+    ) -> GenerateImageTool {
+        let generation: any GenerateImageUseCaseProtocol = imageToolGenerationUseCase ?? (
+            specialist.mode == .imageGeneration
+                ? GenerateImageUseCase(repository: ImageGenerationRepository(apiClient: client))
+                    as any GenerateImageUseCaseProtocol
+                : GenerateChatImageUseCase(
+                    repository: imageToolChatRepository ?? makeChatRepository(generatesImages: true)
+                ) as any GenerateImageUseCaseProtocol
+        )
+        let user = messages.last { $0.role == .user }
+        let turn = messages.reversed().prefix { $0.role != .user }
+        let isAvailable = imageToolAvailability(model: specialist, principal: principal, state: state, vision: false)
+        return GenerateImageTool(
+            modelId: specialist.id,
+            generateImageUseCase: generation,
+            hasAttemptedGeneration: user?.imageGenerationAttempted == true
+                || turn.contains { $0.role == .tool && $0.toolName == "generate_image" },
+            onAttempt: imageGenerationAttemptCallback(
+                userId: user?.id, conversationId: state.conversation?.id ?? state.pendingSessionId,
+                isAvailable: isAvailable
+            ),
+            isAvailable: isAvailable
+        )
+    }
+
+    private func imageGenerationAttemptCallback(
+        userId: UUID?,
+        conversationId: UUID,
+        isAvailable: @escaping @MainActor @Sendable () -> Bool
+    ) -> @MainActor @Sendable () async throws -> Void {
+        { [weak self] in
+            try Task.checkCancellation()
+            guard let self, let userId, isAvailable(),
+                  case .loaded(var current) = self.state,
+                  (current.conversation?.id ?? current.pendingSessionId) == conversationId,
+                  let index = current.messages.lastIndex(where: { $0.role == .user }),
+                  current.messages[index].id == userId,
+                  current.messages[index].imageGenerationAttempted != true else { throw CancellationError() }
+            current.messages[index].imageGenerationAttempted = true
+            self.state = .loaded(current)
+            await self.persistConversation()
+            try Task.checkCancellation()
+            guard isAvailable(), case .loaded(let latest) = self.state,
+                  (latest.conversation?.id ?? latest.pendingSessionId) == conversationId,
+                  let user = latest.messages.last(where: { $0.role == .user }),
+                  user.id == userId, user.imageGenerationAttempted == true else { throw CancellationError() }
         }
     }
 
@@ -100,6 +143,7 @@ extension ChatViewModel {
                 attachmentRepository: attachmentRepository,
                 prepareImageAttachmentUseCase: prepareImageAttachmentUseCase,
                 maxOutputTokens: specialist.maxOutputTokens,
+                maxInputTokens: specialist.maxInputTokens,
                 isAvailable: isAvailable
             ),
             ListImageAttachmentsTool(attachments: attachments, isAvailable: isAvailable)

@@ -106,6 +106,7 @@ extension ChatViewModel {
 
         // Update content and remove all messages after it (including previous assistant response)
         loadedState.messages[messageIndex].content = trimmed
+        loadedState.messages[messageIndex].imageGenerationAttempted = nil
         loadedState.messages = Array(loadedState.messages.prefix(messageIndex + 1))
         invalidateCompactionIfNeeded(in: &loadedState, changedAt: messageIndex)
 
@@ -231,13 +232,14 @@ private extension ChatViewModel {
         messages: inout [ChatMessage]
     ) -> [ChatMessage.Attachment] {
         guard let userIndex = messages.lastIndex(where: { $0.role == .user }),
-              messages[userIndex...].contains(where: {
+              messages[userIndex].imageGenerationAttempted == true || messages[userIndex...].contains(where: {
                   $0.role == .tool && $0.toolName == "generate_image"
               }) else { return [] }
 
         if model.supportsNativeImageGeneration {
             // Native regeneration restarts the turn instead of reusing completed tool generation.
             messages = Array(messages.prefix(userIndex + 1))
+            messages[userIndex].imageGenerationAttempted = nil
             return []
         }
         return previousAssistant.attachments.filter { $0.type == .image }

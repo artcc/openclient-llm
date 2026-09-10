@@ -23,6 +23,8 @@ nonisolated struct ChatMessage: Identifiable, Equatable, Sendable, Codable {
     var toolCallId: String?
     var toolName: String?
     var isFavourite: Bool
+    /// Local per-user-turn reservation, independent of tool transcript delivery.
+    var imageGenerationAttempted: Bool?
 
     enum Role: String, Sendable, Equatable, Codable {
         case user
@@ -45,7 +47,8 @@ nonisolated struct ChatMessage: Identifiable, Equatable, Sendable, Codable {
         toolCalls: [ToolCall]? = nil,
         toolCallId: String? = nil,
         toolName: String? = nil,
-        isFavourite: Bool = false
+        isFavourite: Bool = false,
+        imageGenerationAttempted: Bool? = nil
     ) {
         self.id = id
         self.role = role
@@ -59,6 +62,7 @@ nonisolated struct ChatMessage: Identifiable, Equatable, Sendable, Codable {
         self.toolCallId = toolCallId
         self.toolName = toolName
         self.isFavourite = isFavourite
+        self.imageGenerationAttempted = imageGenerationAttempted
     }
 
     func hasSameRequestContent(as other: ChatMessage) -> Bool {
@@ -93,6 +97,7 @@ nonisolated struct ChatMessage: Identifiable, Equatable, Sendable, Codable {
         toolCallId = try container.decodeIfPresent(String.self, forKey: .toolCallId)
         toolName = try container.decodeIfPresent(String.self, forKey: .toolName)
         isFavourite = try container.decodeIfPresent(Bool.self, forKey: .isFavourite) ?? false
+        imageGenerationAttempted = try container.decodeIfPresent(Bool.self, forKey: .imageGenerationAttempted)
     }
 }
 
@@ -213,5 +218,6 @@ private extension ChatMessage {
         case toolCallId
         case toolName
         case isFavourite
+        case imageGenerationAttempted
     }
 }

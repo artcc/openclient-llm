@@ -18,6 +18,7 @@ struct AnalyzeImagesTool: ChatToolProtocol {
     private let attachmentRepository: AttachmentRepositoryProtocol
     private let prepareImageAttachmentUseCase: PrepareImageAttachmentUseCaseProtocol
     private let maxOutputTokens: Int
+    private let maxInputTokens: Int?
     private let isAvailable: @MainActor @Sendable () -> Bool
 
     var isAvailableForAdvertisement: Bool { isAvailable() }
@@ -63,6 +64,7 @@ struct AnalyzeImagesTool: ChatToolProtocol {
         attachmentRepository: AttachmentRepositoryProtocol,
         prepareImageAttachmentUseCase: PrepareImageAttachmentUseCaseProtocol,
         maxOutputTokens: Int? = nil,
+        maxInputTokens: Int? = nil,
         isAvailable: @escaping @MainActor @Sendable () -> Bool = { true }
     ) {
         self.modelId = modelId
@@ -76,6 +78,7 @@ struct AnalyzeImagesTool: ChatToolProtocol {
         } else {
             self.maxOutputTokens = 2_048
         }
+        self.maxInputTokens = maxInputTokens.flatMap { $0 > 0 ? $0 : nil }
         self.isAvailable = isAvailable
     }
 
@@ -100,6 +103,7 @@ struct AnalyzeImagesTool: ChatToolProtocol {
                 attachments: images
             )
         ]
+        try checkInputBudget(messages)
         let response: String
         do {
             (response, _) = try await chatRepository.sendMessage(
@@ -124,6 +128,18 @@ struct AnalyzeImagesTool: ChatToolProtocol {
     }
 
     // MARK: - Private
+
+    private func checkInputBudget(_ messages: [ChatMessage]) throws {
+        guard let maxInputTokens else { return }
+        let builder = ContextWindowBuilder()
+        let estimated = builder.estimatedInputTokens(
+            messages: messages.filter { $0.role != .system },
+            systemPrompt: messages.first(where: { $0.role == .system })?.content ?? ""
+        )
+        // The builder applies safety headroom; reserve the specialist's effective output separately.
+        let available = max(0, builder.usableInputTokens(for: maxInputTokens) - maxOutputTokens)
+        guard estimated <= available else { throw ExecutionError.inputTooLarge }
+    }
 
     private func specialistQuestion(_ question: String, images: [ChatMessage.Attachment]) -> String {
         let references = images.enumerated().map { index, image in
@@ -219,6 +235,7 @@ struct AnalyzeImagesTool: ChatToolProtocol {
         case imagesOnly
         case unreadableImage
         case invalidPreparedImage
+        case inputTooLarge
         case unavailable
         case requestFailed
         case emptyResponse
@@ -239,6 +256,12 @@ struct AnalyzeImagesTool: ChatToolProtocol {
                 String(localized: "An image could not be loaded or prepared from this conversation.")
             case .invalidPreparedImage:
                 String(localized: "Each prepared image must be a supported, nonempty image of at most 5 MB.")
+            case .inputTooLarge:
+                String(localized: """
+                This image analysis request exceeds the vision model's context window. \
+                Reduce the number of images, shorten the question, \
+                or choose a vision model with a larger context window.
+                """)
             case .unavailable:
                 String(localized:
                     "Image analysis is no longer available. Start a new turn with the current configuration."

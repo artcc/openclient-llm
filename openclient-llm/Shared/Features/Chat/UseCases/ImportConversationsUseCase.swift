@@ -183,10 +183,12 @@ private extension ImportConversationsUseCase {
             throw ImportConversationsError.invalidDocument
         }
         var attachmentRestoration = AttachmentRestoration()
+        let imageReferences = ImageReferences(conversation: conversation, attachmentData: context.attachmentData)
         let messages = try conversation.messages.map { message in
             try restoreMessage(
                 message,
                 context: context,
+                imageReferences: imageReferences,
                 attachmentRestoration: &attachmentRestoration
             )
         }
@@ -197,7 +199,7 @@ private extension ImportConversationsUseCase {
                 modelId: conversation.modelId,
                 systemPrompt: conversation.systemPrompt,
                 contextWindowTokens: conversation.contextWindowTokens,
-                contextSummary: conversation.contextSummary,
+                contextSummary: conversation.contextSummary.map { imageReferences.remapText($0) },
                 contextSummaryCursorMessageId: remappedSummaryCursor(for: conversation, context: context),
                 messages: messages,
                 modelParameters: conversation.modelParameters,
@@ -224,6 +226,7 @@ private extension ImportConversationsUseCase {
     func restoreMessage(
         _ message: ChatMessage,
         context: ImportContext,
+        imageReferences: ImageReferences,
         attachmentRestoration: inout AttachmentRestoration
     ) throws -> ChatMessage {
         guard let messageId = context.messageIds[message.id] else {
@@ -233,21 +236,24 @@ private extension ImportConversationsUseCase {
             message.attachments,
             messageId: message.id,
             context: context,
+            imageReferences: imageReferences,
             attachmentRestoration: &attachmentRestoration
         )
         return ChatMessage(
             id: messageId,
             role: message.role,
-            content: message.content,
+            content: imageReferences.remapContent(of: message),
             reasoningContent: message.reasoningContent,
             timestamp: message.timestamp,
             attachments: attachments,
             tokenUsage: message.tokenUsage,
             webSearchResults: message.webSearchResults,
-            toolCalls: message.toolCalls,
+            toolCalls: message.role == .assistant
+                ? message.toolCalls?.map { imageReferences.remapToolCall($0) } : message.toolCalls,
             toolCallId: message.toolCallId,
             toolName: message.toolName,
-            isFavourite: message.isFavourite
+            isFavourite: message.isFavourite,
+            imageGenerationAttempted: message.imageGenerationAttempted
         )
     }
 
@@ -255,16 +261,18 @@ private extension ImportConversationsUseCase {
         _ attachments: [ChatMessage.Attachment],
         messageId: UUID,
         context: ImportContext,
+        imageReferences: ImageReferences,
         attachmentRestoration: inout AttachmentRestoration
     ) -> [ChatMessage.Attachment] {
         attachments.compactMap { attachment in
             guard let encodedData = context.attachmentData[messageId]?[attachment.id],
-                  let data = Data(base64Encoded: encodedData) else {
+                  let data = Data(base64Encoded: encodedData),
+                  let attachmentId = imageReferences.attachmentId(for: attachment.id, messageId: messageId) else {
                 attachmentRestoration.skippedCount += 1
                 return nil
             }
             let importedAttachment = ChatMessage.Attachment(
-                id: UUID(),
+                id: attachmentId,
                 type: attachment.type,
                 fileName: attachment.fileName,
                 mimeType: attachment.mimeType,

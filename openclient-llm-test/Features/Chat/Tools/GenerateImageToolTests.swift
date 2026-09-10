@@ -106,6 +106,28 @@ final class GenerateImageToolTests: XCTestCase {
         XCTAssertEqual(useCase.executeCallCount, 2)
     }
 
+    func test_execute_seededConsumedTurn_hidesDefinitionAndRejectsWithoutRequest() async {
+        // Given
+        useCase.result = .success(image)
+        let sut = GenerateImageTool(
+            modelId: "image-model",
+            generateImageUseCase: useCase,
+            hasAttemptedGeneration: true,
+            isAvailable: { true }
+        )
+        let registry = ToolRegistry(tools: [sut])
+
+        // When
+        await assertFailure(.turnLimitReached, sut: sut, arguments: #"{"prompt":"A cat"}"#)
+
+        // Then
+        XCTAssertFalse(sut.isAvailableForAdvertisement)
+        XCTAssertTrue(registry.definitions.isEmpty)
+        XCTAssertEqual(useCase.executeCallCount, 0)
+        XCTAssertTrue(useCase.prompts.isEmpty)
+        XCTAssertTrue(useCase.models.isEmpty)
+    }
+
     func test_execute_concurrentInvocationWhileFirstIsSuspended_startsOnlyOneRequest() async throws {
         // Given
         let started = expectation(description: "First image request started")

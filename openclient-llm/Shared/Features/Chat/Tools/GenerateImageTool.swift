@@ -8,15 +8,16 @@
 
 import Foundation
 
-/// Create one instance per user turn and reuse it across all tool rounds in that turn.
+/// Reuse across tool rounds and restore the consumed attempt when recreating a tool for an existing turn.
 @MainActor
 final class GenerateImageTool: ChatToolProtocol {
     // MARK: - Properties
 
     private let modelId: String
     private let generateImageUseCase: GenerateImageUseCaseProtocol
+    private let onAttempt: @MainActor @Sendable () async throws -> Void
     private let isAvailable: @MainActor @Sendable () -> Bool
-    private var hasAttemptedGeneration = false
+    private var hasAttemptedGeneration: Bool
 
     var isAvailableForAdvertisement: Bool { isAvailable() && !hasAttemptedGeneration }
 
@@ -47,10 +48,14 @@ final class GenerateImageTool: ChatToolProtocol {
     init(
         modelId: String,
         generateImageUseCase: GenerateImageUseCaseProtocol,
+        hasAttemptedGeneration: Bool = false,
+        onAttempt: @escaping @MainActor @Sendable () async throws -> Void = {},
         isAvailable: @escaping @MainActor @Sendable () -> Bool = { true }
     ) {
         self.modelId = modelId
         self.generateImageUseCase = generateImageUseCase
+        self.hasAttemptedGeneration = hasAttemptedGeneration
+        self.onAttempt = onAttempt
         self.isAvailable = isAvailable
     }
 
@@ -70,6 +75,8 @@ final class GenerateImageTool: ChatToolProtocol {
         guard !hasAttemptedGeneration else { throw ExecutionError.turnLimitReached }
         // Reserve before the first suspension; failures may still have incurred a server-side charge.
         hasAttemptedGeneration = true
+        try await onAttempt()
+        try checkAvailability()
         let image: GeneratedImage
         do {
             image = try await generateImageUseCase.execute(prompt: prompt, model: modelId, attachments: [])

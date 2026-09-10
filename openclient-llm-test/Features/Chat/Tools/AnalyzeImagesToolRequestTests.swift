@@ -20,7 +20,9 @@ final class AnalyzeImagesToolRequestTests: XCTestCase {
         let image = attachment(data: Data([1]))
         for (limit, expected) in limits {
             let apiClient = MockAPIClient()
-            let sut = try makeSUT(apiClient: apiClient, images: [image], maxOutputTokens: limit)
+            let sut = try makeSUT(
+                apiClient: apiClient, images: [image], maxOutputTokens: limit, maxInputTokens: 4_096
+            )
 
             // When
             _ = try await sut.execute(arguments: """
@@ -45,7 +47,7 @@ final class AnalyzeImagesToolRequestTests: XCTestCase {
             data: Data([3, 4]), id: try XCTUnwrap(UUID(uuidString: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB"))
         )
         let apiClient = MockAPIClient()
-        let sut = try makeSUT(apiClient: apiClient, images: [imageA, imageB])
+        let sut = try makeSUT(apiClient: apiClient, images: [imageA, imageB], maxInputTokens: 8_192)
         let question = "Compare image \(imageA.id.uuidString) with image \(imageB.id.uuidString)."
         let arguments = """
         {"question":"\(question)",
@@ -88,7 +90,8 @@ final class AnalyzeImagesToolRequestTests: XCTestCase {
     private func makeSUT(
         apiClient: MockAPIClient,
         images: [ChatMessage.Attachment],
-        maxOutputTokens: Int? = nil
+        maxOutputTokens: Int? = nil,
+        maxInputTokens: Int? = nil
     ) throws -> AnalyzeImagesTool {
         apiClient.requestResult = try MockChatRepository().agentCompletionResult.get()
         let attachmentRepository = MockAttachmentRepository()
@@ -99,7 +102,8 @@ final class AnalyzeImagesToolRequestTests: XCTestCase {
             chatRepository: ChatRepository(apiClient: apiClient, attachmentRepository: attachmentRepository),
             attachmentRepository: attachmentRepository,
             prepareImageAttachmentUseCase: MockPrepareImageAttachmentUseCase(),
-            maxOutputTokens: maxOutputTokens
+            maxOutputTokens: maxOutputTokens,
+            maxInputTokens: maxInputTokens
         )
     }
 

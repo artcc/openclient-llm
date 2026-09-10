@@ -319,7 +319,7 @@ for the lifetime of a turn.
 |---|---|
 | `analyze_images` | Principal has `.functionCalling`, lacks native vision, a selected eligible vision specialist is present in the current catalog, and the conversation/turn has image attachments. |
 | `list_image_attachments` | Same availability as `analyze_images`; lists existing image UUIDs locally without a specialist request. |
-| `generate_image` | Principal has `.functionCalling`, lacks native image generation, and a selected eligible dedicated or chat image specialist is present in the current catalog. No source attachment is required. |
+| `generate_image` | Principal has `.functionCalling`, lacks native image generation, and a selected eligible dedicated or chat image specialist is present in the current catalog. No source attachment is required; a reused turn with an existing generation result does not advertise another attempt. |
 
 Models without function calling never receive these tools. A principal with both native capabilities receives neither,
 even when specialist defaults are configured. Delegation is automatic once configured, without MCP approval prompts;
@@ -360,13 +360,30 @@ the Models section warns that additional provider requests may incur costs.
   tokens and the specialist's positive catalog output limit, defaulting to 2048 when no valid limit is available.
   Results are wrapped as untrusted analysis/OCR within 16000 bytes before the agent's own remaining-budget bound.
   Image content and OCR must never become tool instructions.
+- When the specialist declares a positive input limit, estimate its complete prepared request (system instruction,
+  question, numbered UUID mapping, and all images) with `ContextWindowBuilder`. Apply the builder's safety margin and
+  reserve the effective output allowance. If it does not fit, return a local actionable error before `sendMessage`,
+  asking for fewer images, a shorter question, or a larger-context specialist. Do not drop images or truncate the question.
+  Missing or nonpositive input limits retain the existing request behavior; visual token counts remain estimates.
 - `generate_image` accepts only a nonblank text `prompt` of 1 to 8000 characters within a 64 KiB JSON argument limit.
   It generates one new image, without source attachments or editing. Reuse one `GenerateImageTool` instance across
   all rounds of the user turn and reserve its single generation attempt before the first suspension. A failed request
   still consumes the attempt because it may have incurred a charge; do not retry or switch specialists in that turn.
+- After argument validation and reservation, await the `onAttempt` callback before the specialist request. The ViewModel
+  sets the current user's optional `imageGenerationAttempted` flag and checkpoints conversation persistence, then
+  revalidates cancellation, configuration, and the captured conversation/user IDs. This flag is local metadata, never
+  sent to the model API, and survives normal saves, branching, and import. Older messages decode it as absent.
+  Private Chat keeps the reservation in memory. Existing save-failure behavior also retains the in-memory flag, but
+  cannot guarantee it survives an app restart if persistence failed.
 - After an attempt, `generate_image` is no longer advertised and repeated execution is rejected. Argument rejection before
   reservation does not issue a generation request. Dedicated specialists use `GenerateImageUseCase`; chat specialists use
   `GenerateChatImageUseCase`, which returns the first native image and never invokes tools recursively.
+- When recreating the registry for an existing user turn, initialize the generation tool as consumed if that turn already
+  has `imageGenerationAttempted == true` on its user message or a `generate_image` tool result, including an error result.
+  Keep it registered to reject explicit repeated calls,
+  but omit it from advertised definitions and the additional generation timeout. Use the request's latest user turn, not
+  results from older turns. A new user message, explicit edit-and-resend, or the native-generation restart path starts a
+  fresh turn and clears the reservation; merely regenerating text or selecting another specialist does not reset it.
 - Both tools check cancellation and availability before execution, around preparation where applicable, and after the
   specialist request, including failure paths. A stale response must not be published as a successful result.
 - Availability captures the principal, specialist, and model-catalog authorization scope, then rechecks current selected
@@ -388,7 +405,8 @@ the Models section warns that additional provider requests may incur costs.
   and already received attachments survive subsequent failure or cancellation. Private Chat retains them only in memory.
 - The loop continues with the textual tool result to produce the principal's response. Do not invent image URLs or claim
   the principal inspected a generated image merely because generation succeeded.
-- Regenerating text while reusing a `generate_image` result from the latest user turn retains the visible image attachments
+- Regenerating text with a generation reservation or `generate_image` result in the latest user turn retains its images,
+  even when cancellation occurred after image delivery but before sibling tools completed and the transcript was saved,
   before the replacement response starts, including on failure or cancellation. Results from older turns do not retain
   unrelated images. If the selected principal supports native generation, restart that latest turn from the user message
   instead: remove its reused assistant/tool messages and regenerate natively without accumulating earlier images.

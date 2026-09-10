@@ -226,6 +226,39 @@ extension ChatViewModelImageToolsTests {
         XCTAssertNil(try loadedState(sut).errorMessage)
         XCTAssertNil(sut.pendingPreflightCompaction)
     }
+
+    func test_analyzeImages_limitedSpecialist_rejectsFourImagesAndAcceptsOne() async throws {
+        // Given
+        let specialist = LLMModel(
+            id: "small-vision", capabilities: [.vision], maxInputTokens: 4_096, maxOutputTokens: 1_024
+        )
+        settings.setSelectedVisionModelId(specialist.id)
+        let images = (0..<4).map { _ in imageAttachment() }
+        let sut = makeViewModel(pending: images, extraModels: [specialist])
+        try await sendMessage(sut, prompt: "Compare the images")
+        let registry = try capturedRegistry()
+        let oversized = try await authorizedInvocation(
+            registry, name: "analyze_images", arguments: analysisArguments(ids: images.map(\.id))
+        )
+
+        // When / Then
+        do {
+            _ = try await registry.execute(oversized)
+            XCTFail("The specialist's input limit must apply independently of the principal's context")
+        } catch {
+            XCTAssertEqual(error as? AnalyzeImagesTool.ExecutionError, .inputTooLarge)
+        }
+        XCTAssertNil(apiClient.lastRequestBody)
+        let reduced = try await authorizedInvocation(
+            registry, name: "analyze_images", arguments: analysisArguments(ids: [images[0].id])
+        )
+        _ = try await registry.execute(reduced)
+        let request = try XCTUnwrap(apiClient.lastRequestBody as? ChatCompletionRequest)
+        XCTAssertEqual(request.model, specialist.id)
+        XCTAssertEqual(request.maxTokens, 1_024)
+        XCTAssertEqual(try loadedState(sut).selectedModel, principal)
+        XCTAssertEqual(try loadedState(sut).messages.first?.attachments, images)
+    }
 }
 
 // MARK: - Private
