@@ -14,26 +14,31 @@ struct APIClient: APIClientProtocol, Sendable {
     private let session: URLSession
     private let serverBaseURLProvider: @MainActor @Sendable () -> String
     private let apiKeyProvider: @MainActor @Sendable () -> String
+    private let streamTimeoutInterval: TimeInterval
 
     // MARK: - Init
 
     init(
         session: URLSession = .shared,
-        settingsManager: SettingsManagerProtocol = SettingsManager()
+        settingsManager: SettingsManagerProtocol = SettingsManager(),
+        streamTimeoutInterval: TimeInterval = 60
     ) {
         self.session = session
         self.serverBaseURLProvider = { settingsManager.getServerBaseURL() }
         self.apiKeyProvider = { settingsManager.getAPIKey() }
+        self.streamTimeoutInterval = streamTimeoutInterval
     }
 
     init(
         session: URLSession = .shared,
         serverBaseURL: String,
-        apiKey: String
+        apiKey: String,
+        streamTimeoutInterval: TimeInterval = 60
     ) {
         self.session = session
         self.serverBaseURLProvider = { serverBaseURL }
         self.apiKeyProvider = { apiKey }
+        self.streamTimeoutInterval = streamTimeoutInterval
     }
 
     // MARK: - Public
@@ -86,7 +91,8 @@ struct APIClient: APIClientProtocol, Sendable {
                     let urlRequest = try buildRequest(
                         endpoint: endpoint,
                         method: .post,
-                        body: body
+                        body: body,
+                        timeoutInterval: streamTimeoutInterval
                     )
                     LogManager.network("→ STREAM POST /\(endpoint)")
 

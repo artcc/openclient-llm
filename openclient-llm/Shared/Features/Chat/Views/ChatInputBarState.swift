@@ -21,6 +21,7 @@ struct ChatInputBarState: Equatable {
     let activeToolCallIds: Set<String>
     let activeToolNamesById: [String: String]
     let mcpToolDisplayNames: [String: String]
+    let imageToolModelNames: [String: String]
     let isWebSearchEnabled: Bool
     let isWebSearchToolConfigured: Bool
     let isPreparingAttachment: Bool
@@ -49,6 +50,9 @@ struct ChatInputBarState: Equatable {
         isSearchingWeb = loadedState.isSearchingWeb
         activeToolCallIds = loadedState.activeToolCallIds
         activeToolNamesById = loadedState.activeToolNamesById
+        imageToolModelNames = loadedState.imageToolModelNames.mapValues {
+            MCPDisplayText.sanitize($0, fallback: String(localized: "Image model"), maximumLength: 160)
+        }
         isWebSearchEnabled = loadedState.isWebSearchEnabled
         isWebSearchToolConfigured = loadedState.isWebSearchToolConfigured
         isPreparingAttachment = loadedState.isPreparingAttachment

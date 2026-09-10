@@ -19,18 +19,22 @@ enum AgentEvent: Sendable {
     case usage(TokenUsage)
     case promptUsage(Int?)
     case image(Data)
+    case generatedImage(GeneratedImage)
     case completed
 }
 
 nonisolated struct AgentToolContext: Sendable {
     let toolRegistry: ToolRegistry
+    let additionalExecutionTime: Duration
     let isConfigurationCurrent: @MainActor @Sendable () -> Bool
 
     init(
         toolRegistry: ToolRegistry,
+        additionalExecutionTime: Duration = .zero,
         isConfigurationCurrent: @escaping @MainActor @Sendable () -> Bool = { true }
     ) {
         self.toolRegistry = toolRegistry
+        self.additionalExecutionTime = additionalExecutionTime
         self.isConfigurationCurrent = isConfigurationCurrent
     }
 }
@@ -100,7 +104,7 @@ struct AgentStreamUseCase: AgentStreamUseCaseProtocol {
         toolContext: AgentToolContext
     ) -> AsyncThrowingStream<AgentEvent, Error> {
         AsyncThrowingStream { continuation in
-            let timeoutController = AgentTimeoutController(timeout: timeout)
+            let timeoutController = AgentTimeoutController(timeout: timeout + toolContext.additionalExecutionTime)
             let executionController = AgentExecutionController()
             let context = AgentLoopContext(
                 model: model,
@@ -230,6 +234,9 @@ private extension AgentStreamUseCase {
         guard Set(toolCalls.map(\.id)).count == toolCalls.count else {
             throw AgentStreamError.invalidResponse
         }
+        guard try yieldNativeImages(choice, continuation: context.loop.continuation) else {
+            throw CancellationError()
+        }
         let remaining = max(0, Self.maxToolCalls - toolCallCount)
         let executableCount = min(toolCalls.count, min(Self.maxToolCallsPerIteration, remaining))
         let executable = Array(toolCalls.prefix(executableCount))
@@ -315,7 +322,8 @@ private extension AgentStreamUseCase {
                     try await executeToolCall(
                         invocation,
                         registry: registry,
-                        isConfigurationCurrent: isConfigurationCurrent
+                        isConfigurationCurrent: isConfigurationCurrent,
+                        continuation: continuation
                     )
                 }
             }
@@ -337,13 +345,19 @@ private extension AgentStreamUseCase {
     func executeToolCall(
         _ invocation: ToolRegistry.AuthorizedInvocation,
         registry: ToolRegistry,
-        isConfigurationCurrent: @escaping @MainActor @Sendable () -> Bool
+        isConfigurationCurrent: @escaping @MainActor @Sendable () -> Bool,
+        continuation: AsyncThrowingStream<AgentEvent, Error>.Continuation
     ) async throws -> ToolCallResult {
         let toolCall = invocation.toolCall
         do {
             guard isConfigurationCurrent() else { throw AgentStreamError.configurationChanged }
             let result = try await registry.execute(invocation)
+            try Task.checkCancellation()
             guard isConfigurationCurrent() else { throw AgentStreamError.configurationChanged }
+            // Publish before the task group collects results so a sibling failure cannot discard completed images.
+            for image in result.images {
+                continuation.yield(.generatedImage(image))
+            }
             return ToolCallResult(
                 toolCallId: toolCall.id,
                 toolName: toolCall.function.name,

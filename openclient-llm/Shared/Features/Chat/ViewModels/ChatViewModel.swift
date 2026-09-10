@@ -50,57 +50,6 @@ final class ChatViewModel {
         case toggleFavourite(UUID)
     }
 
-    enum State: Equatable {
-        case loading
-        case loaded(LoadedState)
-    }
-
-    struct LoadedState: Equatable {
-        var conversation: Conversation?
-        var messages: [ChatMessage] = []
-        var inputText: String = ""
-        var inputRevision = 0
-        var isStreaming: Bool = false
-        var responseRevision = 0
-        var streamingRevision = 0
-        var selectedModel: LLMModel?
-        var availableModels: [LLMModel] = []
-        var conversationStarters: [ConversationStarter] = []
-        var errorMessage: String?
-        var systemPrompt: String = ""
-        var pendingAttachments: [ChatMessage.Attachment] = []
-        var isPreparingAttachment: Bool = false
-        var pendingSessionId: UUID = UUID()
-        var modelParameters: ModelParameters = .default
-        var contextWindowTokens: Int?
-        var contextUsage: ContextUsage?
-        var isSpeaking: Bool = false
-        var speakingMessageId: UUID?
-        var isRecording: Bool = false
-        var recordingDuration: TimeInterval = 0
-        var isTranscribing: Bool = false
-        var showTokenUsage: Bool = true
-        var ttsModelId: String?
-        var transcriptionModelId: String?
-        var exportedData: Data?
-        var branchedConversation: Conversation?
-        var isWebSearchEnabled: Bool = false
-        var isWebSearchToolConfigured: Bool = false
-        var isSearchingWeb: Bool = false
-        var activeToolCallIds: Set<String> = []
-        var activeToolNamesById: [String: String] = [:]
-        var isMCPSupported: Bool = false
-        var availableMCPTools: [MCPToolInfo] = []
-        var availableMCPServers: [MCPServerInfo] = []
-        var failedMCPServerIds: Set<String> = []
-        var enabledMCPToolIds: Set<String> = []
-        var mcpToolPermissions: [String: MCPToolPermission] = [:]
-        var mcpDiscoveryScope: String?
-        var mcpDiscoveryRevision: Int = 0
-        var isLoadingMCPTools: Bool = false
-        var mcpToolsError: String?
-    }
-
     struct PersistenceResult {
         let didPersist: Bool
         let durableConversation: Conversation?
@@ -115,9 +64,11 @@ final class ChatViewModel {
     private let fetchModelsUseCase: FetchModelsUseCaseProtocol
     let prepareImageAttachmentUseCase: PrepareImageAttachmentUseCaseProtocol
     let attachmentRepository: AttachmentRepositoryProtocol
-    let streamMessageUseCase: StreamMessageUseCaseProtocol
+    let streamMessageUseCase: StreamMessageUseCaseProtocol?
     let generateImageUseCase: GenerateImageUseCaseProtocol
-    let agentStreamUseCase: AgentStreamUseCaseProtocol
+    let imageToolChatRepository: ChatRepositoryProtocol?
+    let imageToolGenerationUseCase: GenerateImageUseCaseProtocol?
+    let agentStreamUseCase: AgentStreamUseCaseProtocol?
     let webSearchUseCase: WebSearchUseCaseProtocol
     let saveConversationUseCase: SaveConversationUseCaseProtocol
     private let synthesizeSpeechUseCase: SynthesizeSpeechUseCaseProtocol
@@ -173,9 +124,9 @@ final class ChatViewModel {
         fetchModelsUseCase: FetchModelsUseCaseProtocol = FetchModelsUseCase(),
         prepareImageAttachmentUseCase: PrepareImageAttachmentUseCaseProtocol = PrepareImageAttachmentUseCase(),
         attachmentRepository: AttachmentRepositoryProtocol = AttachmentRepository(),
-        streamMessageUseCase: StreamMessageUseCaseProtocol = StreamMessageUseCase(),
+        streamMessageUseCase: StreamMessageUseCaseProtocol? = nil,
         generateImageUseCase: GenerateImageUseCaseProtocol = GenerateImageUseCase(),
-        agentStreamUseCase: AgentStreamUseCaseProtocol = AgentStreamUseCase(),
+        agentStreamUseCase: AgentStreamUseCaseProtocol? = nil,
         webSearchUseCase: WebSearchUseCaseProtocol = WebSearchUseCase(),
         saveConversationUseCase: SaveConversationUseCaseProtocol = SaveConversationUseCase(),
         synthesizeSpeechUseCase: SynthesizeSpeechUseCaseProtocol = SynthesizeSpeechUseCase(),
@@ -198,7 +149,9 @@ final class ChatViewModel {
         triggerHapticFeedbackUseCase: TriggerHapticFeedbackUseCaseProtocol = TriggerHapticFeedbackUseCase(),
         streamingBackgroundUseCase: StreamingBackgroundUseCaseProtocol = StreamingBackgroundUseCase(),
         notifyStreamingCompletedUseCase: NotifyStreamingCompletedUseCaseProtocol = NotifyStreamingCompletedUseCase(),
-        compactConversationUseCase: CompactConversationUseCaseProtocol = CompactConversationUseCase()
+        compactConversationUseCase: CompactConversationUseCaseProtocol = CompactConversationUseCase(),
+        imageToolChatRepository: ChatRepositoryProtocol? = nil,
+        imageToolGenerationUseCase: GenerateImageUseCaseProtocol? = nil
     ) {
         self.state = state
         self.pendingConversation = conversation
@@ -213,6 +166,8 @@ final class ChatViewModel {
         self.attachmentRepository = attachmentRepository
         self.streamMessageUseCase = streamMessageUseCase
         self.generateImageUseCase = generateImageUseCase
+        self.imageToolChatRepository = imageToolChatRepository
+        self.imageToolGenerationUseCase = imageToolGenerationUseCase
         self.agentStreamUseCase = agentStreamUseCase
         self.webSearchUseCase = webSearchUseCase
         self.saveConversationUseCase = saveConversationUseCase
@@ -341,6 +296,7 @@ private extension ChatViewModel {
     }
 
     func fetchAndBuildInitialState() async {
+        let catalogScope = settingsManager.getMCPAuthorizationScope()
         var resolvedModels: [LLMModel] = []
         var modelError: String?
 
@@ -351,6 +307,10 @@ private extension ChatViewModel {
         }
 
         guard !Task.isCancelled else { return }
+        guard catalogScope == settingsManager.getMCPAuthorizationScope() else {
+            loadInitialData()
+            return
+        }
         let pending = pendingConversation
         pendingConversation = nil
         let loadedState = makeLoadedState(

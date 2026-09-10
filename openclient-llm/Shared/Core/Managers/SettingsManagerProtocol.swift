@@ -35,6 +35,10 @@ protocol SettingsManagerProtocol: Sendable {
     func setSelectedTTSVoice(_ voice: String, forModelId modelId: String)
     func getSelectedSTTModelId() -> String?
     func setSelectedSTTModelId(_ value: String?)
+    func getSelectedVisionModelId() -> String?
+    func setSelectedVisionModelId(_ value: String?)
+    func getSelectedImageGenerationModelId() -> String?
+    func setSelectedImageGenerationModelId(_ value: String?)
     func getWebSearchToolName() -> String
     func setWebSearchToolName(_ value: String)
     func getWebSearchMaxResults() -> Int

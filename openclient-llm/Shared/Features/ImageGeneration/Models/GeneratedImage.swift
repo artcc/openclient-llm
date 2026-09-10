@@ -8,7 +8,7 @@
 
 import Foundation
 
-struct GeneratedImage: Equatable, Sendable {
+nonisolated struct GeneratedImage: Equatable, Sendable {
     let data: Data
     let mimeType: String
     let revisedPrompt: String?

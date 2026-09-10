@@ -10,7 +10,7 @@ import Foundation
 
 extension AgentStreamUseCase {
     func boundedToolResult(_ result: ToolCallResult, maximumCharacters: Int) -> ToolCallResult {
-        if result.toolName.hasPrefix("mcp_") {
+        if result.toolName.hasPrefix("mcp_") || result.toolName == "analyze_images" {
             return ToolCallResult(
                 toolCallId: result.toolCallId,
                 toolName: result.toolName,
@@ -19,7 +19,8 @@ extension AgentStreamUseCase {
                         result.executionResult.text,
                         maximumBytes: maximumCharacters
                     ),
-                    searchResults: result.executionResult.searchResults
+                    searchResults: result.executionResult.searchResults,
+                    images: result.executionResult.images
                 )
             )
         }
@@ -29,7 +30,11 @@ extension AgentStreamUseCase {
             return ToolCallResult(
                 toolCallId: result.toolCallId,
                 toolName: result.toolName,
-                executionResult: ToolExecutionResult(text: "", searchResults: result.executionResult.searchResults)
+                executionResult: ToolExecutionResult(
+                    text: "",
+                    searchResults: result.executionResult.searchResults,
+                    images: result.executionResult.images
+                )
             )
         }
         let contentLimit = max(0, maximumCharacters - marker.utf8.count)
@@ -39,7 +44,8 @@ extension AgentStreamUseCase {
             toolName: result.toolName,
             executionResult: ToolExecutionResult(
                 text: utf8Prefix(result.executionResult.text, maximumBytes: contentLimit) + suffix,
-                searchResults: result.executionResult.searchResults
+                searchResults: result.executionResult.searchResults,
+                images: result.executionResult.images
             )
         )
     }

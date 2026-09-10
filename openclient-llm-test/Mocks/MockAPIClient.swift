@@ -23,6 +23,8 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
     var lastMCPArguments: String?
     var streamChunks: [Data] = []
     var streamError: Error?
+    var lastStreamEndpoint: String?
+    var lastStreamBody: (any Encodable & Sendable)?
     var multipartResult: Any?
     var multipartError: Error?
     var lastMultipartEndpoint: String?
@@ -58,6 +60,8 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
         endpoint: String,
         body: any Encodable & Sendable
     ) -> AsyncThrowingStream<Data, Error> {
+        lastStreamEndpoint = endpoint
+        lastStreamBody = body
         let chunks = streamChunks
         let error = streamError
         return AsyncThrowingStream { continuation in

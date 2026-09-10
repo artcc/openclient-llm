@@ -20,6 +20,8 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     var selectedModelId: String?
     var selectedTTSModelId: String?
     var selectedSTTModelId: String?
+    var selectedVisionModelId: String?
+    var selectedImageGenerationModelId: String?
     var ttsVoices: [String: String] = [:]
     var isCloudSyncEnabled: Bool = false
     var lastSuccessfulCloudSyncDate: Date?
@@ -157,6 +159,22 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
 
     func setSelectedSTTModelId(_ value: String?) {
         selectedSTTModelId = value
+    }
+
+    func getSelectedVisionModelId() -> String? {
+        selectedVisionModelId
+    }
+
+    func setSelectedVisionModelId(_ value: String?) {
+        selectedVisionModelId = value
+    }
+
+    func getSelectedImageGenerationModelId() -> String? {
+        selectedImageGenerationModelId
+    }
+
+    func setSelectedImageGenerationModelId(_ value: String?) {
+        selectedImageGenerationModelId = value
     }
 
     func getWebSearchToolName() -> String {
@@ -297,6 +315,8 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         selectedModelId = nil
         selectedTTSModelId = nil
         selectedSTTModelId = nil
+        selectedVisionModelId = nil
+        selectedImageGenerationModelId = nil
         lastSuccessfulCloudSyncDate = nil
         acceptedCloudAccountFingerprint = nil
         ttsVoices = [:]

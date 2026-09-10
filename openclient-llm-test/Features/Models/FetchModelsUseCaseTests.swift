@@ -88,6 +88,24 @@ final class FetchModelsUseCaseTests: XCTestCase {
         XCTAssertTrue(result.first(where: { $0.id == "llama3" })?.capabilities.isEmpty == true)
     }
 
+    func test_execute_dualChatModelInfo_preservesBothSpecialistRoles() async throws {
+        // Given
+        mockRepository.fetchModelsResult = .success([LLMModel(id: "studio-assistant")])
+        mockRepository.fetchModelInfoResult = .success([
+            LLMModel(id: "studio-assistant", capabilities: [.vision, .imageGeneration], mode: .chat)
+        ])
+
+        // When
+        let result = try await sut.execute()
+
+        // Then
+        let model = try XCTUnwrap(result.first)
+        XCTAssertEqual(model.mode, .chat)
+        XCTAssertEqual(model.capabilities, [.vision, .imageGeneration])
+        XCTAssertTrue(model.isVisionSpecialist)
+        XCTAssertTrue(model.isImageGenerationSpecialist)
+    }
+
     func test_execute_mergesModeFromModelInfo() async throws {
         // Given
         let models = [

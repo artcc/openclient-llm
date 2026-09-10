@@ -13,6 +13,7 @@ nonisolated enum ImageGenerationInputError: LocalizedError {
     case visionRequired
     case imagesOnly
     case unreadableImage
+    case textOnly
 
     var errorDescription: String? {
         switch self {
@@ -24,6 +25,8 @@ nonisolated enum ImageGenerationInputError: LocalizedError {
             String(localized: "Image generation only supports image attachments.")
         case .unreadableImage:
             String(localized: "An attached image could not be loaded. Please attach it again.")
+        case .textOnly:
+            String(localized: "Chat image generation currently supports text prompts only.")
         }
     }
 }

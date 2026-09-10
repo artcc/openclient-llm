@@ -1,10 +1,15 @@
 Hi there! We've got some great new features for you in this update.
 
-***1.6.55:
+***1.7.0:
 
 • Text-to-speech now automatically selects the first available model if you haven't chosen one or your previous choice is no longer available, including when there's only one model.
 • Speech-to-text now automatically selects Apple speech recognition if you haven't chosen a model or your previous choice is no longer available, including when Apple is the only option.
 • Image models with vision now let you attach reference images for editing on iPhone, iPad, and Mac, and trying again keeps your original prompt and references.
+• Your favorite chat model can now get help from image specialists. Models that support tools can analyze pictures or create new images without switching models or opening another chat.
+• Choose your preferred vision and image generation models in the new Image and Vision section. Use the same compatible model for both, or choose None to turn off either kind of help.
+• If your chat model already understands or creates images, it keeps handling that job itself.
+• Ask about pictures from earlier in the conversation, and see which specialist is working while your request runs.
+• Created images stay right in your conversation, even if the reply is interrupted after the image arrives. Private chats still keep images only for the session.
 • Minor bug fixes and improvements for a smoother experience.
 
 ***Recent Updates:

@@ -116,6 +116,16 @@ private extension ChatInputBarView {
         }
         guard let toolName = activeToolNames.first else { return nil }
         switch toolName {
+        case "analyze_images":
+            if let model = state.imageToolModelNames[toolName] {
+                return String(localized: "Analyzing images with \(model)...")
+            }
+            return String(localized: "Analyzing images...")
+        case "generate_image":
+            if let model = state.imageToolModelNames[toolName] {
+                return String(localized: "Generating an image with \(model)...")
+            }
+            return String(localized: "Generating an image...")
         case "get_current_datetime":
             return String(localized: "Getting the current date and time...")
         case "save_memory":
