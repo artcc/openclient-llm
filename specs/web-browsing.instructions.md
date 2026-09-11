@@ -25,8 +25,8 @@ Web search uses a **single mechanism**: an **agent loop** with a tool named `web
 | Condition | Globe Color | Behavior |
 |-----------|------------|----------|
 | Web search OFF | Grey | No search; function-calling models still use the agent loop with other built-in tools, while other models use regular streaming |
-| Web search ON + `.functionCalling` | Accent | Agent loop with tool `web_search` → executed via `/v1/search` endpoint |
-| Web search unavailable because the model lacks `.functionCalling` or no search tool is configured | Red | The toggle does not change state; no search occurs |
+| Web search ON + `.functionCalling` + built-in search enabled | Accent | Agent loop with tool `web_search` → executed via `/v1/search` endpoint |
+| Web search unavailable because the model lacks `.functionCalling`, no search tool is configured, or the built-in tool is disabled in Settings → Tools | Red | The toggle does not change state; no search occurs |
 
 ### How It Works (Agent Loop with `/v1/search`)
 
@@ -97,8 +97,8 @@ search_tools:
 func streamWithWebSearch(_ context: SendMessageContext) async {
     let useAgentMode = context.modelCapabilities.contains(.functionCalling)
     if useAgentMode {
-        // The registry always has datetime and may have memory tools.
-        // web_search is added only when context.webSearchEnabled is true.
+        // The registry contains enabled, eligible built-in tools.
+        // web_search also requires context.webSearchEnabled to be true.
         await performAgentStreaming(...)
     } else {
         // No search (disabled or no capabilities) → regular streaming
@@ -134,6 +134,8 @@ The `name` field is stored in `ChatMessage.toolName` and serialized via `ChatCom
 ## Settings
 
 - **Web search enabled**: Stored in `SettingsManager` (`UserDefaults`) and defaults to `false` when no value exists.
+- **Built-in search tool enabled**: Managed independently in Settings → Tools and defaults to `true`. Disabling it
+  removes advertisement and blocks new executions without changing the saved globe preference or search configuration.
 - **Search tool name**: Stored in `SettingsManager` (`UserDefaults`) and defaults to the empty string. It must match a `search_tool_name` in LiteLLM configuration; Settings can discover tools through `GET /v1/search/tools` and select the first returned tool when the saved value is unavailable.
 - **Maximum results**: Stored in `SettingsManager` (`UserDefaults`) and defaults to 10. `WebSearchUseCase` sends this value to LiteLLM, while `WebSearchTool` formats at most the first five returned results for model context and retains the full result array for source display.
 - **Tool rounds**: The agent permits up to 15 iterations, 20 tool calls in total, and 8 calls in one iteration. These are agent safeguards, not user-configurable search settings.

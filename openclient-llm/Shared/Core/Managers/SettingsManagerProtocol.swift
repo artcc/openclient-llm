@@ -49,6 +49,8 @@ protocol SettingsManagerProtocol: Sendable {
     func setIsPrivacyScreenEnabled(_ value: Bool)
     func getHasEnoughConversationsForMemoryTip() -> Bool
     func setHasEnoughConversationsForMemoryTip(_ value: Bool)
+    func getIsBuiltInToolEnabled(_ tool: BuiltInTool) -> Bool
+    func setIsBuiltInToolEnabled(_ value: Bool, for tool: BuiltInTool)
     func getEnabledMCPToolIds() -> [String]
     func setEnabledMCPToolIds(_ ids: [String])
     func getMCPToolPermissionRawValue(for key: String) -> String?

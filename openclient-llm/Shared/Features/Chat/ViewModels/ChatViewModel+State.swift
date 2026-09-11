@@ -46,6 +46,7 @@ extension ChatViewModel {
         var branchedConversation: Conversation?
         var isWebSearchEnabled: Bool = false
         var isWebSearchToolConfigured: Bool = false
+        var isBuiltInWebSearchEnabled: Bool = true
         var isSearchingWeb: Bool = false
         var activeToolCallIds: Set<String> = []
         var activeToolNamesById: [String: String] = [:]

@@ -108,6 +108,7 @@ final class ChatViewModel {
     var errorDismissTask: Task<Void, Never>?
     var durationTrackingTask: Task<Void, Never>?
     var mcpSettingsObservationTask: Task<Void, Never>?
+    var builtInToolSettingsObservationTask: Task<Void, Never>?
     var mcpDiscoveryTask: Task<Void, Never>?
     var mcpDiscoveryGeneration = 0
     var observedMCPAuthorizationScope: String
@@ -200,6 +201,7 @@ final class ChatViewModel {
         self.compactConversationUseCase = compactConversationUseCase
         observeAppDataReset()
         observeMCPToolSettingsChanges()
+        observeBuiltInToolSettingsChanges()
     }
 
     isolated deinit {
@@ -209,6 +211,7 @@ final class ChatViewModel {
             NotificationCenter.default.removeObserver(backgroundPersistenceObserver)
         }
         mcpSettingsObservationTask?.cancel()
+        builtInToolSettingsObservationTask?.cancel()
         mcpDiscoveryTask?.cancel()
     }
 

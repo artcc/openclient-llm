@@ -295,7 +295,12 @@ struct ToolFunctionDefinition: Codable, Sendable {
 }
 ```
 
-The default registry always includes `get_current_datetime`. Outside Private Chat it also includes `save_memory` and `delete_memory`. It includes `web_search` only while web search is enabled. When MCP tools are configured on the LiteLLM server and enabled by the user, each enabled tool is wrapped in an `MCPTool` instance (conforming to `ChatToolProtocol`) and added to the registry. `ToolRegistry.execute` returns an "Unknown tool" result rather than throwing when a name is not registered.
+The chat registry includes enabled built-in tools, subject to their existing requirements: `get_current_datetime`,
+`save_memory` and `delete_memory` outside Private Chat, and `web_search` while web search is enabled. Image tools retain
+the conditions below. Each built-in is wrapped in `ConfiguredBuiltInTool` before MCP tools are appended. When MCP tools
+are configured on the LiteLLM server and enabled by the user, each enabled tool is wrapped in an `MCPTool` instance
+(conforming to `ChatToolProtocol`) and added to the registry. `ToolRegistry.execute` returns an "Unknown tool" result
+rather than throwing when a name is not registered.
 
 `ToolRegistry.definitions` filters all tools through `isAvailableForAdvertisement` on every access, in addition to MCP
 availability checks. Image tools are conditionally added by `ChatViewModel+ImageTools`; their availability is not static
@@ -494,9 +499,26 @@ Do not implement streamed tool-call deltas unless the repository and event contr
 
 ### Automatic Agent Routing
 
-- There is no separate Tools or Agent toggle.
-- Function-calling models automatically receive the default registry.
+- There is no separate agent-mode toggle.
+- Function-calling models automatically receive the registry of enabled, eligible tools.
 - The globe control independently adds or removes `web_search` and requires both a configured search tool and a function-calling model.
+
+### Built-in Tool Settings
+
+- Settings has a dedicated **Tools** section, independent of the existing MCP section. `ToolsView` lists the seven
+  `BuiltInTool` entries with a localized display name, technical name, description, and a switch matching Memory rows.
+- Built-ins can only be enabled or disabled; they cannot be edited or deleted. No user-created tools are implemented yet.
+- `SettingsManager` stores independent local preferences under `builtInToolEnabled.<technical name>`. Missing values
+  default to enabled, preserving existing behavior. App data reset clears these preferences.
+- `ConfiguredBuiltInTool` checks the current preference for advertisement and immediately before execution, including
+  calls authorized before a setting changed. It preserves each tool's dynamic advertisement and execution requirements.
+  An already-started operation is not cancelled solely because its preference changes.
+- Changes publish `builtInToolSettingsDidChange`; chat refreshes context usage and web-search availability. The globe
+  is unavailable while the built-in search tool is disabled, without erasing the saved chat search preference.
+- System-prompt guidance omits disabled built-in instructions and requires the model to use only currently advertised tools.
+- Enabling a tool never bypasses Private Chat, model capabilities, attachment requirements, specialist selections, or
+  generation limits. Disabling memory tools does not remove saved memories from context; disabling image tools does
+  not disable a model's native image capabilities. MCP settings and authorization are independent.
 
 ### Tool Execution Feedback
 
@@ -548,7 +570,8 @@ When persisting conversations with tool calling:
 - **No arbitrary code execution**: Tools are predefined, no dynamic tool loading
 - **Rate limiting**: Apply rate limits to tool executions (especially web search)
 - **Content sanitization**: Sanitize tool results before injecting into messages
-- **Tool scope**: Function-calling models receive built-in datetime and, outside Private Chat, memory tools automatically. Web search remains explicit opt-in through its toggle.
+- **Tool scope**: Function-calling models receive enabled built-in datetime and, outside Private Chat, enabled memory
+  tools automatically. Web search additionally requires explicit opt-in through its globe toggle.
 - **Image scope**: Specialist defaults authorize only the eligible image tools described above; preserve native priority,
   per-turn generation limits, captured configuration, UUID-only analysis inputs, and untrusted-result boundaries.
 

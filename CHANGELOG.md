@@ -16,6 +16,7 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 - `analyze_images` tool lets function-calling chat models without native vision ask a selected specialist about current or earlier image attachments
 - `generate_image` tool lets function-calling chat models without native image generation create images through a selected specialist without switching models or conversations
 - Image tool progress now identifies the operation and specialist model in the chat composer
+- Tools section in Settings lists OpenClient's built-in tools alphabetically by localized name, with technical names, clear descriptions, and individual enable switches that remember your choices
 
 ### Changed
 
