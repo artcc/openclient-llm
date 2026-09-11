@@ -334,7 +334,7 @@ private extension ChatInputBarView {
                     webSearchColor(
                         enabled: state.isWebSearchEnabled,
                         supported: modelSupportsWebSearch,
-                        configured: state.isWebSearchToolConfigured
+                        configured: state.isWebSearchToolConfigured && state.isBuiltInWebSearchEnabled
                     )
                 )
                 .frame(minWidth: 44, minHeight: 44)
@@ -347,9 +347,8 @@ private extension ChatInputBarView {
             ? String(localized: "Disable Web Search")
             : String(localized: "Enable Web Search")
         )
-        .accessibilityValue(!state.isWebSearchToolConfigured
-            ? String(localized: "Web search is not configured")
-            : (!modelSupportsWebSearch ? String(localized: "Not supported by this model") : ""))
+        .accessibilityValue(webSearchAvailabilityDescription)
+        .help(webSearchAvailabilityDescription)
         .animation(.easeInOut(duration: 0.2), value: state.isWebSearchEnabled)
     }
 
@@ -459,6 +458,15 @@ private extension ChatInputBarView {
         return enabled ? Color.appAccent : .secondary
     }
 
+    var webSearchAvailabilityDescription: String {
+        if !state.isBuiltInWebSearchEnabled { return String(localized: "Web search is disabled in Settings > Tools") }
+        if !state.isWebSearchToolConfigured { return String(localized: "Web search is not configured") }
+        if state.selectedModel?.capabilities.contains(.functionCalling) != true {
+            return String(localized: "Not supported by this model")
+        }
+        return ""
+    }
+
     var canShowInputTips: Bool {
         state.selectedModel != nil
             && !state.isStreaming
@@ -470,6 +478,7 @@ private extension ChatInputBarView {
     var canShowWebSearchTip: Bool {
         canShowInputTips
             && state.isWebSearchToolConfigured
+            && state.isBuiltInWebSearchEnabled
             && state.selectedModel?.capabilities.contains(.functionCalling) == true
     }
 

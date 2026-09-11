@@ -107,6 +107,7 @@ extension ChatViewModel {
     }
 
     func refreshContextUsage(in loadedState: inout LoadedState, calibratedPromptTokens: Int? = nil) {
+        loadedState.isBuiltInWebSearchEnabled = settingsManager.getIsBuiltInToolEnabled(.webSearch)
         let profileContext = isPrivateChat ? "" : getUserProfileContextUseCase?.execute() ?? ""
         let memoryContext = isPrivateChat ? "" : getMemoryContextUseCase?.execute() ?? ""
         let requestPrompt = requestSystemPrompt(

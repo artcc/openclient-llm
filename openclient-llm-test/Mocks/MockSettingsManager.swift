@@ -33,6 +33,7 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     var availableSearchTools: [SearchToolItem] = []
     var isPrivacyScreenEnabled: Bool = true
     var hasEnoughConversationsForMemoryTip: Bool = false
+    var disabledBuiltInTools: Set<BuiltInTool> = []
     var enabledMCPToolIds: [String] = []
     var enabledMCPToolWriteCount = 0
     var mcpToolPermissions: [String: MCPToolPermission] = [:]
@@ -221,6 +222,18 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         enabledMCPToolIds
     }
 
+    func getIsBuiltInToolEnabled(_ tool: BuiltInTool) -> Bool {
+        !disabledBuiltInTools.contains(tool)
+    }
+
+    func setIsBuiltInToolEnabled(_ value: Bool, for tool: BuiltInTool) {
+        if value {
+            disabledBuiltInTools.remove(tool)
+        } else {
+            disabledBuiltInTools.insert(tool)
+        }
+    }
+
     func setEnabledMCPToolIds(_ ids: [String]) {
         enabledMCPToolWriteCount += 1
         enabledMCPToolIds = ids
@@ -329,6 +342,7 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         mcpDiscoveryFailed = false
         mcpAuthorizationScope = UUID().uuidString
         hasEnoughConversationsForMemoryTip = false
+        disabledBuiltInTools = []
         dismissedRemoteBannerKey = nil
         deleteAllCalled = true
     }

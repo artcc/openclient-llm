@@ -25,4 +25,7 @@ extension Notification.Name {
     nonisolated static let mcpToolSettingsDidChange = Notification.Name(
         "openclient.mcpToolSettingsDidChange"
     )
+    nonisolated static let builtInToolSettingsDidChange = Notification.Name(
+        "openclient.builtInToolSettingsDidChange"
+    )
 }

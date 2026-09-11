@@ -275,6 +275,56 @@ final class ToolRegistryTests: XCTestCase {
         XCTAssertFalse(repository.didExecute)
     }
 
+    // MARK: - Tests — built-in settings
+
+    func test_execute_builtInDisabledAfterAuthorization_doesNotExecute() async throws {
+        // Given
+        let settings = MockSettingsManager()
+        let tool = MockChatTool(name: "save_memory")
+        let sut = ToolRegistry(tools: [ConfiguredBuiltInTool(tool: tool, settingsManager: settings)])
+        let invocation = try await authorizedInvocation(in: sut, toolName: "save_memory", arguments: "{}")
+
+        // When
+        settings.setIsBuiltInToolEnabled(false, for: .saveMemory)
+        let result = try await sut.execute(invocation)
+
+        // Then
+        XCTAssertEqual(tool.executionCount, 0)
+        XCTAssertTrue(sut.definitions.isEmpty)
+        XCTAssertTrue(result.text.contains("disabled"))
+    }
+
+    func test_definitions_builtInReenabled_restoresAdvertisementAndExecution() async throws {
+        // Given
+        let settings = MockSettingsManager()
+        settings.setIsBuiltInToolEnabled(false, for: .saveMemory)
+        let tool = MockChatTool(name: "save_memory")
+        let sut = ToolRegistry(tools: [ConfiguredBuiltInTool(tool: tool, settingsManager: settings)])
+        XCTAssertTrue(sut.definitions.isEmpty)
+
+        // When
+        settings.setIsBuiltInToolEnabled(true, for: .saveMemory)
+        let invocation = try await authorizedInvocation(in: sut, toolName: "save_memory", arguments: "{}")
+        _ = try await sut.execute(invocation)
+
+        // Then
+        XCTAssertEqual(sut.definitions.map(\.function.name), ["save_memory"])
+        XCTAssertEqual(tool.executionCount, 1)
+    }
+
+    func test_definitions_enabledBuiltInWithUnavailableImplementation_remainsUnavailable() {
+        // Given
+        let settings = MockSettingsManager()
+        let tool = ListImageAttachmentsTool(attachments: [], isAvailable: { false })
+        let sut = ToolRegistry(tools: [ConfiguredBuiltInTool(tool: tool, settingsManager: settings)])
+
+        // When
+        let definitions = sut.definitions
+
+        // Then
+        XCTAssertTrue(definitions.isEmpty)
+    }
+
     // MARK: - Tests — default factory
 
     func test_default_withWebSearchEnabled_includesWebSearchTool() {
