@@ -364,7 +364,7 @@ private extension SettingsView {
             }
             .buttonStyle(.plain)
         } header: {
-            Text(String(localized: "Tools"))
+            Text(String(localized: "Integrations"))
         } footer: {
             Text(String(localized: "Manage the built-in tools OpenClient makes available to the assistant."))
         }

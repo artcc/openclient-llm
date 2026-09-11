@@ -60,14 +60,14 @@ private extension ToolsView {
                 ForEach(sortedTools) { tool in
                     toolRow(tool, isEnabled: state.enabledTools.contains(tool))
                 }
-            } header: {
-                Text(String(localized: "Built-in Tools"))
             } footer: {
                 Text(String(localized: """
                     Choose which OpenClient tools the assistant can use. \
                     Tools require a model that supports tool calling. \
                     Image tools may make additional model requests.
                     """))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
