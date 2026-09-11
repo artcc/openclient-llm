@@ -35,6 +35,10 @@ protocol SettingsManagerProtocol: Sendable {
     func setSelectedTTSVoice(_ voice: String, forModelId modelId: String)
     func getSelectedSTTModelId() -> String?
     func setSelectedSTTModelId(_ value: String?)
+    func getSelectedVisionModelId() -> String?
+    func setSelectedVisionModelId(_ value: String?)
+    func getSelectedImageGenerationModelId() -> String?
+    func setSelectedImageGenerationModelId(_ value: String?)
     func getWebSearchToolName() -> String
     func setWebSearchToolName(_ value: String)
     func getWebSearchMaxResults() -> Int
@@ -45,6 +49,8 @@ protocol SettingsManagerProtocol: Sendable {
     func setIsPrivacyScreenEnabled(_ value: Bool)
     func getHasEnoughConversationsForMemoryTip() -> Bool
     func setHasEnoughConversationsForMemoryTip(_ value: Bool)
+    func getIsBuiltInToolEnabled(_ tool: BuiltInTool) -> Bool
+    func setIsBuiltInToolEnabled(_ value: Bool, for tool: BuiltInTool)
     func getEnabledMCPToolIds() -> [String]
     func setEnabledMCPToolIds(_ ids: [String])
     func getMCPToolPermissionRawValue(for key: String) -> String?

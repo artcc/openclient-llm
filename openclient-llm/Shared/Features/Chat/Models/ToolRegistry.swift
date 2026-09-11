@@ -69,6 +69,7 @@ struct ToolRegistry: Sendable {
 
     var definitions: [ToolDefinition] {
         tools.values.compactMap { tool in
+            guard tool.isAvailableForAdvertisement else { return nil }
             if let mcpTool = tool as? any MCPAuthorizableToolProtocol,
                !mcpTool.isAvailableForAdvertisement {
                 return nil

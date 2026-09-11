@@ -106,7 +106,7 @@ private extension ChatViewModel {
             tools: tools
         )
         guard let compacted = try await compactConversationUseCase.execute(
-            messages: sendContext.messages,
+            messages: ImageAttachmentContext.messagesForModel(sendContext.messages, model: sendContext.selectedModel),
             configuration: configuration
         ), compactionCursorAdvanced(
             from: cursorMessageId,
@@ -226,6 +226,7 @@ private extension ChatViewModel {
     }
 
     func hasSameRequestMessages(_ messages: [ChatMessage], as sendContext: SendMessageContext) -> Bool {
+        // Compare original history, not the model-only attachment projection used for requests and compaction.
         messages.filter { $0.id != sendContext.assistantId }.elementsEqual(sendContext.messages) {
             $0.id == $1.id && $0.hasSameRequestContent(as: $1)
         }

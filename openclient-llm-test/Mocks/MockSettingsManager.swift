@@ -20,6 +20,8 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     var selectedModelId: String?
     var selectedTTSModelId: String?
     var selectedSTTModelId: String?
+    var selectedVisionModelId: String?
+    var selectedImageGenerationModelId: String?
     var ttsVoices: [String: String] = [:]
     var isCloudSyncEnabled: Bool = false
     var lastSuccessfulCloudSyncDate: Date?
@@ -31,6 +33,7 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     var availableSearchTools: [SearchToolItem] = []
     var isPrivacyScreenEnabled: Bool = true
     var hasEnoughConversationsForMemoryTip: Bool = false
+    var disabledBuiltInTools: Set<BuiltInTool> = []
     var enabledMCPToolIds: [String] = []
     var enabledMCPToolWriteCount = 0
     var mcpToolPermissions: [String: MCPToolPermission] = [:]
@@ -159,6 +162,22 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         selectedSTTModelId = value
     }
 
+    func getSelectedVisionModelId() -> String? {
+        selectedVisionModelId
+    }
+
+    func setSelectedVisionModelId(_ value: String?) {
+        selectedVisionModelId = value
+    }
+
+    func getSelectedImageGenerationModelId() -> String? {
+        selectedImageGenerationModelId
+    }
+
+    func setSelectedImageGenerationModelId(_ value: String?) {
+        selectedImageGenerationModelId = value
+    }
+
     func getWebSearchToolName() -> String {
         webSearchToolName
     }
@@ -201,6 +220,18 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
 
     func getEnabledMCPToolIds() -> [String] {
         enabledMCPToolIds
+    }
+
+    func getIsBuiltInToolEnabled(_ tool: BuiltInTool) -> Bool {
+        !disabledBuiltInTools.contains(tool)
+    }
+
+    func setIsBuiltInToolEnabled(_ value: Bool, for tool: BuiltInTool) {
+        if value {
+            disabledBuiltInTools.remove(tool)
+        } else {
+            disabledBuiltInTools.insert(tool)
+        }
     }
 
     func setEnabledMCPToolIds(_ ids: [String]) {
@@ -297,6 +328,8 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         selectedModelId = nil
         selectedTTSModelId = nil
         selectedSTTModelId = nil
+        selectedVisionModelId = nil
+        selectedImageGenerationModelId = nil
         lastSuccessfulCloudSyncDate = nil
         acceptedCloudAccountFingerprint = nil
         ttsVoices = [:]
@@ -309,6 +342,7 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         mcpDiscoveryFailed = false
         mcpAuthorizationScope = UUID().uuidString
         hasEnoughConversationsForMemoryTip = false
+        disabledBuiltInTools = []
         dismissedRemoteBannerKey = nil
         deleteAllCalled = true
     }

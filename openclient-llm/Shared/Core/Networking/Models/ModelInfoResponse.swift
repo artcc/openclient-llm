@@ -35,6 +35,7 @@ nonisolated struct ModelInfoResponse: Decodable, Sendable {
         let supportsParallelFunctionCalling: Bool?
         let supportsResponseSchema: Bool?
         let supportsWebSearch: Bool?
+        let supportedOutputModalities: [String]?
         let mode: String?
         let litellmProvider: String?
     }

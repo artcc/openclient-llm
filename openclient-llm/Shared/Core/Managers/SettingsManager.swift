@@ -23,11 +23,14 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         static let isWebSearchEnabled = "isWebSearchEnabled"
         static let selectedTTSModelId = "selectedTTSModelId"
         static let selectedSTTModelId = "selectedSTTModelId"
+        static let selectedVisionModelId = "selectedVisionModelId"
+        static let selectedImageGenerationModelId = "selectedImageGenerationModelId"
         static let webSearchToolName = "webSearchToolName"
         static let webSearchMaxResults = "webSearchMaxResults"
         static let availableSearchTools = "availableSearchTools"
         static let isPrivacyScreenEnabled = "isPrivacyScreenEnabled"
         static let hasEnoughConversationsForMemoryTip = "hasEnoughConversationsForMemoryTip"
+        static let builtInToolEnabledPrefix = "builtInToolEnabled."
         static let enabledMCPToolIds = "enabledMCPToolIds"
         static let mcpToolPermissionPrefix = "mcpToolPermission."
         static let mcpToolConfigurationPrefix = "mcpToolConfiguration."
@@ -200,6 +203,22 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         defaults.set(value, forKey: Keys.selectedSTTModelId)
     }
 
+    func getSelectedVisionModelId() -> String? {
+        defaults.string(forKey: Keys.selectedVisionModelId)
+    }
+
+    func setSelectedVisionModelId(_ value: String?) {
+        defaults.set(value, forKey: Keys.selectedVisionModelId)
+    }
+
+    func getSelectedImageGenerationModelId() -> String? {
+        defaults.string(forKey: Keys.selectedImageGenerationModelId)
+    }
+
+    func setSelectedImageGenerationModelId(_ value: String?) {
+        defaults.set(value, forKey: Keys.selectedImageGenerationModelId)
+    }
+
     func getWebSearchToolName() -> String {
         defaults.string(forKey: Keys.webSearchToolName) ?? ""
     }
@@ -266,11 +285,16 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         defaults.removeObject(forKey: Keys.isWebSearchEnabled)
         defaults.removeObject(forKey: Keys.selectedTTSModelId)
         defaults.removeObject(forKey: Keys.selectedSTTModelId)
+        defaults.removeObject(forKey: Keys.selectedVisionModelId)
+        defaults.removeObject(forKey: Keys.selectedImageGenerationModelId)
         defaults.removeObject(forKey: Keys.webSearchToolName)
         defaults.removeObject(forKey: Keys.webSearchMaxResults)
         defaults.removeObject(forKey: Keys.availableSearchTools)
         defaults.removeObject(forKey: Keys.isPrivacyScreenEnabled)
         defaults.removeObject(forKey: Keys.hasEnoughConversationsForMemoryTip)
+        for tool in BuiltInTool.allCases {
+            defaults.removeObject(forKey: Keys.builtInToolEnabledPrefix + tool.rawValue)
+        }
         defaults.removeObject(forKey: Keys.enabledMCPToolIds)
         for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(Keys.mcpToolPermissionPrefix) {
             defaults.removeObject(forKey: key)
@@ -286,10 +310,22 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         defaults.removeObject(forKey: LegacyKeys.serverBaseURL)
         defaults.removeObject(forKey: LegacyKeys.apiKey)
         keychainManager.deleteAll()
+        NotificationCenter.default.post(name: .builtInToolSettingsDidChange, object: nil)
         NotificationCenter.default.post(name: .serverConfigurationDidChange, object: nil)
         if wasCloudSyncEnabled {
             NotificationCenter.default.post(name: .cloudSyncIntentDidChange, object: nil)
         }
+    }
+
+    func getIsBuiltInToolEnabled(_ tool: BuiltInTool) -> Bool {
+        let key = Keys.builtInToolEnabledPrefix + tool.rawValue
+        return defaults.object(forKey: key) == nil ? true : defaults.bool(forKey: key)
+    }
+
+    func setIsBuiltInToolEnabled(_ value: Bool, for tool: BuiltInTool) {
+        guard getIsBuiltInToolEnabled(tool) != value else { return }
+        defaults.set(value, forKey: Keys.builtInToolEnabledPrefix + tool.rawValue)
+        NotificationCenter.default.post(name: .builtInToolSettingsDidChange, object: nil)
     }
 }
 

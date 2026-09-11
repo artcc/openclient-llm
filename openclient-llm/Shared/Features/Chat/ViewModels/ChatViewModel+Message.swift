@@ -45,12 +45,11 @@ extension ChatViewModel {
         let text = loadedState.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || !loadedState.pendingAttachments.isEmpty,
               let model = loadedState.selectedModel else { return }
-        guard model.mode != .imageGeneration || (!text.isEmpty && loadedState.pendingAttachments.isEmpty) else {
-            loadedState.errorMessage = String(localized: "Image generation requires a text prompt without attachments.")
-            state = .loaded(loadedState)
-            scheduleErrorDismiss()
-            return
-        }
+        guard validateImageGenerationInput(
+            text: text,
+            attachments: loadedState.pendingAttachments,
+            model: model
+        ) else { return }
 
         if activeAssistantMessageId != nil {
             cancelActiveStreaming()

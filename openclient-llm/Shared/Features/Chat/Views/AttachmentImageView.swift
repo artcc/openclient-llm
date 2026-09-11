@@ -28,6 +28,9 @@ struct AttachmentImageView: View {
     @State private var loadedData: Data?
     @State private var isLoaded: Bool = false
     @State private var showPreview: Bool = false
+#if os(macOS)
+    @State private var imageToExport: Data?
+#endif
 
     // MARK: - Init
 
@@ -63,6 +66,9 @@ struct AttachmentImageView: View {
                 ImagePreviewView(data: data)
             }
         }
+#if os(macOS)
+        .imageExporter(data: $imageToExport)
+#endif
     }
 }
 
@@ -147,9 +153,9 @@ private extension AttachmentImageView {
         }
         #elseif os(macOS)
         Button {
-            saveImageToDownloads(data)
+            imageToExport = data
         } label: {
-            Label(String(localized: "Save to Downloads"), systemImage: "arrow.down.circle")
+            Label(String(localized: "Save Image..."), systemImage: "arrow.down.circle")
         }
         #endif
         Button {
@@ -163,13 +169,6 @@ private extension AttachmentImageView {
     func saveImageToPhotos(_ data: Data) {
         guard let image = UIImage(data: data) else { return }
         UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-    }
-    #elseif os(macOS)
-    func saveImageToDownloads(_ data: Data) {
-        let timestamp = Int(Date().timeIntervalSince1970)
-        guard let url = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)
-            .first?.appendingPathComponent("generated-image-\(timestamp).png") else { return }
-        try? data.write(to: url)
     }
     #endif
 

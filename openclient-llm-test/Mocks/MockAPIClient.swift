@@ -17,13 +17,20 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
     var requestError: Error?
     var lastRequestEndpoint: String?
     var lastRequestTimeoutInterval: TimeInterval?
+    var lastRequestBody: (any Encodable & Sendable)?
     var lastMCPServerId: String?
     var lastMCPToolName: String?
     var lastMCPArguments: String?
     var streamChunks: [Data] = []
     var streamError: Error?
+    var lastStreamEndpoint: String?
+    var lastStreamBody: (any Encodable & Sendable)?
     var multipartResult: Any?
     var multipartError: Error?
+    var lastMultipartEndpoint: String?
+    var lastMultipartFields: [String: String]?
+    var lastMultipartFiles: [MultipartFileData]?
+    var lastMultipartTimeoutInterval: TimeInterval?
     var rawDataResult: Data?
     var rawDataError: Error?
     var downloadResult: (data: Data, mimeType: String)?
@@ -39,6 +46,7 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
     ) async throws -> T {
         lastRequestEndpoint = endpoint
         lastRequestTimeoutInterval = timeoutInterval
+        lastRequestBody = body
         if let error = requestError {
             throw error
         }
@@ -52,6 +60,8 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
         endpoint: String,
         body: any Encodable & Sendable
     ) -> AsyncThrowingStream<Data, Error> {
+        lastStreamEndpoint = endpoint
+        lastStreamBody = body
         let chunks = streamChunks
         let error = streamError
         return AsyncThrowingStream { continuation in
@@ -71,8 +81,13 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
     func multipartRequest<T: Decodable & Sendable>(
         endpoint: String,
         fields: [String: String],
-        file: MultipartFileData
+        files: [MultipartFileData],
+        timeoutInterval: TimeInterval
     ) async throws -> T {
+        lastMultipartEndpoint = endpoint
+        lastMultipartFields = fields
+        lastMultipartFiles = files
+        lastMultipartTimeoutInterval = timeoutInterval
         if let error = multipartError {
             throw error
         }

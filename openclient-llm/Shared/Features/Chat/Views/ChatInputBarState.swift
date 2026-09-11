@@ -21,13 +21,23 @@ struct ChatInputBarState: Equatable {
     let activeToolCallIds: Set<String>
     let activeToolNamesById: [String: String]
     let mcpToolDisplayNames: [String: String]
+    let imageToolModelNames: [String: String]
     let isWebSearchEnabled: Bool
     let isWebSearchToolConfigured: Bool
+    let isBuiltInWebSearchEnabled: Bool
     let isPreparingAttachment: Bool
     let hasPendingAttachments: Bool
     let hasTranscriptionModel: Bool
     let availableMCPToolIds: Set<String>
     let enabledMCPToolIds: Set<String>
+
+    var canAttachImages: Bool {
+        canUseChatActions || selectedModel?.capabilities.contains(.vision) == true
+    }
+
+    var canUseChatActions: Bool {
+        selectedModel?.mode != .imageGeneration
+    }
 
     init(loadedState: ChatViewModel.LoadedState) {
         inputText = loadedState.inputText
@@ -41,8 +51,12 @@ struct ChatInputBarState: Equatable {
         isSearchingWeb = loadedState.isSearchingWeb
         activeToolCallIds = loadedState.activeToolCallIds
         activeToolNamesById = loadedState.activeToolNamesById
-        isWebSearchEnabled = loadedState.isWebSearchEnabled
+        imageToolModelNames = loadedState.imageToolModelNames.mapValues {
+            MCPDisplayText.sanitize($0, fallback: String(localized: "Image model"), maximumLength: 160)
+        }
+        isWebSearchEnabled = loadedState.isWebSearchEnabled && loadedState.isBuiltInWebSearchEnabled
         isWebSearchToolConfigured = loadedState.isWebSearchToolConfigured
+        isBuiltInWebSearchEnabled = loadedState.isBuiltInWebSearchEnabled
         isPreparingAttachment = loadedState.isPreparingAttachment
         hasPendingAttachments = !loadedState.pendingAttachments.isEmpty
         hasTranscriptionModel = loadedState.transcriptionModelId != nil

@@ -1,6 +1,9 @@
 disabled_rules:
   - trailing_comma
 
+excluded:
+  - .build
+
 opt_in_rules:
   - force_unwrapping
 

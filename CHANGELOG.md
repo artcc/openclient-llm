@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## [1.7.0-build-105] - 2026-09-11
+
+### Added
+
+- Image generation models with vision now accept one or more image attachments through LiteLLM's image editing endpoint on iOS, iPadOS, and macOS
+- Image and Vision section with independent optional default models, including shared selections for compatible dual-capability models
+- `analyze_images` tool lets function-calling chat models without native vision ask a selected specialist about current or earlier image attachments
+- `generate_image` tool lets function-calling chat models without native image generation create images through a selected specialist without switching models or conversations
+- Image tool progress now identifies the operation and specialist model in the chat composer
+- Tools section in Settings lists OpenClient's built-in tools alphabetically by localized name, with technical names, clear descriptions, and individual enable switches that remember your choices
+
+### Changed
+
+- Native vision and image generation take priority over delegation, while unavailable specialist selections remain saved without automatic replacement
+- Model discovery now recognizes image generation from LiteLLM's optional output-modality metadata without changing the model's chat transport
+- Models without native vision receive image references instead of image bytes throughout conversation history and context compaction
+- Generated tool images are attached and saved in the current conversation as soon as they arrive, while private chats keep them only in memory
+- Delegated generation permits one attempted request per turn, with longer image-generation timeouts to accommodate slower models
+
+### Fixed
+
+- The Models screen now automatically selects and saves the first available text-to-speech model when no valid selection exists, including when only one model is available
+- The Models screen now automatically selects and saves Apple speech recognition when no valid speech-to-text selection exists, including when Apple is the only available option
+- Regenerating an image now reuses the original prompt and reference images
+- Native chat image responses now preserve the decoded image format and support image-only agent answers
+- Native agent images are published before paced text so stopping the response does not discard an image already received
+
+### Security
+
+- Image analysis resolves only attachment IDs from the captured conversation and treats analysis and OCR output as untrusted data
+- Specialist requests capture their server configuration and revalidate model selection, conversation identity, and availability before returning results
+
 ## [1.6.50-build-102] - 2026-09-09
 
 ### Changed

@@ -22,18 +22,8 @@ nonisolated struct ChatCompletionStreamResponse: Decodable, Sendable {
         let role: String?
         let content: String?
         let reasoningContent: String?
-        let images: [ImageItem]?
+        let images: [ChatCompletionResponse.ImageItem]?
         let toolCalls: [ToolCall]?
-    }
-
-    struct ImageItem: Decodable, Sendable {
-        let imageUrl: ImageItemURL
-        let index: Int
-        let type: String
-    }
-
-    struct ImageItemURL: Decodable, Sendable {
-        let url: String
     }
 
     struct Usage: Decodable, Sendable {

@@ -107,6 +107,7 @@ extension ChatViewModel {
     }
 
     func refreshContextUsage(in loadedState: inout LoadedState, calibratedPromptTokens: Int? = nil) {
+        loadedState.isBuiltInWebSearchEnabled = settingsManager.getIsBuiltInToolEnabled(.webSearch)
         let profileContext = isPrivateChat ? "" : getUserProfileContextUseCase?.execute() ?? ""
         let memoryContext = isPrivateChat ? "" : getMemoryContextUseCase?.execute() ?? ""
         let requestPrompt = requestSystemPrompt(
@@ -125,8 +126,11 @@ extension ChatViewModel {
             cursorMessageId: loadedState.conversation?.contextSummaryCursorMessageId
         )
         let tools = contextTools(for: loadedState)
+        let messages = loadedState.selectedModel.map {
+            ImageAttachmentContext.messagesForModel(partition.messages, model: $0)
+        } ?? partition.messages
         loadedState.contextUsage = ContextWindowBuilder().usage(
-            messages: partition.messages,
+            messages: messages,
             systemPrompt: systemPrompt,
             summary: loadedState.conversation?.contextSummary,
             model: modelWithContextWindow(
@@ -146,7 +150,10 @@ extension ChatViewModel {
     ) -> Int? {
         guard let promptTokens else { return nil }
         guard let assistant = state.messages.first(where: { $0.id == assistantMessageId }) else { return promptTokens }
-        let responseTokens = ContextWindowBuilder().estimatedInputTokens(messages: [assistant], systemPrompt: "")
+        let messages = state.selectedModel.map {
+            ImageAttachmentContext.messagesForModel([assistant], model: $0)
+        } ?? [assistant]
+        let responseTokens = ContextWindowBuilder().estimatedInputTokens(messages: messages, systemPrompt: "")
         return promptTokens + responseTokens
     }
 
@@ -167,8 +174,11 @@ extension ChatViewModel {
             summary: configuration.summary,
             cursorMessageId: configuration.summaryCursorMessageId
         )
+        let projectedMessages = configuration.selectedModel.map {
+            ImageAttachmentContext.messagesForModel(partition.messages, model: $0)
+        } ?? partition.messages
         let context = ContextWindowBuilder().build(
-            messages: partition.messages,
+            messages: projectedMessages,
             systemPrompt: effectiveSystemPrompt,
             summary: configuration.summary,
             model: modelWithContextWindow(
@@ -412,13 +422,13 @@ extension ChatViewModel {
 
     func generatedImageAttachment(
         data: Data,
-        mimeType: String = "image/png",
+        mimeType: String? = nil,
         state _: LoadedState
     ) -> ChatMessage.Attachment? {
         ChatMessage.Attachment(
             type: .image,
             fileName: String(localized: "Generated Image"),
-            mimeType: mimeType,
+            mimeType: mimeType ?? (try? GeneratedImageDecoder.decode(data: data).mimeType) ?? "image/png",
             fileRelativePath: "",
             transientData: data
         )

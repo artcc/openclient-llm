@@ -191,5 +191,73 @@ final class ModelsViewModelSTTTests: XCTestCase {
             return
         }
         XCTAssertEqual(loadedState.selectedSTTModelId, LLMModel.appleSpeechRecognition.id)
+        XCTAssertEqual(mockSettingsManager.selectedSTTModelId, LLMModel.appleSpeechRecognition.id)
+    }
+
+    func test_refreshAsync_noSelectionWithRemoteSTT_selectsAndPersistsApple() async {
+        // Given
+        mockFetchModels.result = .success([LLMModel(id: "whisper-1", mode: .audioTranscription)])
+        sut = ModelsViewModel(
+            state: .loaded(.init()),
+            fetchModelsUseCase: mockFetchModels,
+            settingsManager: mockSettingsManager
+        )
+
+        // When
+        await sut.refreshAsync()
+
+        // Then
+        guard case .loaded(let loadedState) = sut.state else {
+            XCTFail("Expected loaded state")
+            return
+        }
+        XCTAssertEqual(loadedState.selectedSTTModelId, LLMModel.appleSpeechRecognition.id)
+        XCTAssertEqual(mockSettingsManager.selectedSTTModelId, LLMModel.appleSpeechRecognition.id)
+    }
+
+    func test_refreshAsync_onlyAppleAvailable_selectsAndPersistsApple() async {
+        // Given
+        let sttModel = LLMModel(id: "whisper-1", mode: .audioTranscription)
+        mockSettingsManager.selectedSTTModelId = sttModel.id
+        mockFetchModels.result = .success([LLMModel(id: "gpt-4")])
+        sut = ModelsViewModel(
+            state: .loaded(.init(models: [sttModel], selectedSTTModelId: sttModel.id)),
+            fetchModelsUseCase: mockFetchModels,
+            settingsManager: mockSettingsManager
+        )
+
+        // When
+        await sut.refreshAsync()
+
+        // Then
+        guard case .loaded(let loadedState) = sut.state else {
+            XCTFail("Expected loaded state")
+            return
+        }
+        XCTAssertEqual(loadedState.selectedSTTModelId, LLMModel.appleSpeechRecognition.id)
+        XCTAssertEqual(mockSettingsManager.selectedSTTModelId, LLMModel.appleSpeechRecognition.id)
+    }
+
+    func test_refreshAsync_selectedSTTStillAvailable_preservesSelection() async {
+        // Given
+        let sttModel = LLMModel(id: "whisper-1", mode: .audioTranscription)
+        mockSettingsManager.selectedSTTModelId = sttModel.id
+        mockFetchModels.result = .success([sttModel])
+        sut = ModelsViewModel(
+            state: .loaded(.init(models: [sttModel], selectedSTTModelId: sttModel.id)),
+            fetchModelsUseCase: mockFetchModels,
+            settingsManager: mockSettingsManager
+        )
+
+        // When
+        await sut.refreshAsync()
+
+        // Then
+        guard case .loaded(let loadedState) = sut.state else {
+            XCTFail("Expected loaded state")
+            return
+        }
+        XCTAssertEqual(loadedState.selectedSTTModelId, sttModel.id)
+        XCTAssertEqual(mockSettingsManager.selectedSTTModelId, sttModel.id)
     }
 }

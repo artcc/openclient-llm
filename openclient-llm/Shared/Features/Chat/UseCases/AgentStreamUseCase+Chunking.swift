@@ -17,6 +17,7 @@ nonisolated extension AgentStreamUseCase {
         let content = choice.message.content ?? ""
         let reasoning = choice.message.reasoningContent
         guard hasPresentableFinalContent(choice) else { return true }
+        guard try yieldNativeImages(choice, continuation: continuation) else { return false }
         if let reasoning, !reasoning.isEmpty {
             try await yieldChunked(
                 reasoning,
@@ -25,7 +26,7 @@ nonisolated extension AgentStreamUseCase {
                 delay: delay
             )
         }
-        if !content.isEmpty {
+        if !content.isEmpty, content.trimmingCharacters(in: .whitespacesAndNewlines) != "{}" {
             try await yieldChunked(
                 content,
                 as: { .token($0) },
@@ -36,10 +37,22 @@ nonisolated extension AgentStreamUseCase {
         return false
     }
 
+    func yieldNativeImages(
+        _ choice: ChatCompletionResponse.Choice,
+        continuation: AsyncThrowingStream<AgentEvent, Error>.Continuation
+    ) throws -> Bool {
+        for item in choice.message.images ?? [] {
+            try Task.checkCancellation()
+            let image = try GeneratedImageDecoder.decode(dataURL: item.imageUrl.url)
+            if case .terminated = continuation.yield(.generatedImage(image)) { return false }
+        }
+        return true
+    }
+
     func hasPresentableFinalContent(_ choice: ChatCompletionResponse.Choice) -> Bool {
         let content = choice.message.content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let reasoning = choice.message.reasoningContent?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return content != "{}" && (!content.isEmpty || !reasoning.isEmpty)
+        return choice.message.images?.isEmpty == false || (content != "{}" && (!content.isEmpty || !reasoning.isEmpty))
     }
 
     func yieldChunked(

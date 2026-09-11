@@ -110,7 +110,8 @@ private extension BranchConversationUseCase {
                 toolCalls: message.toolCalls,
                 toolCallId: message.toolCallId,
                 toolName: message.toolName,
-                isFavourite: message.isFavourite
+                isFavourite: message.isFavourite,
+                imageGenerationAttempted: message.imageGenerationAttempted
             )
         }
     }

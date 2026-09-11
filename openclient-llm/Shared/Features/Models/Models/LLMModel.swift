@@ -61,6 +61,29 @@ struct LLMModel: Identifiable, Equatable, Sendable {
     }
 }
 
+// MARK: - Image and vision support
+
+extension LLMModel {
+    nonisolated var supportsNativeVision: Bool {
+        capabilities.contains(.vision)
+    }
+
+    nonisolated var supportsNativeImageGeneration: Bool {
+        mode == .imageGeneration || capabilities.contains(.imageGeneration)
+    }
+
+    nonisolated var isVisionSpecialist: Bool {
+        supportsNativeVision && (mode == .chat || mode == .completion || mode == .unknown)
+    }
+
+    // Dedicated models use the images endpoint; capable chat models keep the chat transport.
+    nonisolated var isImageGenerationSpecialist: Bool {
+        mode == .imageGeneration || (
+            capabilities.contains(.imageGeneration) && (mode == .chat || mode == .completion || mode == .unknown)
+        )
+    }
+}
+
 // MARK: - Provider
 
 extension LLMModel {

@@ -26,6 +26,7 @@ struct SettingsView: View {
     @State var isShowingVotice = false
     @State private var isShowingUserProfile = false
     @State private var isShowingMemory = false
+    @State private var isShowingTools = false
     @State var isShowingCloudData = false
     @State var isShowingHelp = false
     @State var isShowingTipJar = false
@@ -108,6 +109,12 @@ private extension SettingsView {
             cloudDataSheet
 #if os(macOS)
                 .frame(width: 700, height: 500)
+#endif
+        }
+        .sheet(isPresented: $isShowingTools) {
+            ToolsView()
+#if os(macOS)
+                .frame(width: 700, height: 600)
 #endif
         }
         .sheet(isPresented: $isShowingHelp) {
@@ -259,6 +266,7 @@ private extension SettingsView {
                 cloudSyncSection(loadedState)
                 personalizationSection()
                 chatSection(loadedState)
+                toolsSection
                 webSearchSection(loadedState)
                 mcpSection(loadedState)
                 supportSection(loadedState)
@@ -344,6 +352,21 @@ private extension SettingsView {
             Text(String(localized: "Personalization"))
         } footer: {
             Text(String(localized: "Configure your personal context and memory items to personalise model responses."))
+        }
+    }
+
+    var toolsSection: some View {
+        Section {
+            Button {
+                isShowingTools = true
+            } label: {
+                settingsDestinationLabel("Tools", systemImage: "wrench.and.screwdriver")
+            }
+            .buttonStyle(.plain)
+        } header: {
+            Text(String(localized: "Integrations"))
+        } footer: {
+            Text(String(localized: "Manage the built-in tools OpenClient makes available to the assistant."))
         }
     }
 

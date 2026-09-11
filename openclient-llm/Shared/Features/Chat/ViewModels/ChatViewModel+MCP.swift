@@ -30,6 +30,7 @@ extension ChatViewModel {
             messages: pending?.messages ?? [],
             selectedModel: selectedModel,
             availableModels: chatModels,
+            modelCatalogScope: settingsManager.getMCPAuthorizationScope(),
             conversationStarters: (pending?.messages ?? []).isEmpty
                 ? getConversationStartersUseCase.execute(count: 4)
                 : [],

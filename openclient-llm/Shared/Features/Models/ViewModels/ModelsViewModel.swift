@@ -19,6 +19,8 @@ final class ModelsViewModel {
         case modelTapped(LLMModel)
         case ttsModelTapped(LLMModel)
         case sttModelTapped(LLMModel)
+        case visionModelSelected(String?)
+        case imageGenerationModelSelected(String?)
         case voiceSelected(String, forModelId: String)
     }
 
@@ -32,9 +34,40 @@ final class ModelsViewModel {
         var selectedModelId: String?
         var selectedTTSModelId: String?
         var selectedSTTModelId: String?
+        var selectedVisionModelId: String?
+        var selectedImageGenerationModelId: String?
         var selectedTTSVoices: [String: String] = [:]
         var errorMessage: String?
         var isRefreshing: Bool = false
+
+        var visionModels: [LLMModel] {
+            models.filter(\.isVisionSpecialist)
+        }
+
+        var imageGenerationModels: [LLMModel] {
+            models.filter(\.isImageGenerationSpecialist)
+        }
+
+        var isSelectedVisionModelUnavailable: Bool {
+            guard let selectedVisionModelId else { return false }
+            return !visionModels.contains { $0.id == selectedVisionModelId }
+        }
+
+        var isSelectedImageModelUnavailable: Bool {
+            guard let selectedImageGenerationModelId else { return false }
+            return !imageGenerationModels.contains { $0.id == selectedImageGenerationModelId }
+        }
+
+        var isSelectedVisionSpecialistUnsupported: Bool {
+            models.contains { $0.id == selectedVisionModelId && $0.supportsNativeVision && !$0.isVisionSpecialist }
+        }
+
+        var isSelectedImageSpecialistUnsupported: Bool {
+            models.contains {
+                $0.id == selectedImageGenerationModelId && $0.supportsNativeImageGeneration &&
+                    !$0.isImageGenerationSpecialist
+            }
+        }
     }
 
     private(set) var state: State
@@ -70,6 +103,10 @@ final class ModelsViewModel {
             selectTTSModel(model)
         case .sttModelTapped(let model):
             selectSTTModel(model)
+        case .visionModelSelected(let modelId):
+            selectVisionModel(modelId)
+        case .imageGenerationModelSelected(let modelId):
+            selectImageGenerationModel(modelId)
         case .voiceSelected(let voice, let modelId):
             selectVoice(voice, forModelId: modelId)
         }
@@ -95,18 +132,24 @@ private extension ModelsViewModel {
                 let models = try await fetchModelsUseCase.execute()
                 let allModels = [LLMModel.appleSpeechRecognition] + models
                 let selectedModelId = settingsManager.getSelectedModelId()
-                let selectedTTSModelId = settingsManager.getSelectedTTSModelId()
-                let selectedSTTModelId = settingsManager.getSelectedSTTModelId() ?? LLMModel.appleSpeechRecognition.id
+                let selectedTTSModelId = selectDefaultTTSModel(from: allModels)
+                let selectedSTTModelId = resolveSelectedSTTModelId(from: allModels)
                 let ttsVoices = buildTTSVoices(from: allModels)
                 state = .loaded(LoadedState(
                     models: allModels,
                     selectedModelId: selectedModelId,
                     selectedTTSModelId: selectedTTSModelId,
                     selectedSTTModelId: selectedSTTModelId,
+                    selectedVisionModelId: settingsManager.getSelectedVisionModelId(),
+                    selectedImageGenerationModelId: settingsManager.getSelectedImageGenerationModelId(),
                     selectedTTSVoices: ttsVoices
                 ))
             } catch {
-                state = .loaded(LoadedState(errorMessage: error.localizedDescription))
+                state = .loaded(LoadedState(
+                    selectedVisionModelId: settingsManager.getSelectedVisionModelId(),
+                    selectedImageGenerationModelId: settingsManager.getSelectedImageGenerationModelId(),
+                    errorMessage: error.localizedDescription
+                ))
                 scheduleErrorDismiss()
             }
         }
@@ -151,19 +194,41 @@ private extension ModelsViewModel {
         settingsManager.setSelectedTTSVoice(voice, forModelId: modelId)
     }
 
+    func selectVisionModel(_ modelId: String?) {
+        guard case .loaded(var loadedState) = state else { return }
+        if let modelId {
+            guard loadedState.visionModels.contains(where: { $0.id == modelId }) else { return }
+        }
+        loadedState.selectedVisionModelId = modelId
+        state = .loaded(loadedState)
+        settingsManager.setSelectedVisionModelId(modelId)
+    }
+
+    func selectImageGenerationModel(_ modelId: String?) {
+        guard case .loaded(var loadedState) = state else { return }
+        if let modelId {
+            guard loadedState.imageGenerationModels.contains(where: { $0.id == modelId }) else { return }
+        }
+        loadedState.selectedImageGenerationModelId = modelId
+        state = .loaded(loadedState)
+        settingsManager.setSelectedImageGenerationModelId(modelId)
+    }
+
     func performRefresh() async {
         do {
             let models = try await fetchModelsUseCase.execute()
             let allModels = [LLMModel.appleSpeechRecognition] + models
             let selectedModelId = settingsManager.getSelectedModelId()
-            let selectedTTSModelId = settingsManager.getSelectedTTSModelId()
-            let selectedSTTModelId = settingsManager.getSelectedSTTModelId() ?? LLMModel.appleSpeechRecognition.id
+            let selectedTTSModelId = selectDefaultTTSModel(from: allModels)
+            let selectedSTTModelId = resolveSelectedSTTModelId(from: allModels)
             let ttsVoices = buildTTSVoices(from: allModels)
             state = .loaded(LoadedState(
                 models: allModels,
                 selectedModelId: selectedModelId,
                 selectedTTSModelId: selectedTTSModelId,
                 selectedSTTModelId: selectedSTTModelId,
+                selectedVisionModelId: settingsManager.getSelectedVisionModelId(),
+                selectedImageGenerationModelId: settingsManager.getSelectedImageGenerationModelId(),
                 selectedTTSVoices: ttsVoices
             ))
         } catch {
@@ -173,6 +238,29 @@ private extension ModelsViewModel {
             state = .loaded(currentState)
             scheduleErrorDismiss()
         }
+    }
+
+    func selectDefaultTTSModel(from models: [LLMModel]) -> String? {
+        let savedModelId = settingsManager.getSelectedTTSModelId()
+        if let savedModelId, models.contains(where: { $0.id == savedModelId && $0.mode == .audioSpeech }) {
+            return savedModelId
+        }
+        guard let model = models.first(where: { $0.mode == .audioSpeech }) else { return nil }
+        settingsManager.setSelectedTTSModelId(model.id)
+        return model.id
+    }
+
+    func resolveSelectedSTTModelId(from models: [LLMModel]) -> String {
+        let savedModelId = settingsManager.getSelectedSTTModelId()
+        if let savedModelId, models.contains(where: {
+            $0.id == savedModelId && $0.mode == .audioTranscription
+        }) {
+            return savedModelId
+        }
+
+        let defaultModelId = LLMModel.appleSpeechRecognition.id
+        settingsManager.setSelectedSTTModelId(defaultModelId)
+        return defaultModelId
     }
 
     func buildTTSVoices(from models: [LLMModel]) -> [String: String] {

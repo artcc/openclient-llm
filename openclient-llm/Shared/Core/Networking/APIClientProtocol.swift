@@ -29,7 +29,8 @@ protocol APIClientProtocol: Sendable {
     func multipartRequest<T: Decodable & Sendable>(
         endpoint: String,
         fields: [String: String],
-        file: MultipartFileData
+        files: [MultipartFileData],
+        timeoutInterval: TimeInterval
     ) async throws -> T
     func rawDataRequest(
         endpoint: String,
@@ -53,6 +54,14 @@ extension APIClientProtocol {
         body: (any Encodable & Sendable)?
     ) async throws -> T {
         try await request(endpoint: endpoint, method: method, body: body, timeoutInterval: 60)
+    }
+
+    func multipartRequest<T: Decodable & Sendable>(
+        endpoint: String,
+        fields: [String: String],
+        file: MultipartFileData
+    ) async throws -> T {
+        try await multipartRequest(endpoint: endpoint, fields: fields, files: [file], timeoutInterval: 125)
     }
 }
 

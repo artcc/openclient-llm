@@ -1,37 +1,11 @@
 Hi there! We've got some great new features for you in this update.
 
-***1.6.50:
-
-• A warmer welcome: getting started on iPhone, iPad, and Mac is now clearer, with easier server setup, helpful progress updates, and accessibility improvements.
-• A little more breathing room for your chats. Writing controls fit smaller windows better, while conversations stay comfortably centered on larger iPad and Mac screens.
-• The little details are easier to spot, from message information to the buttons for listening to a reply or trying again. Error messages are clearer, too.
-• Bringing a few attachments along? They now fit neatly across rows, with easier-to-read filenames and easier removal on iPhone and iPad. Sending one without text no longer leaves an empty bubble behind.
-• Tables line up properly, code is more comfortable to read, and quotes no longer leave oversized gaps in your conversations.
-• Find your way back to a conversation more easily with clearer chat titles, details, and tags. Chat history, search results, and model lists also make better use of larger iPad screens.
-• Choosing a model is a little easier, with clearer names, a better view of what each model can do, and easier-to-spot information and voice controls.
-• Settings feel more at home on your device, with clearer server fields and familiar Mac buttons. Consistent arrows now help you tell what opens inside OpenClient and what takes you to another app.
-• Make OpenClient your own with clearer Personal Context, Memory, and prompt template editors, plus more comfortable space to write.
-• Reviewing your iCloud data is more straightforward, with clearer actions and a dedicated panel you can close with Done on iPhone, iPad, and Mac.
-• No more hopping between differently sized panels in Mac Settings: editors, settings panels, and web pages now share a consistent size.
-• Help has a tidier home for feature tips and a handy Done button when you're ready to get back to your chats.
-• VoiceOver now describes more buttons, loading states, and selections across the app and widgets, with accessible image zoom controls and easier access to voice selection.
-• Minor bug fixes and improvements for a smoother experience.
-
-***Recent Updates:
-
-• Memory entries in Settings now use the full row width, making longer text easier to read.
-• Select and copy part of a chat message while using the new actions button for whole-message options.
-• Getting started on Mac is less distracting, with the main app kept out of the way until you're ready.
-• 10 new themed app icons for Halloween and Christmas.
-• Your Mac menu bar chat is ready once your server is set up, and you can take the conversation straight into the main app whenever you like.
-• Choose from 20 app icons in Settings on iPhone and iPad.
-• Longer chats hold on to earlier context more reliably, including when a reply is cancelled or interrupted.
-• Browse long conversations more smoothly, with a floating date indicator to help you keep your bearings.
-• Catch up on earlier messages while a reply is arriving: the conversation stays steady as you scroll and catches up when you stop.
-• Step away from OpenClient without losing track of a reply. Live Activities show progress as your model thinks, uses tools, creates images, and saves the result.
-• Fixed a frustrating freeze that could happen when scrolling during a reply or after several responses.
-• Keep OpenClient close at hand with Mac desktop and Notification Center widgets for new chats, search, quick actions, and your ongoing, recent, pinned, or tagged conversations.
-• Start a fresh conversation straight from the New Chat control on Mac.
+• Your favorite chat model just got some talented teammates! Models that support tools can now call on specialists to analyze photos or create images, without switching models or starting another chat. Ask about a picture, dream up something new, or revisit an image from earlier in the conversation. It all happens in the same chat, and you can see which specialist is helping along the way.
+• You're in control of the team. Choose your vision and image generation specialists in the new Image and Vision section in Models. Use one compatible model for both jobs, mix and match, or choose None to turn off either kind of help. If your chat model already understands or creates images, it keeps doing that job itself.
+• Your assistant's toolbox is now in your hands! Open the new Tools section in Settings to see what each built-in tool does and turn it on or off. Everything is listed alphabetically in your language, and OpenClient remembers your choices.
+• Got a picture you'd like to change? Image-generation models with vision now accept one or more reference images for editing on iPhone, iPad, and Mac. Trying again keeps your original prompt and references, so you don't have to set everything up from scratch.
+• We've given your creations some extra care, too. Images stay in the conversation if you stop a reply after they arrive, and regenerating just the text keeps the image without requesting another generation. We've improved image-only replies, image format handling, and references in long chats and imported backups. If an analysis request is too large for your specialist, clearer guidance helps you adjust it. Private chats still keep images only for the session.
+• Voice setup is a little easier as well. If you haven't selected a model, or your previous choice is no longer available, text-to-speech picks the first available model and speech-to-text selects Apple speech recognition. Both work even when there's only one option. We've also included smaller fixes and improvements to keep things running smoothly.
 
 Thanks for your continued support and for helping us build the best possible LLM client together.
 
