@@ -41,6 +41,8 @@ struct MarkdownTableView: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
+        // Keep the table's natural height during the surrounding message's layout passes.
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
