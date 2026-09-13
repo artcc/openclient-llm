@@ -7,10 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## [1.7.5-build-108] - 2026-09-14
+## [1.7.5-build-109] - 2026-09-14
+
+### Added
+
+- Markdown footnotes with numbered references and multiline notes collected at the end of assistant responses
+- Native subscript and superscript rendering for `<sub>` and `<sup>` tags across Markdown text, including formatted links
+
+### Changed
+
+- Reduced spacing between user and assistant messages and brought timestamps closer to message content
+- Consolidated assistant message metadata and Listen and Regenerate Response actions into a compact, adaptive row
 
 ### Fixed
 
+- Markdown tables now support optional outer pipe delimiters in headers and rows
+- Escaped pipes in Markdown tables now remain inside their cells, including within inline code
+- Markdown tables no longer consume following headings, lists, quotes, images, code blocks, or footnote definitions containing pipes
 - **Minor bug fixes**
 
 ## [1.7.0-build-105] - 2026-09-11

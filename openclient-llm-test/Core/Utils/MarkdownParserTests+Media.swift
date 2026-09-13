@@ -191,4 +191,94 @@ extension MarkdownParserTests {
             XCTFail("Expected .text"); return
         }
     }
+
+    func test_parse_tableWithOptionalOuterPipes_returnsSameCells() {
+        // Given
+        let inputs = [
+            "Name | Age\n--- | ---\nAlice | 30",
+            "| Name | Age |\n--- | ---\nAlice | 30",
+            "Name | Age\n| --- | --- |\n| Alice | 30 |",
+            "Name | Age |\n:--- | ---:\n| Alice | 30"
+        ]
+
+        // When
+        let results = inputs.map { MarkdownParser.parse($0) }
+
+        // Then
+        for blocks in results {
+            XCTAssertEqual(blocks, [.table(headers: ["Name", "Age"], rows: [["Alice", "30"]])])
+        }
+    }
+
+    func test_parse_tableWithEscapedPipes_preservesLiteralPipesAndEmptyCells() {
+        // Given
+        let input = #"""
+        Pattern | Value | Empty
+        --- | --- | ---
+        a\|b | `x\|y` | |
+        \| | trailing\| | |
+        """#
+
+        // When
+        let blocks = MarkdownParser.parse(input)
+
+        // Then
+        XCTAssertEqual(blocks, [.table(
+            headers: ["Pattern", "Value", "Empty"],
+            rows: [["a|b", "`x|y`", ""], ["|", "trailing|", ""]]
+        )])
+    }
+
+    func test_parse_tableWithEscapedBackslash_keepsFollowingPipeAsSeparator() {
+        // Given
+        let input = #"""
+        Path | Value
+        --- | ---
+        C:\\| 42
+        """#
+
+        // When
+        let blocks = MarkdownParser.parse(input)
+
+        // Then
+        XCTAssertEqual(blocks, [.table(headers: ["Path", "Value"], rows: [[#"C:\\"#, "42"]])])
+    }
+
+    func test_parse_invalidTableSeparators_preservesText() {
+        // Given
+        let inputs = [
+            "Name | Age\n--- | :\nAlice | 30",
+            "Name | Age\n--- | --:--\nAlice | 30",
+            "Name | Age\n--- | --- | ---\nAlice | 30",
+            "Name \\| Age\n--- | ---\nAlice | 30"
+        ]
+
+        // When
+        let results = inputs.map { MarkdownParser.parse($0) }
+
+        // Then
+        for (input, blocks) in zip(inputs, results) {
+            XCTAssertEqual(blocks, [.text(input)])
+        }
+    }
+
+    func test_parse_tableFollowedByBlocksContainingPipes_doesNotConsumeNextBlock() {
+        // Given
+        let table = "Name | Age\n--- | ---\nAlice | 30\n"
+        let suffixes: [(String, MessageBlock)] = [
+            ("# Heading | Details", .heading(text: "Heading | Details", level: 1)),
+            ("> Quote | Details", .blockquote("Quote | Details")),
+            ("- Item | Details", .unorderedList(items: [.init(content: "Item | Details", depth: 0)])),
+            ("```\na | b\n```", .codeBlock(code: "a | b", language: nil)),
+            ("[^source]: A | B", .footnote(label: "source", content: "A | B"))
+        ]
+
+        // When
+        let results = suffixes.map { MarkdownParser.parse(table + $0.0) }
+
+        // Then
+        for (suffix, blocks) in zip(suffixes, results) {
+            XCTAssertEqual(blocks, [.table(headers: ["Name", "Age"], rows: [["Alice", "30"]]), suffix.1])
+        }
+    }
 }

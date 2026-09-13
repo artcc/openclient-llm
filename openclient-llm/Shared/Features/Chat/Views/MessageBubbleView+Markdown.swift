@@ -50,7 +50,15 @@ extension MessageBubbleView {
                     TaskListView(items: items, inlineContent: renderedMarkdown.inlineContent)
                 case .image(let alt, let url):
                     MarkdownImageView(alt: alt, urlString: url, onLayoutChanged: onLayoutChanged)
+                case .footnote:
+                    EmptyView()
                 }
+            }
+            if !renderedMarkdown.footnotes.isEmpty {
+                MarkdownFootnotesView(
+                    footnotes: renderedMarkdown.footnotes,
+                    inlineContent: renderedMarkdown.inlineContent
+                )
             }
         }
     }
@@ -66,14 +74,14 @@ extension MessageBubbleView {
     }
 
     func textBlockView(_ content: String) -> some View {
-        Text(renderedMarkdown.attributedString(for: content))
+        MarkdownInlineText(renderedMarkdown.attributedString(for: content))
             .foregroundStyle(Color.primary)
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     func headingBlockView(_ text: String, level: Int) -> some View {
-        Text(text)
+        MarkdownInlineText(renderedMarkdown.attributedString(for: text))
             .font(headingFont(level))
             .fontWeight(.semibold)
             .foregroundStyle(Color.primary)

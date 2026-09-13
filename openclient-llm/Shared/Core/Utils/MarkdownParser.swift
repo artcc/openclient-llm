@@ -21,6 +21,7 @@ nonisolated enum MessageBlock: Equatable, Sendable {
     case table(headers: [String], rows: [[String]])
     case taskList(items: [MarkdownTaskItem])
     case image(alt: String, url: String)
+    case footnote(label: String, content: String)
 }
 
 // MARK: - MarkdownListItem
@@ -53,6 +54,7 @@ nonisolated struct MarkdownParser: Sendable {
 
     static func parse(_ raw: String) -> [MessageBlock] {
         let lines = raw.components(separatedBy: "\n")
+        let protectedFootnoteLines = footnoteCodeLines(in: lines)
 
         var blocks: [MessageBlock] = []
         var index = 0
@@ -60,7 +62,9 @@ nonisolated struct MarkdownParser: Sendable {
         while index < lines.count {
             let line = lines[index]
 
-            if line.hasPrefix("```") {
+            if !protectedFootnoteLines.contains(index), let footnote = parseFootnote(lines: lines, startIndex: &index) {
+                blocks.append(footnote)
+            } else if line.hasPrefix("```") {
                 let language = extractLanguage(from: line)
                 var codeLines: [String] = []
                 index += 1
@@ -83,31 +87,55 @@ nonisolated struct MarkdownParser: Sendable {
                 blocks.append(table)
                 index = advancePastTable(lines: lines, startIndex: index)
             } else {
-                parseMixedBlock(lines: lines, startIndex: &index, into: &blocks)
+                parseMixedBlock(
+                    lines: lines,
+                    startIndex: &index,
+                    protectedFootnoteLines: protectedFootnoteLines,
+                    into: &blocks
+                )
             }
         }
 
         return blocks
+    }
+
+    static func isTableBodyBoundary(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        return trimmed.hasPrefix("```")
+            || isHorizontalRule(line)
+            || isBlockquoteLine(line)
+            || parseUnorderedListItem(line) != nil
+            || parseOrderedListItem(line) != nil
+            || extractHeading(from: line) != nil
+            || parseImageLine(line) != nil
+            || (trimmed.hasPrefix("[^") && trimmed.contains("]:"))
     }
 }
 
 // MARK: - Private: Mixed Block Parsing
 
 private nonisolated extension MarkdownParser {
-    static func parseMixedBlock(lines: [String], startIndex: inout Int, into blocks: inout [MessageBlock]) {
+    static func parseMixedBlock(
+        lines: [String],
+        startIndex: inout Int,
+        protectedFootnoteLines: Set<Int>,
+        into blocks: inout [MessageBlock]
+    ) {
         var accumulatedText: [String] = []
 
         while startIndex < lines.count && !lines[startIndex].hasPrefix("```") {
             let currentLine = lines[startIndex]
 
-            if isHorizontalRule(currentLine) {
+            if !protectedFootnoteLines.contains(startIndex),
+               let footnote = parseFootnote(lines: lines, startIndex: &startIndex) {
                 flushText(&accumulatedText, into: &blocks)
-                blocks.append(.horizontalRule)
-                startIndex += 1
+                blocks.append(footnote)
                 continue
-            } else if let image = parseImageLine(currentLine) {
+            }
+
+            if let block = parseRuleOrImage(currentLine) {
                 flushText(&accumulatedText, into: &blocks)
-                blocks.append(image)
+                blocks.append(block)
                 startIndex += 1
                 continue
             }
@@ -151,6 +179,13 @@ private nonisolated extension MarkdownParser {
         }
 
         flushText(&accumulatedText, into: &blocks)
+    }
+
+    static func parseRuleOrImage(_ line: String) -> MessageBlock? {
+        if isHorizontalRule(line) {
+            return .horizontalRule
+        }
+        return parseImageLine(line)
     }
 
     static func flushText(_ text: inout [String], into blocks: inout [MessageBlock]) {
@@ -376,75 +411,6 @@ private nonisolated extension MarkdownParser {
             blocks.append(.orderedList(items: items))
         }
 
-        return index
-    }
-}
-
-// MARK: - Private: Table
-
-private nonisolated extension MarkdownParser {
-    static func tryParseTable(lines: [String], startIndex: Int) -> MessageBlock? {
-        guard startIndex + 1 < lines.count else { return nil }
-
-        let headerLine = lines[startIndex]
-        let separatorLine = lines[startIndex + 1]
-
-        let headers = parseTableRow(headerLine)
-        guard !headers.isEmpty else { return nil }
-        guard isTableSeparator(separatorLine, columnCount: headers.count) else { return nil }
-
-        var rows: [[String]] = []
-        var index = startIndex + 2
-
-        while index < lines.count {
-            let row = parseTableRow(lines[index])
-            if row.isEmpty { break }
-            rows.append(row)
-            index += 1
-        }
-
-        return .table(headers: headers, rows: rows)
-    }
-
-    static func parseTableRow(_ line: String) -> [String] {
-        let trimmed = line.trimmingCharacters(in: .whitespaces)
-        guard trimmed.hasPrefix("|") || trimmed.hasSuffix("|") else { return [] }
-
-        let cells = trimmed
-            .split(separator: "|", omittingEmptySubsequences: false)
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-
-        let startIndex = trimmed.hasPrefix("|") ? 1 : 0
-        let endIndex = cells.count - (trimmed.hasSuffix("|") ? 1 : 0)
-
-        guard startIndex < min(cells.count, endIndex + 1) else { return [] }
-
-        let filtered = Array(cells[startIndex..<endIndex])
-        return filtered.isEmpty ? [] : filtered
-    }
-
-    static func isTableSeparator(_ line: String, columnCount: Int) -> Bool {
-        let trimmed = line.trimmingCharacters(in: .whitespaces)
-        guard trimmed.contains("|") && trimmed.contains("-") else { return false }
-
-        let cells = parseTableRow(line)
-        guard cells.count == columnCount else { return false }
-
-        return cells.allSatisfy { cell in
-            let cleaned = cell.trimmingCharacters(in: .whitespaces)
-            guard !cleaned.isEmpty else { return false }
-            let withoutColons = cleaned.replacingOccurrences(of: ":", with: "")
-            return withoutColons.allSatisfy { $0 == "-" }
-        }
-    }
-
-    static func advancePastTable(lines: [String], startIndex: Int) -> Int {
-        var index = startIndex + 2
-        while index < lines.count {
-            let row = parseTableRow(lines[index])
-            if row.isEmpty { break }
-            index += 1
-        }
         return index
     }
 }

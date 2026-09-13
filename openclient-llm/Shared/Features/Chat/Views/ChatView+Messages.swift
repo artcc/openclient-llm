@@ -18,7 +18,7 @@ extension ChatView {
         let lastMessageId = state.messages.last?.id
 
         // LazyVStack can fail to converge when upward scrolling overlaps live message layout updates.
-        return VStack(spacing: 24) {
+        return VStack(spacing: 16) {
             ForEach(state.messages) { message in
                 let isLast = message.id == lastMessageId
                 let isStreamingMsg = state.isStreaming && isLast
