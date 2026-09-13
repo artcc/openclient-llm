@@ -41,7 +41,7 @@ private extension NumberedListView {
                 .frame(minWidth: 24, alignment: .trailing)
                 .padding(.leading, CGFloat(item.depth) * 16)
 
-            Text(inlineContent[item.content] ?? AttributedString(item.content))
+            MarkdownInlineText(inlineContent[item.content] ?? AttributedString(item.content))
                 .font(.body)
                 .foregroundStyle(Color.primary)
                 .textSelection(.enabled)

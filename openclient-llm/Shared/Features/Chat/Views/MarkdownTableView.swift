@@ -88,7 +88,7 @@ private extension MarkdownTableView {
     }
 
     func cellView(_ content: AttributedString, isBold: Bool) -> some View {
-        Text(content)
+        MarkdownInlineText(content)
             .font(isBold ? .subheadline.weight(.semibold) : .subheadline)
             .foregroundStyle(Color.primary)
             .textSelection(.enabled)
