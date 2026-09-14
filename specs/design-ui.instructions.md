@@ -426,6 +426,10 @@ Current implementation:
 - iOS places the field in an always-visible navigation bar drawer; macOS uses default searchable placement when this
   shared view is presented.
 - The macOS conversation list also has its own toolbar search expansion.
+- iPad adds a search field in `tabViewSidebarHeader`. While the sidebar is visible, it replaces the Search tab label
+  and presents results in the main Chats area without a second search field. The top-bar layout retains the Search tab.
+- Activating iPad search with an empty query shows guidance, not all conversations. Selecting a result opens it in Chats,
+  removes search focus, and preserves the query. Selecting a sidebar destination exits search.
 - `ModelsView` does not currently use `.searchable`; do not claim model search exists.
 
 ```swift
