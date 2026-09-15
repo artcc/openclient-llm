@@ -1,199 +1,86 @@
 # AGENTS.md
 
-This file is the project-wide operating guide. It resolves facts that would otherwise require reading multiple configuration files; focused implementation rules live in `specs/`.
+Project-wide orchestration guide. Read this file before changing the repository, then read every specification relevant to the task. Focused specifications are living project contracts and must remain aligned with the implementation.
 
-## Instruction Order
+## Source Of Truth
 
-1. Read this file before changing the project.
-2. Read every specification relevant to the requested work before editing.
-3. If instructions conflict, follow repository-specific instructions over general guidance. When two project instructions conflict, stop and ask for clarification.
-4. Keep this file limited to durable, project-wide facts. Put focused or evolving implementation rules in `specs/`.
+Use this precedence according to the kind of information involved:
 
-## Workspace Boundaries
+1. The user's explicit request and constraints for the current task.
+2. Repository configuration and manifests for configured facts, including `openclient-llm.xcodeproj/project.pbxproj`,
+   `.swiftlint.yml`, plists, entitlements, schemes, and CI workflows.
+3. The focused specification for intended behavior, invariants, compatibility, and implementation constraints; a more
+   specific spec takes precedence over this overview.
+4. Compiled source code and tests as evidence of the current implementation and established local conventions.
+5. This file for project-wide orchestration.
+6. Descriptive documentation and examples, which must not override configuration, specifications, or implementation.
 
-- Inspect files and directories only within this repository workspace.
-- The only exception is a document, image, log, or other artifact outside the workspace that the user explicitly provides.
-- Consult official online documentation for external APIs and framework behavior; use Apple's online developer documentation
-  for Apple platforms and frameworks.
-- Do not inspect installed Apple SDKs or frameworks, `DerivedData`, Xcode caches, system libraries, package caches, or
-  similar locations outside the repository to infer implementation details.
-- If an exceptional task appears to require inspecting any such external location, explain exactly why it is needed and
-  obtain the user's explicit permission before accessing it.
+Repository instructions take precedence over generic agent guidance. A disagreement between a spec and the code is project
+drift, not permission to ignore the spec. Determine whether the task changes the contract or restores the implementation;
+then update both in the same change. If intent remains unclear, stop and ask for clarification.
+
+## Operating Rules
+
+- Work only inside this repository. The only exception is an artifact outside it that the user explicitly provides.
+- Do not inspect installed SDKs, `DerivedData`, caches, system libraries, package caches, or other external paths to infer
+  implementation details. Prefer official online documentation for external APIs, especially Apple frameworks.
+- Read directly related files and all applicable specs before editing.
+- Preserve the architecture, conventions, and nearby implementation patterns unless the task explicitly changes them.
+- Keep applicable specs synchronized whenever behavior, compatibility, architecture, or a documented invariant changes.
+  Do not leave a known mismatch for a later documentation pass.
+- Do not discard, overwrite, or reformat unrelated user changes. Limit edits to the requested scope.
+- Do not add or update dependencies without explicit permission. Read package declarations from the Xcode project rather
+  than duplicating their inventory here.
+- Ask before builds, tests, SwiftLint, formatters, type checks, or other validation commands. Use the smallest relevant
+  validation once authorized.
+- Use the project `xcode-verify` skill for Xcode validation; it owns setup and fallback details, while
+  `.xcodebuildmcp/config.yaml` owns the default project, scheme, and simulator selection.
+- Do not commit, push, amend, or perform destructive Git operations unless explicitly requested.
+- Run `git diff --check` before reporting implementation work complete, unless the user forbids Git commands.
 
 ## Specifications
 
-Each specification must use the `.instructions.md` suffix and start with YAML front matter containing a `description`. Add an `applyTo` pattern when the scope can be expressed by file path. When adding or removing a specification, update this table in the same change.
+Specifications use the `.instructions.md` suffix and valid YAML front matter with a `description`; add `applyTo` when the
+scope is expressible by path. Update this table when adding or removing a spec.
 
 | File | Read when |
 |---|---|
 | `agent-tool-calling.instructions.md` | Implementing tool calling, tool UI, or the agent loop. |
-| `architecture.instructions.md` | Creating Swift files, features, or changing layer boundaries. |
+| `architecture.instructions.md` | Creating Swift files, features, targets, or changing layer boundaries. |
 | `changelog.instructions.md` | Updating `CHANGELOG.md`. |
 | `chat-visual-style.instructions.md` | Designing chat-specific SwiftUI. |
 | `code-style.instructions.md` | Writing or reviewing Swift style. |
-| `concurrency.instructions.md` | Working with async code, isolation, or `Sendable`. |
-| `conversation-backup-format.instructions.md` | Exporting, importing, restoring, validating, or versioning conversation backups. |
-| `design-ui.instructions.md` | Designing general SwiftUI UI, accessibility, haptics, or animation. |
-| `icloud-sync.instructions.md` | Implementing or changing iCloud synchronization, storage, conflict resolution, or cloud data management. |
+| `concurrency.instructions.md` | Working with async code, isolation, tasks, or `Sendable`. |
+| `conversation-backup-format.instructions.md` | Changing conversation backup export, import, validation, or versioning. |
+| `design-ui.instructions.md` | Designing general SwiftUI, accessibility, haptics, or animation. |
+| `icloud-sync.instructions.md` | Changing iCloud synchronization, storage, conflicts, or cloud data management. |
 | `litellm-api.instructions.md` | Changing LiteLLM/OpenAI-compatible API integration. |
 | `readme.instructions.md` | Updating `README.md`. |
-| `roadmap-completed.instructions.md` | Reviewing completed roadmap work. |
-| `security.instructions.md` | Handling sensitive data, user input, credentials, or security review. |
+| `security.instructions.md` | Handling sensitive data, input, credentials, networking, or security review. |
 | `swiftui-multiplatform.instructions.md` | Building shared iOS, iPadOS, or macOS SwiftUI. |
-| `testing.instructions.md` | Adding or changing tests and mocks. |
-| `version.instructions.md` | Adding changelog entries, choosing a release version/build, or updating TestFlight release notes. |
+| `testing.instructions.md` | Adding or changing tests, fixtures, or mocks. |
+| `version.instructions.md` | Changing release versions, build metadata, or TestFlight notes. |
 | `web-browsing.instructions.md` | Implementing web search or browsing features. |
 
-## Platform & Services
+## Architecture At A Glance
 
-- Target Swift 6+ with SwiftUI on iOS, iPadOS, and macOS. Minimum deployment is iOS 26 and macOS 26.
-- The app connects to a self-hosted LiteLLM server through its OpenAI-compatible API. The base URL is user-configurable.
-- Store credentials in `KeychainManager`; store non-sensitive settings in `SettingsManager`.
-
-## Build & Run
-
-```bash
-# Build iOS scheme (default)
-xcodebuild build -project openclient-llm.xcodeproj -scheme openclient-llm -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max'
-
-# Build macOS scheme
-xcodebuild build -project openclient-llm.xcodeproj -scheme openclient-llm-macOS -destination 'platform=macOS'
-```
-
-- Use `.xcodeproj` (not `.xcworkspace`). The three SPM packages are SwiftLintPlugins, VoticeSDK, and ConfettiSwiftUI.
-- SwiftLint runs on the iOS and macOS app builds. `.swiftlint.yml` sets line-length warning/error limits to
-  120/150, function-body limits to 50/80, type-body limits to 300/400, and file-length limits to 500/650;
-  force unwraps and force casts are errors.
-- CI skips code signing: append `CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO` to `xcodebuild` commands.
-- VS Code + XcodeBuildMCP is supported (config at `.xcodebuildmcp/config.yaml`).
-- **You must create a `Secrets.xcconfig` before building.** Copy the template from CI:
-
-```bash
-cat > Secrets.xcconfig << 'EOF'
-VOTICE_API_KEY =
-VOTICE_API_SECRET =
-VOTICE_APP_ID =
-EOF
-```
-
-## Concurrency (critical)
-
-The iOS and macOS app targets set `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`; shared code therefore inherits
-main-actor isolation when compiled into either app. The test, Share Extension, `WidgetsExtension-iOS`, and
-`WidgetsExtension-macOS` targets do not set it.
-
-- `@MainActor` annotations on ViewModels are redundant but kept for documentation.
-- All test classes **must** be `@MainActor` — otherwise they cannot access `@MainActor`-isolated types synchronously.
-- Use `nonisolated` only when a declaration must run or be constructed outside `MainActor` and its dependencies and
-  transferred values are safe across isolation boundaries. Common cases include shared DTOs, parsing helpers, constants
-  required by nonisolated protocols, and genuinely background processing. Do not use it for UI-bound state.
-- `@unchecked Sendable` requires a documented safety invariant comment — never use without justification.
-  - Production wrappers: `// Safety: <API> is thread-safe per Apple documentation. All stored properties are immutable (\`let\`).`
-  - Test mocks: `// Safety: Only used within serialized @MainActor test methods.`
-- No `ObservableObject` / `@Published` — use `@Observable` macro everywhere.
-
-## Test commands
-
-```bash
-# Run all tests (iOS scheme)
-xcodebuild test -project openclient-llm.xcodeproj -scheme openclient-llm -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' -test-timeouts-enabled YES -maximum-test-execution-time-allowance 120 CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
-
-# Run a single test class
-xcodebuild test -project openclient-llm.xcodeproj -scheme openclient-llm -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' -only-testing:openclient-llm-test/ChatViewModelTests CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
-```
-
-Tests live in `openclient-llm-test/`, linked to the iOS target. They are unit and in-process integration tests; there
-are no UI tests or current tests that call a real LiteLLM/Ollama server.
-
-### Test conventions
-
-- Naming: `test_<method>_<scenario>_<expectedResult>()` (e.g. `test_fetchModels_serverUnavailable_returnsEmpty()`).
-- Import: `@testable import openclient_llm`.
-- Structure: Given-When-Then with `// Given` / `// When` / `// Then` comments.
-- Mocks live in `openclient-llm-test/Mocks/`, named `MockXxx`, protocol-based.
-- Test classes mirror feature folders: `Features/Chat/` → `Features/Chat/ChatViewModelTests.swift`.
-- Add isolated tests for UseCases, Repositories, and ViewModels. Use protocols and mocks for dependencies.
-
-## Project Structure And Targets
-
-| Target | Purpose |
-|---|---|
-| `openclient-llm` | iOS app + all shared code |
-| `openclient-llm-macOS` | macOS app (macOS-only UI; references `Shared/` from iOS target) |
-| `openclient-llm-test` | Unit tests (linked to iOS target) |
-| `ShareExtension` | iOS Share Extension (does NOT link Shared code; uses App Group) |
-| `WidgetsExtension-iOS` | Native iOS/iPadOS WidgetKit extension sourced from `WidgetsShared/` |
-| `WidgetsExtension-macOS` | Native macOS WidgetKit extension sourced from `WidgetsShared/` |
-
-- Shared business logic lives in `openclient-llm/Shared/` and is referenced by both app targets.
-- Platform-specific UI goes in each target's own folder. Use `#if os(iOS)` / `#if os(macOS)` only when the difference is small.
-- `ShareExtension` does not link `Shared/`; it has extension-local payload/store types compatible with the main app.
-- `WidgetsShared/` contains the widget views, providers, intents, controls, App Group models, and resources compiled by both
-  widget extensions. The platform extension folders retain only their own plist and entitlements.
-- Neither widget extension links the shared feature layer. `AppGroupStore`, `WidgetConversation`, and `WidgetControlStore`
-  are compiled into both apps and both widget extensions.
-- App Group: `group.com.artcc.openclient-llm`
-
-## Architecture: Event/State ViewModels
-
-ViewModels use `@Observable`, explicit `@MainActor`, event-driven `send(_:)` input, and screen-specific state. Most use
-the following Event/State shape; `HomeViewModel` instead exposes several focused observable properties:
-
-```swift
-@Observable
-@MainActor
-final class FeatureViewModel {
-    enum Event { case viewAppeared }
-    enum State: Equatable { case loading; case loaded(LoadedState) }
-    struct LoadedState: Equatable { /* screen data */ }
-
-    private(set) var state: State
-    init(state: State = .loading) { self.state = state }
-    func send(_ event: Event) { /* switch on event */ }
-}
-```
-
-- Root screen views generally own `@Observable` ViewModels with `@State`. Custom initialization and internal visibility are
-  allowed for split `Type+Concern.swift` implementations; child views may receive the same ViewModel and use `@Bindable`
-  when bindings are required.
-- ViewModels primarily coordinate UseCases, but some also inject Managers directly for settings, memory, cloud sync,
-  user profile, and app-wide routing state. Preserve the local pattern instead of adding pass-through UseCases.
-- ViewModel `send(_:)` is the primary UI event entry point. Preserve established explicit methods such as awaitable refresh
-  APIs where the surrounding feature already uses them. Asynchronous ownership and state mutation stay inside the ViewModel.
-- Typical data flow is View → ViewModel → UseCase → Repository → APIClient/LocalStorage. Managers are transversal
-  services coordinated by UseCases, ViewModels, repositories, and app entry points where the implementation requires it.
-
-## File conventions
-
-- Every `.swift` file starts with the boilerplate copyright header (see any existing file).
-- One public type per file, named after the type.
-- Use `// MARK: -` sections where they improve navigation. Common sections are `Properties`, `Init`, a meaningful public
-  section such as `View` or `Input functions`, and `Private` near the bottom; do not force sections into small files.
-- Primary SwiftUI screens and reusable visual components need preview coverage, either in the same file or a dedicated
-  `Type+Previews.swift` file. Platform adapters and infrastructure-only views may rely on a composed parent preview.
-- Never initialize optional stored properties with `= nil` (optionals default to nil).
-- Localize all user-facing source strings. Use `String(localized:)` when an API requires `String`; direct localized literals
-  are valid for APIs taking `LocalizedStringKey` or `LocalizedStringResource`. Never manually edit `Localizable.xcstrings`.
-- Write localized source strings in English only; translations are maintained manually by the project author.
-- SwiftLint configuration: warnings/errors are 120/150 lines for line length, 50/80 for function bodies, 300/400 for
-  type bodies, and 500/650 for files. `force_unwrapping` and `force_cast` are errors.
-- External SPM packages are SwiftLintPlugins, VoticeSDK, and ConfettiSwiftUI; do not add others without a concrete need.
-
-## Git workflow
-
-- Branch from `develop`, open PRs targeting `develop`.
-- Commit messages: imperative style ("Add chat streaming support"), reference related issues with `Closes #N`.
-- Do NOT commit `Secrets.xcconfig` (gitignored; contains Votice API keys).
-- Values from `Secrets.xcconfig` are compiled into the client app and are recoverable from a distributed bundle. Treat them
-  as client configuration, not as confidential server-side secrets; never place a privileged credential there.
-- Release workflows derive tag and artifact labels from the first numeric `CHANGELOG.md` header. The deployment process
-  increments the published build number automatically, so the checked-in `CURRENT_PROJECT_VERSION` does not need to match
-  the changelog build suffix. The standard release tag is `v<VERSION>`; the macOS DMG tag is `v<VERSION>-macos`.
+- The app uses SwiftUI and connects to a user-configurable LiteLLM/OpenAI-compatible server.
+- Shared app code belongs in `openclient-llm/Shared/` and is compiled by the iOS/iPadOS and macOS app targets.
+- Platform-only app code belongs in `openclient-llm/` or `openclient-llm-macOS/` as appropriate.
+- `ShareExtension` is standalone and does not link the shared feature layer. `WidgetsShared/` is compiled by both widget
+  extensions; widget targets likewise do not link the shared feature layer.
+- Cross-target App Group models and stores must retain intentional target membership and compatible persisted formats.
+- The usual flow is View -> ViewModel -> UseCase -> Repository -> APIClient/local storage, with Managers for transversal
+  services. Do not add pass-through layers solely to satisfy the diagram.
+- ViewModels use `@Observable`, remain explicitly `@MainActor`, own asynchronous state mutation, and generally receive UI
+  events through `send(_:)`. Do not introduce `ObservableObject` or `@Published`.
+- `SettingsManager` is the app-facing settings facade: its credential and authorization-scope APIs delegate to
+  `KeychainManager`, while non-sensitive preferences use `UserDefaults`. Preserve that storage boundary.
 
 ## Change Completion
 
-- After completing implementation work, **always ask the user** before compiling, checking SwiftLint, or running tests. Never do these automatically.
-- When the user wants to verify: run the smallest relevant test set after a focused change; run the full iOS suite after shared-code changes.
-- Build both iOS and macOS after changing shared SwiftUI or shared business logic.
-- Run `git diff --check` before reporting completion.
-- Do not include generated files, `Secrets.xcconfig`, or unrelated working-tree changes in a commit.
+- Keep user-facing source strings in English and localize them. Do not edit `Localizable.xcstrings` manually.
+- Follow `.swiftlint.yml` rather than copying its numeric thresholds into guidance.
+- Verify target membership when creating or moving source files.
+- Update structural documentation when intentionally changing targets, top-level ownership, or platform strategy.
+- Report what changed, what was not validated, and any remaining risks.

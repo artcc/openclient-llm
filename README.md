@@ -116,8 +116,6 @@ servers that provide the endpoints used by your selected features; point the app
 | WidgetKit | Native iOS, iPadOS, and macOS widgets plus a New Chat system control |
 | Votice | In-app feedback & feature requests |
 
-This project was developed entirely with Xcode, Visual Studio Code and GitHub Copilot (with Claude Opus / Sonnet 4.6).
-
 ## Architecture
 
 The project follows **MVVM + UseCase + Repository + Manager** with Swift strict concurrency and `async/await`. Code is organized by feature under `Shared/`, shared across iOS and macOS targets. Platform-specific UI lives in each target's own folder.

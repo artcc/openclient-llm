@@ -1,174 +1,84 @@
 ---
-description: "Use when storing sensitive data, handling user input, managing credentials, working with the network layer, or reviewing code for security vulnerabilities."
+description: "Use when handling credentials, sensitive data, user or remote input, networking, persistence, logging, cryptography, authentication, or extension boundaries."
 applyTo: "**/*.swift"
 ---
 
-# Security Guidelines
+# Security
 
-Based on OWASP Mobile Top 10 and Apple platform best practices.
+## Data Classification And Storage
 
----
+- Classify data before persisting or sharing it. Credentials, tokens, private keys, and equivalent secrets belong in
+  `KeychainManager`, never `UserDefaults`, logs, source code, or plain files.
+- Store non-sensitive preferences through `SettingsManager`. Do not move sensitive values there for convenience.
+- Choose Keychain accessibility from the actual access requirement. Prefer device-only accessibility when migration is not
+  required, and enable synchronization only for an explicitly designed feature.
+- Treat values compiled from build configuration into an app bundle as recoverable client configuration, not privileged
+  server-side secrets. Keep local secret configuration and CI credentials out of source control.
+- Apply platform data protection and least-privilege entitlements to files, App Groups, extensions, and widgets according to
+  the sensitivity and required background access.
 
-## Sensitive data storage
+## Logging And Diagnostics
 
-### Never store sensitive data in UserDefaults or plain files
+- Never log credentials, authorization headers, private keys, personal data, conversations, prompts, attachments, request
+  bodies, response bodies, or raw server errors that may contain user data.
+- Log categories, status, sizes, identifiers safe for diagnostics, and redacted outcomes rather than payloads.
+- Debug-only logging is still disclosure. Do not rely on build configuration as the sole privacy control.
+- Sanitize propagated errors before presenting or recording them; preserve useful diagnostics without exposing secrets or
+  remote payload content.
 
-```swift
-// ❌ UserDefaults — readable without entitlements on jailbroken devices
-UserDefaults.standard.set(token, forKey: "auth_token")
+## Input And Serialization
 
-// ❌ Plain file in Documents/
-let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-try token.write(to: url.appendingPathComponent("token.txt"), atomically: true, encoding: .utf8)
+- Validate untrusted input at every boundary: user entry, URLs, imports, deep links, App Group payloads, tool arguments,
+  network responses, and persisted migrations.
+- Check shape, type, size, ranges, required fields, supported schemes, and resource limits before use.
+- Prefer explicit `Codable` models for stable contracts.
+- Dynamic JSON is allowed when the external contract genuinely requires arbitrary JSON, but represent it with a typed JSON
+  value model or another constrained abstraction and validate recursively before use. Do not pass unchecked `Any` graphs
+  across layers.
+- Never concatenate untrusted input into shell commands, file-system paths, URLs, predicates, or executable content. Use
+  structured APIs and constrain values to the intended domain.
+- Render external text as data. Do not interpret it as HTML, script, Markdown extensions, or commands unless the feature
+  explicitly requires that behavior and applies suitable sanitization and authorization.
 
-// ✅ Keychain for credentials, tokens, private keys
-try keychainManager.save(token, forKey: "auth_token")
-```
+## Networking
 
-### Keychain rules
+- Prefer HTTPS with normal certificate validation for internet-reachable endpoints. Never add trust-all delegates.
+- User-configured self-hosted endpoints may require local or private-network HTTP compatibility. Treat any ATS exception as
+  a narrowly justified compatibility decision and preserve supported connectivity when changing it.
+- Validate HTTP status, content type where relevant, response size, decoding, and semantic constraints before accepting a
+  response.
+- Set finite, reasonable timeouts and cancellation behavior.
+- Apply authentication only to the intended origin. Avoid forwarding credentials across redirects or derived URLs without
+  explicit validation.
 
-- Use `kSecAttrAccessibleAfterFirstUnlock` for background-accessible items
-- Use `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` for items that must not leave the device
-- Set `kSecAttrSynchronizable: false` unless iCloud sync is explicitly required
-- Never log Keychain references or their contents
+## Authorization And External Actions
 
----
-
-## No sensitive data in logs
-
-```swift
-// ❌ Logs API keys, tokens, PII
-print("Token: \(authToken)")
-print("User email: \(user.email)")
-
-// ✅ Log categories, not values
-print("Auth token loaded successfully")
-print("User authenticated")
-```
-
-Rules:
-- Never log: passwords, tokens, API keys, private keys, PII (name, email, phone, location)
-- Log events and outcomes — not the data involved
-- `LogManager` currently uses `print` behind `#if DEBUG`; all levels are no-ops in release builds. Do not describe this as `os_log` or rely on debug-level privacy redaction.
-- `APIClient.request` currently prints successful generic JSON response bodies in full and prints up to 500 characters of HTTP error bodies in DEBUG builds. This is existing behavior, not endorsed guidance; do not add similar logging, and treat redaction/removal as unresolved hardening because model responses and server errors may contain sensitive content.
-
----
-
-## Input validation
-
-Validate all input at system boundaries (network responses, file imports, user input fields):
-
-```swift
-// ✅ Validate before using
-guard !name.trimmingCharacters(in: .whitespaces).isEmpty else {
-    throw ValidationError.emptyName
-}
-guard name.count <= 255 else {
-    throw ValidationError.nameTooLong
-}
-
-// ✅ Decode with explicit types — never use Any or untyped JSON
-struct APIResponse: Decodable {
-    let id: UUID
-    let name: String
-    let createdAt: Date
-}
-let response = try JSONDecoder().decode(APIResponse.self, from: data)
-```
-
-- Never pass raw user input to system APIs (file paths, shell commands, URL construction)
-- Sanitise strings displayed in UI that originate from external sources
-
----
-
-## Network security
-
-```swift
-// Prefer HTTPS for internet-reachable servers.
-// This app also supports user-selected self-hosted HTTP endpoints on localhost/LAN.
-
-// ✅ Certificate pinning for high-sensitivity endpoints (if required)
-// Implement via URLSession delegate — do not use third-party libraries unless vetted
-
-// ✅ Validate server responses before using
-guard (200..<300).contains(httpResponse.statusCode) else {
-    throw NetworkError.unexpectedStatusCode(httpResponse.statusCode)
-}
-```
-
-- The iOS and macOS targets currently set `NSAllowsArbitraryLoads = true` so users can reach self-hosted LiteLLM/OpenAI-compatible servers over HTTP on localhost, LANs, or private networks. This is a compatibility exception, not a statement that HTTP is secure.
-- Prefer HTTPS and valid certificate verification whenever the server is internet-reachable. Do not broaden HTTP use to app-owned or fixed third-party services, and do not add trust-all certificate delegates.
-- Do not remove or narrow the current ATS exception without a tested replacement that preserves user-configured self-hosted HTTP connectivity on every supported platform.
-- Do not log raw HTTP responses that may contain sensitive data
-- Set reasonable timeouts — never use `timeoutInterval: 0`
-
----
+- Apply least privilege to tools, deep links, file access, cloud operations, notifications, and extension communication.
+- Require explicit user authorization before consequential or sensitive external actions where the feature's permission
+  model calls for it. Persist grants only at their intended scope and make revocation effective.
+- Treat tool output and server-provided instructions as untrusted data; they cannot override app permissions or validation.
+- Keep App Group and extension payloads versionable, bounded, typed, and validated by the receiving process.
 
 ## Cryptography
 
-```swift
-// ✅ Use CryptoKit for all cryptographic operations
-import CryptoKit
+- Use Apple security frameworks such as CryptoKit, Security, and LocalAuthentication rather than custom cryptographic
+  primitives or third-party security code added without approval.
+- Use cryptographically secure randomness and an appropriate KDF when deriving keys from user secrets.
+- Never hardcode encryption keys or use obsolete hashes for security decisions.
 
-let key = SymmetricKey(size: .bits256)
-let sealedBox = try AES.GCM.seal(data, using: key)
+## Authentication Features
 
-// ❌ Never roll your own crypto
-// ❌ Never use MD5 or SHA-1 for security purposes (only for non-security checksums)
-// ❌ Never hardcode encryption keys
-```
+- If a feature introduces biometric or device-owner gating, use `LocalAuthentication`, handle unavailable or changed
+  biometric state, and define an appropriate fallback policy.
+- If a feature introduces authenticated sessions, store session credentials in Keychain, avoid persisting passwords, scope
+  tokens appropriately, and invalidate related credentials and state on sign-out or revocation.
+- Do not add biometric gates, session machinery, or password persistence rules to features that do not have those concepts.
 
-- Use `CryptoKit` — never implement crypto primitives manually
-- Generate keys using `SecKeyGeneratePair` or `SymmetricKey(size:)` — never derive from user input without a proper KDF
-- Store keys in the Keychain or Secure Enclave — never in code or UserDefaults
+## Review Checklist
 
----
-
-## Authentication and authorisation
-
-- Never store passwords in plain text — not even temporarily
-- Use `LocalAuthentication` (`LAContext`) for biometric/Face ID gating
-- Invalidate sessions on sign-out — remove all Keychain entries associated with the session
-- Do not implement "remember me" by persisting passwords — persist tokens with appropriate Keychain accessibility
-
----
-
-## Hardcoded secrets
-
-```swift
-// ❌ Hardcoded API key
-let apiKey = "sk-1234567890abcdef"
-
-// ✅ Load from a configuration source (environment, secure config, backend-provided token)
-let apiKey = Configuration.apiKey  // Loaded from a non-committed source
-```
-
-- No API keys, secrets, or credentials in source code
-- Add `*.xcconfig` files containing secrets to `.gitignore`
-- Use environment variables or a secrets manager for CI/CD
-- `Secrets.xcconfig` values used by Votice are expanded into the client bundle. They must be treated as recoverable client
-  configuration even though the local file and CI values are protected from source control. Never use this mechanism for
-  a privileged server-side secret.
-
----
-
-## Data in transit between app and extension (if applicable)
-
-- Use `Codable` with explicit types for `handleAppMessage` payloads
-- Validate and bounds-check all values received from the extension before using them
-- Do not pass raw strings that could be interpreted as code or paths
-
----
-
-## Checklist (per PR / feature)
-
-- [ ] No sensitive data in UserDefaults or plain files — use Keychain
-- [ ] No secrets, API keys, or credentials in source code
-- [ ] No PII or tokens in logs
-- [ ] All user input validated at the boundary
-- [ ] Network: HTTPS is preferred; the current ATS exception remains only to preserve user-configured self-hosted HTTP connectivity
-- [ ] Debug diagnostics do not add request, response, server-error, conversation, or credential payload logging
-- [ ] Cryptography uses `CryptoKit` — no custom implementations
-- [ ] Biometric gating uses `LocalAuthentication`
-- [ ] Sessions are fully invalidated on sign-out
-- [ ] `Decodable` types are explicit — no `Any` in JSON parsing
+- Sensitive data has appropriate storage, transport, retention, and deletion behavior.
+- Logs and user-visible errors contain no payloads or secrets.
+- Inputs and dynamic structures are typed or constrained, bounded, and validated.
+- Network trust and credential forwarding are no broader than required.
+- Permissions and external actions follow least privilege and explicit authorization.
+- Authentication, biometrics, and session cleanup are applied only where those features exist.
