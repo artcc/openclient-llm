@@ -21,6 +21,9 @@ extension HomeView {
         Binding(
             get: { selectedTab },
             set: { tab in
+                // Switching to results can write the Chats selection back before its view appears.
+                guard !isSidebarSearchFocusRequested || tab != .chats else { return }
+                isSidebarSearchFocusRequested = false
                 isSidebarSearchFocused = false
                 isSidebarSearchActive = false
                 selectedTab = tab
@@ -33,6 +36,7 @@ extension HomeView {
         if UIDevice.current.userInterfaceIdiom == .pad {
             SearchConversationsView(
                 searchText: $iPadSearchText,
+                isSearchActive: selectedTab == .search && !isSidebarSearchVisible,
                 onConversationSelected: openSearchResult
             )
         } else {
@@ -41,46 +45,36 @@ extension HomeView {
     }
 
     var iPadSidebarSearch: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            TextField(String(localized: "Search conversations..."), text: $iPadSearchText)
-                .textFieldStyle(.plain)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-                .focused($isSidebarSearchFocused)
-                .accessibilityIdentifier("iPadSidebarSearch")
-                .onSubmit { isSidebarSearchFocused = false }
-            if !iPadSearchText.isEmpty {
-                Button {
-                    iPadSearchText = ""
-                    activateSidebarSearch()
-                    isSidebarSearchFocused = true
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 44, height: 44)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(String(localized: "Clear Search"))
-            }
-        }
-        .padding(.leading, 12)
-        .padding(.trailing, iPadSearchText.isEmpty ? 12 : 0)
-        .frame(minHeight: 44)
-        .background(.quaternary, in: .capsule)
+        SidebarSearchField(
+            text: $iPadSearchText,
+            isFocused: $isSidebarSearchFocused,
+            focusRequested: $isSidebarSearchFocusRequested,
+            onActivated: activateSidebarSearch
+        )
+        .padding(.horizontal, -16)
         .padding(.vertical, 8)
-        .onChange(of: isSidebarSearchFocused) { _, focused in
-            if focused { activateSidebarSearch() }
+    }
+
+    func activateSidebarSearch() {
+        guard !isSidebarSearchActive else {
+            isSidebarSearchFocused = true
+            return
         }
-        .onAppear {
-            isSidebarSearchVisible = true
+        isSidebarSearchFocusRequested = true
+        selectedTab = .chats
+        isSidebarSearchActive = true
+        isSidebarSearchFocused = true
+    }
+
+    func updateSidebarPlacement(_ placement: TabBarPlacement) {
+        guard UIDevice.current.userInterfaceIdiom == .pad else { return }
+        let showsSidebar = placement == .sidebar
+        guard showsSidebar != isSidebarSearchVisible else { return }
+        isSidebarSearchVisible = showsSidebar
+        if showsSidebar {
             if selectedTab == .search { activateSidebarSearch() }
-        }
-        .onDisappear {
-            isSidebarSearchVisible = false
+        } else {
+            isSidebarSearchFocusRequested = false
             isSidebarSearchFocused = false
             if isSidebarSearchActive {
                 isSidebarSearchActive = false
@@ -89,12 +83,8 @@ extension HomeView {
         }
     }
 
-    func activateSidebarSearch() {
-        selectedTab = .chats
-        isSidebarSearchActive = true
-    }
-
     func openSearchResult(_ conversation: Conversation) {
+        isSidebarSearchFocusRequested = false
         isSidebarSearchFocused = false
         isSidebarSearchActive = false
         isPrivateChatActive = false

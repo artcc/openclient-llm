@@ -16,9 +16,12 @@ struct SearchConversationsView: View {
     @State private var viewModel = ConversationListViewModel()
     @State private var localSearchText = ""
     @State private var selectedConversation: Conversation?
+    @State private var isSearchPresented = false
+    @FocusState private var isSearchFocused: Bool
 
     private let externalSearchText: Binding<String>?
     private let showsSearchField: Bool
+    private let isSearchActive: Bool
     private let onConversationSelected: ((Conversation) -> Void)?
 
     // MARK: - Init
@@ -26,10 +29,12 @@ struct SearchConversationsView: View {
     init(
         searchText: Binding<String>? = nil,
         showsSearchField: Bool = true,
+        isSearchActive: Bool = true,
         onConversationSelected: ((Conversation) -> Void)? = nil
     ) {
         externalSearchText = searchText
         self.showsSearchField = showsSearchField
+        self.isSearchActive = isSearchActive
         self.onConversationSelected = onConversationSelected
     }
 
@@ -72,12 +77,32 @@ private extension SearchConversationsView {
     var searchPresentation: some View {
         if showsSearchField {
 #if os(iOS)
-            searchNavigation
-                .searchable(
-                    text: searchBinding,
-                    placement: .navigationBarDrawer(displayMode: .always),
-                    prompt: String(localized: "Search conversations...")
-                )
+            if externalSearchText != nil {
+                searchNavigation
+                    .searchFocused($isSearchFocused)
+                    .searchable(
+                        text: searchBinding,
+                        isPresented: $isSearchPresented,
+                        placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: String(localized: "Search") + "..."
+                    )
+                    .onChange(of: isSearchActive, initial: true) { _, active in
+                        if active {
+                            isSearchPresented = true
+                        }
+                        isSearchFocused = active
+                    }
+                    .onDisappear {
+                        isSearchFocused = false
+                    }
+            } else {
+                searchNavigation
+                    .searchable(
+                        text: searchBinding,
+                        placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: String(localized: "Search conversations...")
+                    )
+            }
 #else
             searchNavigation
                 .searchable(text: searchBinding, prompt: String(localized: "Search conversations..."))
@@ -147,6 +172,7 @@ private extension SearchConversationsView {
             ForEach(conversations) { conversation in
                 Button {
                     if let onConversationSelected {
+                        isSearchFocused = false
                         onConversationSelected(conversation)
                     } else {
                         selectedConversation = conversation

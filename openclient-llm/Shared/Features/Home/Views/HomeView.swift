@@ -30,7 +30,8 @@ struct HomeView: View {
     @State var iPadSearchText = ""
     @State var isSidebarSearchVisible = false
     @State var isSidebarSearchActive = false
-    @FocusState var isSidebarSearchFocused: Bool
+    @State var isSidebarSearchFocusRequested = false
+    @State var isSidebarSearchFocused = false
 #endif
 
     // MARK: - Init
@@ -133,6 +134,7 @@ private extension HomeView {
         TabView(selection: tabSelection) {
             Tab(value: AppTab.chats) {
                 chatsTab
+                    .modifier(TabBarPlacementObserver(onChange: updateSidebarPlacement))
             } label: {
                 Label {
                     Text(String(localized: "Chats"))
@@ -143,6 +145,7 @@ private extension HomeView {
             }
             Tab(value: AppTab.models) {
                 ModelsView()
+                    .modifier(TabBarPlacementObserver(onChange: updateSidebarPlacement))
             } label: {
                 Label {
                     Text(String(localized: "Models"))
@@ -153,6 +156,7 @@ private extension HomeView {
             }
             Tab(value: AppTab.settings) {
                 SettingsView(requestedPresentation: $requestedSettingsPresentation)
+                    .modifier(TabBarPlacementObserver(onChange: updateSidebarPlacement))
             } label: {
                 Label {
                     Text(String(localized: "Settings"))
@@ -163,6 +167,7 @@ private extension HomeView {
             }
             Tab(value: AppTab.search, role: .search) {
                 searchTab
+                    .modifier(TabBarPlacementObserver(onChange: updateSidebarPlacement))
             } label: {
                 Label(String(localized: "Search"), systemImage: "magnifyingglass")
             }
@@ -176,18 +181,21 @@ private extension HomeView {
         }
         .onChange(of: selectedTab) { _, tab in
             if tab != .chats {
+                isSidebarSearchFocusRequested = false
                 isSidebarSearchActive = false
                 isSidebarSearchFocused = false
             }
         }
         .onChange(of: selectedConversation) { _, conversation in
             if conversation != nil {
+                isSidebarSearchFocusRequested = false
                 isSidebarSearchActive = false
                 isSidebarSearchFocused = false
             }
         }
         .onChange(of: isPrivateChatActive) { _, active in
             if active {
+                isSidebarSearchFocusRequested = false
                 isSidebarSearchActive = false
                 isSidebarSearchFocused = false
             }
@@ -201,6 +209,14 @@ private extension HomeView {
                 searchText: $iPadSearchText,
                 showsSearchField: false,
                 onConversationSelected: openSearchResult
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    isSidebarSearchFocusRequested = false
+                    isSidebarSearchFocused = false
+                }
             )
         } else {
             iPhoneChatsLayout
@@ -244,7 +260,6 @@ private extension HomeView {
 #if os(iOS)
             if isSidebarSearchVisible {
                 activateSidebarSearch()
-                isSidebarSearchFocused = true
             } else {
                 selectedTab = .search
             }
