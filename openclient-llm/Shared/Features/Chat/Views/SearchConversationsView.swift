@@ -14,12 +14,105 @@ struct SearchConversationsView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var viewModel = ConversationListViewModel()
-    @State private var searchText = ""
+    @State private var localSearchText = ""
     @State private var selectedConversation: Conversation?
+    @State private var isSearchPresented = false
+    @FocusState private var isSearchFocused: Bool
+
+    private let externalSearchText: Binding<String>?
+    private let showsSearchField: Bool
+    private let isSearchActive: Bool
+    private let onConversationSelected: ((Conversation) -> Void)?
+
+    // MARK: - Init
+
+    init(
+        searchText: Binding<String>? = nil,
+        showsSearchField: Bool = true,
+        isSearchActive: Bool = true,
+        onConversationSelected: ((Conversation) -> Void)? = nil
+    ) {
+        externalSearchText = searchText
+        self.showsSearchField = showsSearchField
+        self.isSearchActive = isSearchActive
+        self.onConversationSelected = onConversationSelected
+    }
 
     // MARK: - View
 
     var body: some View {
+        searchPresentation
+            .onChange(of: searchText) { _, newValue in
+                viewModel.send(.searchChanged(newValue))
+            }
+            .onChange(of: isLoaded) { _, loaded in
+                if loaded {
+                    viewModel.send(.searchChanged(searchText))
+                }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    viewModel.refresh()
+                }
+            }
+            .task {
+                viewModel.send(.viewAppeared)
+            }
+    }
+}
+
+// MARK: - Private
+
+private extension SearchConversationsView {
+    var searchText: String { searchBinding.wrappedValue }
+
+    var searchBinding: Binding<String> { externalSearchText ?? $localSearchText }
+
+    var isLoaded: Bool {
+        if case .loaded = viewModel.state { return true }
+        return false
+    }
+
+    @ViewBuilder
+    var searchPresentation: some View {
+        if showsSearchField {
+#if os(iOS)
+            if externalSearchText != nil {
+                searchNavigation
+                    .searchFocused($isSearchFocused)
+                    .searchable(
+                        text: searchBinding,
+                        isPresented: $isSearchPresented,
+                        placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: String(localized: "Search") + "..."
+                    )
+                    .onChange(of: isSearchActive, initial: true) { _, active in
+                        if active {
+                            isSearchPresented = true
+                        }
+                        isSearchFocused = active
+                    }
+                    .onDisappear {
+                        isSearchFocused = false
+                    }
+            } else {
+                searchNavigation
+                    .searchable(
+                        text: searchBinding,
+                        placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: String(localized: "Search conversations...")
+                    )
+            }
+#else
+            searchNavigation
+                .searchable(text: searchBinding, prompt: String(localized: "Search conversations..."))
+#endif
+        } else {
+            searchNavigation
+        }
+    }
+
+    var searchNavigation: some View {
         NavigationStack {
             Group {
                 switch viewModel.state {
@@ -38,38 +131,17 @@ struct SearchConversationsView: View {
                 }
             }
         }
-        #if os(iOS)
-        .searchable(
-            text: $searchText,
-            placement: .navigationBarDrawer(displayMode: .always),
-            prompt: String(localized: "Search conversations...")
-        )
-        #else
-        .searchable(
-            text: $searchText,
-            prompt: String(localized: "Search conversations...")
-        )
-        #endif
-        .onChange(of: searchText) { _, newValue in
-            viewModel.send(.searchChanged(newValue))
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
-                viewModel.refresh()
-            }
-        }
-        .task {
-            viewModel.send(.viewAppeared)
-        }
     }
-}
 
-// MARK: - Private
-
-private extension SearchConversationsView {
     @ViewBuilder
     func searchContent(_ loadedState: ConversationListViewModel.LoadedState) -> some View {
-        if !searchText.isEmpty && loadedState.filteredConversations.isEmpty {
+        if externalSearchText != nil && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            ContentUnavailableView {
+                Label(String(localized: "Search Conversations"), systemImage: "magnifyingglass")
+            } description: {
+                Text(String(localized: "Search your conversations by title or message content"))
+            }
+        } else if !searchText.isEmpty && loadedState.filteredConversations.isEmpty {
             ContentUnavailableView.search(text: searchText)
         } else {
             let conversations = searchText.isEmpty
@@ -99,7 +171,12 @@ private extension SearchConversationsView {
         List {
             ForEach(conversations) { conversation in
                 Button {
-                    selectedConversation = conversation
+                    if let onConversationSelected {
+                        isSearchFocused = false
+                        onConversationSelected(conversation)
+                    } else {
+                        selectedConversation = conversation
+                    }
                 } label: {
                     conversationRow(conversation)
                 }
@@ -186,6 +263,10 @@ private extension SearchConversationsView {
 
 #Preview {
     SearchConversationsView()
+}
+
+#Preview("Sidebar search without a query") {
+    SearchConversationsView(searchText: .constant(""), showsSearchField: false)
 }
 
 #Preview("Search result with large text") {

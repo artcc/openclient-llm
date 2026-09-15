@@ -16,8 +16,8 @@ struct HomeView: View {
     let onRemoteBannerAction: () -> Void
 
     @State private var viewModel = HomeViewModel()
-    @State private var selectedConversation: Conversation?
-    @State private var isPrivateChatActive: Bool = false
+    @State var selectedConversation: Conversation?
+    @State var isPrivateChatActive: Bool = false
     @State private var requestedSettingsPresentation: SettingsPresentation?
 
 #if os(macOS)
@@ -26,7 +26,12 @@ struct HomeView: View {
 #endif
 
 #if os(iOS)
-    @State private var selectedTab: AppTab = .chats
+    @State var selectedTab: AppTab = .chats
+    @State var iPadSearchText = ""
+    @State var isSidebarSearchVisible = false
+    @State var isSidebarSearchActive = false
+    @State var isSidebarSearchFocusRequested = false
+    @State var isSidebarSearchFocused = false
 #endif
 
     // MARK: - Init
@@ -126,9 +131,10 @@ struct HomeView: View {
 private extension HomeView {
 #if os(iOS)
     var iOSLayout: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: tabSelection) {
             Tab(value: AppTab.chats) {
                 chatsTab
+                    .modifier(TabBarPlacementObserver(onChange: updateSidebarPlacement))
             } label: {
                 Label {
                     Text(String(localized: "Chats"))
@@ -139,6 +145,7 @@ private extension HomeView {
             }
             Tab(value: AppTab.models) {
                 ModelsView()
+                    .modifier(TabBarPlacementObserver(onChange: updateSidebarPlacement))
             } label: {
                 Label {
                     Text(String(localized: "Models"))
@@ -149,6 +156,7 @@ private extension HomeView {
             }
             Tab(value: AppTab.settings) {
                 SettingsView(requestedPresentation: $requestedSettingsPresentation)
+                    .modifier(TabBarPlacementObserver(onChange: updateSidebarPlacement))
             } label: {
                 Label {
                     Text(String(localized: "Settings"))
@@ -158,16 +166,61 @@ private extension HomeView {
                 }
             }
             Tab(value: AppTab.search, role: .search) {
-                SearchConversationsView()
+                searchTab
+                    .modifier(TabBarPlacementObserver(onChange: updateSidebarPlacement))
             } label: {
                 Label(String(localized: "Search"), systemImage: "magnifyingglass")
             }
+            .hidden(isSidebarSearchVisible)
         }
         .tabViewStyle(.sidebarAdaptable)
+        .tabViewSidebarHeader {
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                iPadSidebarSearch
+            }
+        }
+        .onChange(of: selectedTab) { _, tab in
+            if tab != .chats {
+                isSidebarSearchFocusRequested = false
+                isSidebarSearchActive = false
+                isSidebarSearchFocused = false
+            }
+        }
+        .onChange(of: selectedConversation) { _, conversation in
+            if conversation != nil {
+                isSidebarSearchFocusRequested = false
+                isSidebarSearchActive = false
+                isSidebarSearchFocused = false
+            }
+        }
+        .onChange(of: isPrivateChatActive) { _, active in
+            if active {
+                isSidebarSearchFocusRequested = false
+                isSidebarSearchActive = false
+                isSidebarSearchFocused = false
+            }
+        }
     }
 
+    @ViewBuilder
     var chatsTab: some View {
-        iPhoneChatsLayout
+        if isSidebarSearchActive {
+            SearchConversationsView(
+                searchText: $iPadSearchText,
+                showsSearchField: false,
+                onConversationSelected: openSearchResult
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    isSidebarSearchFocusRequested = false
+                    isSidebarSearchFocused = false
+                }
+            )
+        } else {
+            iPhoneChatsLayout
+        }
     }
 
     var iPhoneChatsLayout: some View {
@@ -195,14 +248,6 @@ private extension HomeView {
         }
     }
 
-    // MARK: - AppTab
-
-    enum AppTab: Hashable {
-        case chats
-        case models
-        case settings
-        case search
-    }
 #endif
 
     func handleShortcutAction(_ action: ShortcutAction) {
@@ -213,7 +258,11 @@ private extension HomeView {
             viewModel.send(.newPrivateChatShortcutTriggered)
         case .search:
 #if os(iOS)
-            selectedTab = .search
+            if isSidebarSearchVisible {
+                activateSidebarSearch()
+            } else {
+                selectedTab = .search
+            }
 #else
             selectedConversation = nil
             sidebarDestination = .chats

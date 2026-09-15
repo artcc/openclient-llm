@@ -60,7 +60,7 @@ private extension MessageBubbleView {
         HStack {
             Spacer(minLength: 60)
 
-            VStack(alignment: .trailing, spacing: 6) {
+            VStack(alignment: .trailing, spacing: 2) {
                 if !message.attachments.isEmpty {
                     attachmentsView
                 }
@@ -92,7 +92,7 @@ private extension MessageBubbleView {
                 .frame(width: 28, height: 28)
                 .glassEffect(.regular, in: .circle)
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
                 if !message.attachments.isEmpty {
                     attachmentsView
                 }
@@ -113,43 +113,13 @@ private extension MessageBubbleView {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 0) {
-                    if !message.content.isEmpty || !message.attachments.isEmpty {
-                        HStack(spacing: 8) {
-                            if let usage = message.tokenUsage, !isStreaming, showTokenUsage {
-                                tokenUsageLabel(usage)
-                            }
+                if !message.content.isEmpty || !message.attachments.isEmpty {
+                    assistantMessageFooter
+                }
 
-                            Spacer(minLength: 8)
-
-                            timestampLabel
-                            messageActionsMenu
-                        }
-                    }
-
-                    if let results = message.webSearchResults, !results.isEmpty, !isStreaming {
-                        WebSearchSourcesView(results: results)
-                            .padding(.vertical, 10)
-                    }
-
-                    FlowLayout(spacing: 8) {
-                        if !isStreaming && !message.content.isEmpty && message.role == .assistant && hasTTS {
-                            speakButton
-                        }
-
-                        if !isStreaming, !message.content.isEmpty, isLastMessage, let onRegenerateTapped {
-                            Button(action: onRegenerateTapped) {
-                                Label(String(localized: "Regenerate Response"), systemImage: "arrow.clockwise")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-#if os(iOS)
-                                    .frame(minHeight: 44)
-#endif
-                                    .contentShape(.rect)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
+                if let results = message.webSearchResults, !results.isEmpty, !isStreaming {
+                    WebSearchSourcesView(results: results)
+                        .padding(.vertical, 10)
                 }
             }
             .frame(minHeight: 28, alignment: .center)
@@ -253,6 +223,59 @@ private extension MessageBubbleView {
     }
 
     // MARK: - Message Actions
+
+    var assistantMessageFooter: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                assistantTokenUsage
+                Spacer(minLength: 0)
+                assistantInlineActions
+                timestampLabel
+                messageActionsMenu
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                assistantTokenUsage
+                HStack(spacing: 8) {
+                    assistantInlineActions
+                    Spacer(minLength: 0)
+                    timestampLabel
+                    messageActionsMenu
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    var assistantTokenUsage: some View {
+        if let usage = message.tokenUsage, !isStreaming, showTokenUsage {
+            tokenUsageLabel(usage)
+        }
+    }
+
+    var assistantInlineActions: some View {
+        HStack(spacing: 0) {
+            if !isStreaming && !message.content.isEmpty && message.role == .assistant && hasTTS {
+                speakButton
+            }
+            if !isStreaming, !message.content.isEmpty, isLastMessage, let onRegenerateTapped {
+                Button(action: onRegenerateTapped) {
+                    Label(String(localized: "Regenerate Response"), systemImage: "arrow.clockwise")
+                        .labelStyle(.iconOnly)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+#if os(iOS)
+                        .frame(width: 44, height: 44)
+#else
+                        .frame(width: 28, height: 28)
+#endif
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(String(localized: "Regenerate Response"))
+                .help(String(localized: "Regenerate Response"))
+            }
+        }
+    }
 
     var messageActionsMenu: some View {
         Menu {
@@ -445,21 +468,23 @@ private extension MessageBubbleView {
                 onSpeakTapped?()
             }
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: isSpeaking ? "stop.circle.fill" : "speaker.wave.2")
-                    .font(.system(size: 10))
-                Text(isSpeaking
-                     ? String(localized: "Stop")
-                     : String(localized: "Listen"))
-                    .font(.caption)
-            }
+            Label(
+                isSpeaking ? String(localized: "Stop") : String(localized: "Listen"),
+                systemImage: isSpeaking ? "stop.circle.fill" : "speaker.wave.2"
+            )
+            .labelStyle(.iconOnly)
+            .font(.caption)
             .foregroundStyle(isSpeaking ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
 #if os(iOS)
-            .frame(minHeight: 44)
+            .frame(width: 44, height: 44)
+#else
+            .frame(width: 28, height: 28)
 #endif
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(isSpeaking ? String(localized: "Stop") : String(localized: "Listen"))
+        .help(isSpeaking ? String(localized: "Stop") : String(localized: "Listen"))
     }
 
     // MARK: - Image Actions

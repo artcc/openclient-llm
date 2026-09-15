@@ -22,7 +22,7 @@ struct BlockquoteView: View {
     // MARK: - View
 
     var body: some View {
-        Text(inlineContent[content] ?? AttributedString(content))
+        MarkdownInlineText(inlineContent[content] ?? AttributedString(content))
             .font(.callout)
             .foregroundStyle(.secondary)
             .textSelection(.enabled)
