@@ -7,12 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## [1.7.5-build-109] - 2026-09-14
+## [1.7.5-build-110] - 2026-09-15
 
 ### Added
 
 - Markdown footnotes with numbered references and multiline notes collected at the end of assistant responses
 - Native subscript and superscript rendering for `<sub>` and `<sup>` tags across Markdown text, including formatted links
+- iPad sidebar conversation search with results in the main area, empty-query guidance, and direct chat navigation that dismisses search focus while preserving the query
 
 ### Changed
 

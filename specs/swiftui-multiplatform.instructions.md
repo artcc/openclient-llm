@@ -113,6 +113,9 @@ TabView(selection: $selectedTab) {
 - `HomeView` uses `.tabViewStyle(.sidebarAdaptable)` and each destination owns navigation where needed.
 - Current iPadOS behavior uses the same iOS `NavigationStack` chat layout; it does not contain a separate
   `NavigationSplitView` implementation.
+- iPad sidebar search uses a `tabViewSidebarHeader` field and renders conversation search results in the main area.
+  The Search tab remains available in the top-bar layout. Query text persists when opening a result in Chats;
+  an empty iPad query shows search guidance instead of the entire conversation list.
 - Tabs are scalable — future features (e.g., "Images" for image generation) can be added as new tabs
 
 ### macOS — NavigationSplitView with Sidebar

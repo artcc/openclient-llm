@@ -16,8 +16,8 @@ struct HomeView: View {
     let onRemoteBannerAction: () -> Void
 
     @State private var viewModel = HomeViewModel()
-    @State private var selectedConversation: Conversation?
-    @State private var isPrivateChatActive: Bool = false
+    @State var selectedConversation: Conversation?
+    @State var isPrivateChatActive: Bool = false
     @State private var requestedSettingsPresentation: SettingsPresentation?
 
 #if os(macOS)
@@ -26,7 +26,11 @@ struct HomeView: View {
 #endif
 
 #if os(iOS)
-    @State private var selectedTab: AppTab = .chats
+    @State var selectedTab: AppTab = .chats
+    @State var iPadSearchText = ""
+    @State var isSidebarSearchVisible = false
+    @State var isSidebarSearchActive = false
+    @FocusState var isSidebarSearchFocused: Bool
 #endif
 
     // MARK: - Init
@@ -126,7 +130,7 @@ struct HomeView: View {
 private extension HomeView {
 #if os(iOS)
     var iOSLayout: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: tabSelection) {
             Tab(value: AppTab.chats) {
                 chatsTab
             } label: {
@@ -158,16 +162,49 @@ private extension HomeView {
                 }
             }
             Tab(value: AppTab.search, role: .search) {
-                SearchConversationsView()
+                searchTab
             } label: {
                 Label(String(localized: "Search"), systemImage: "magnifyingglass")
             }
+            .hidden(isSidebarSearchVisible)
         }
         .tabViewStyle(.sidebarAdaptable)
+        .tabViewSidebarHeader {
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                iPadSidebarSearch
+            }
+        }
+        .onChange(of: selectedTab) { _, tab in
+            if tab != .chats {
+                isSidebarSearchActive = false
+                isSidebarSearchFocused = false
+            }
+        }
+        .onChange(of: selectedConversation) { _, conversation in
+            if conversation != nil {
+                isSidebarSearchActive = false
+                isSidebarSearchFocused = false
+            }
+        }
+        .onChange(of: isPrivateChatActive) { _, active in
+            if active {
+                isSidebarSearchActive = false
+                isSidebarSearchFocused = false
+            }
+        }
     }
 
+    @ViewBuilder
     var chatsTab: some View {
-        iPhoneChatsLayout
+        if isSidebarSearchActive {
+            SearchConversationsView(
+                searchText: $iPadSearchText,
+                showsSearchField: false,
+                onConversationSelected: openSearchResult
+            )
+        } else {
+            iPhoneChatsLayout
+        }
     }
 
     var iPhoneChatsLayout: some View {
@@ -195,14 +232,6 @@ private extension HomeView {
         }
     }
 
-    // MARK: - AppTab
-
-    enum AppTab: Hashable {
-        case chats
-        case models
-        case settings
-        case search
-    }
 #endif
 
     func handleShortcutAction(_ action: ShortcutAction) {
@@ -213,7 +242,12 @@ private extension HomeView {
             viewModel.send(.newPrivateChatShortcutTriggered)
         case .search:
 #if os(iOS)
-            selectedTab = .search
+            if isSidebarSearchVisible {
+                activateSidebarSearch()
+                isSidebarSearchFocused = true
+            } else {
+                selectedTab = .search
+            }
 #else
             selectedConversation = nil
             sidebarDestination = .chats
