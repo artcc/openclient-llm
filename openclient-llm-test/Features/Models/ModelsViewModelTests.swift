@@ -82,6 +82,20 @@ final class ModelsViewModelTests: XCTestCase {
         XCTAssertNotNil(loadedState.errorMessage)
     }
 
+    func test_send_viewAppeared_repeatedly_fetchesModelsOnce() async throws {
+        // Given
+        var executeCount = 0
+        mockFetchModels.onExecute = { executeCount += 1 }
+
+        // When
+        sut.send(.viewAppeared)
+        sut.send(.viewAppeared)
+        try await Task.sleep(for: .milliseconds(100))
+
+        // Then
+        XCTAssertEqual(executeCount, 1)
+    }
+
     // MARK: - Tests — refreshTapped
 
     func test_send_refreshTapped_reloadsModels() async throws {

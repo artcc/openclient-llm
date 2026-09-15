@@ -60,12 +60,7 @@ struct ConversationListView: View {
         }
         .navigationTitle(String(localized: "Chats"))
 #if os(macOS)
-        .focusedSceneValue(\.newChatAction) {
-            viewModel.send(.newConversationTapped)
-        }
-        .focusedSceneValue(\.newPrivateChatAction) {
-            viewModel.send(.newPrivateConversationTapped)
-        }
+        .focusedSceneValue(\.conversationListViewModel, viewModel)
         .task(id: macSearchRequestID) {
             guard macSearchRequestID > 0 else { return }
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {

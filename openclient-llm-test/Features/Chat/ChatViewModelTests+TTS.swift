@@ -28,7 +28,8 @@ extension ChatViewModelTests {
             saveConversationUseCase: mockSaveConversation,
             synthesizeSpeechUseCase: mockSynthesize,
             getChatPreferencesUseCase: mockGetChatPreferences,
-            getConversationStartersUseCase: mockGetConversationStarters
+            getConversationStartersUseCase: mockGetConversationStarters,
+            playAudioUseCase: mockPlayAudio
         )
 
         sut.send(.viewAppeared)
@@ -59,7 +60,8 @@ extension ChatViewModelTests {
             saveConversationUseCase: mockSaveConversation,
             synthesizeSpeechUseCase: mockSynthesize,
             getChatPreferencesUseCase: mockGetChatPreferences,
-            getConversationStartersUseCase: mockGetConversationStarters
+            getConversationStartersUseCase: mockGetConversationStarters,
+            playAudioUseCase: mockPlayAudio
         )
 
         sut.send(.viewAppeared)
@@ -93,7 +95,8 @@ extension ChatViewModelTests {
             saveConversationUseCase: mockSaveConversation,
             synthesizeSpeechUseCase: mockSynthesize,
             getChatPreferencesUseCase: mockGetChatPreferences,
-            getConversationStartersUseCase: mockGetConversationStarters
+            getConversationStartersUseCase: mockGetConversationStarters,
+            playAudioUseCase: mockPlayAudio
         )
 
         sut.send(.viewAppeared)
@@ -124,7 +127,8 @@ extension ChatViewModelTests {
             saveConversationUseCase: mockSaveConversation,
             synthesizeSpeechUseCase: mockSynthesize,
             getChatPreferencesUseCase: mockGetChatPreferences,
-            getConversationStartersUseCase: mockGetConversationStarters
+            getConversationStartersUseCase: mockGetConversationStarters,
+            playAudioUseCase: mockPlayAudio
         )
 
         sut.send(.viewAppeared)
@@ -161,7 +165,8 @@ extension ChatViewModelTests {
             saveConversationUseCase: mockSaveConversation,
             synthesizeSpeechUseCase: mockSynthesize,
             getChatPreferencesUseCase: mockGetChatPreferences,
-            getConversationStartersUseCase: mockGetConversationStarters
+            getConversationStartersUseCase: mockGetConversationStarters,
+            playAudioUseCase: mockPlayAudio
         )
 
         sut.send(.viewAppeared)
@@ -199,7 +204,8 @@ extension ChatViewModelTests {
             saveConversationUseCase: mockSaveConversation,
             synthesizeSpeechUseCase: mockSynthesize,
             getChatPreferencesUseCase: mockGetChatPreferences,
-            getConversationStartersUseCase: mockGetConversationStarters
+            getConversationStartersUseCase: mockGetConversationStarters,
+            playAudioUseCase: mockPlayAudio
         )
 
         sut.send(.viewAppeared)

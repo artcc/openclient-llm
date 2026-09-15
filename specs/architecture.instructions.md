@@ -1,138 +1,60 @@
 ---
-description: "Use when implementing features, creating new files, defining layer boundaries, following MVVM+UseCase+Repository patterns, writing Swift code, applying code style conventions, or understanding project structure."
+description: "Use when creating Swift files or features, assigning target ownership, or changing View, ViewModel, UseCase, Repository, Manager, networking, or storage boundaries."
 applyTo: "**/*.swift"
 ---
 
-# OpenClient Architecture
+# Architecture
 
-## Current Project Layout
+## Target Ownership
 
-The Xcode project currently has **six native targets**, all backed by File System Synchronized Groups:
+- Put code shared by the iOS/iPadOS and macOS apps in `openclient-llm/Shared/`.
+- Put genuinely platform-specific app code in the corresponding app target directory. Use conditional compilation only
+  for small platform differences inside otherwise shared code.
+- Keep `ShareExtension` independent from the shared feature layer. Maintain compatible transfer types at its App Group
+  boundary rather than coupling the extension to app-only code.
+- Put widget code shared across platforms in `WidgetsShared/`. Widget extensions must not depend on the shared app feature
+  layer.
+- Treat files intentionally compiled into several apps or extensions as cross-target contracts. Verify target membership,
+  platform availability, persistence compatibility, and extension-safe APIs when changing them.
+- Read target membership, deployment settings, build settings, and package dependencies from the Xcode project. Do not
+  infer them from folder names or duplicate inventories in guidance.
 
-```text
-openclient-llm/                 # iOS/iPadOS app target
-├── App/                        # iOS app and scene delegates
-├── Resources/                  # iOS plist, entitlements, test plan
-└── Shared/                     # Compiled by both app targets
-    ├── Core/
-    │   ├── Extensions/
-    │   ├── Managers/
-    │   ├── Models/
-    │   ├── Networking/
-    │   ├── Utils/
-    │   └── Views/
-    ├── Features/               # Feature-owned Models/Repositories/UseCases/ViewModels/Views as needed
-    └── Resources/              # Shared assets, localization, icon, and Poppins fonts
+## Layering
 
-openclient-llm-macOS/           # macOS app target
-├── App/
-├── Resources/
-└── Views/                      # macOS-only menu bar and command UI
-
-openclient-llm-test/            # iOS-hosted XCTest unit test target
-├── Core/
-├── Features/
-└── Mocks/
-
-ShareExtension/                 # Standalone iOS Share Extension
-└── App/Models/                 # Duplicates its small App Group transfer model/store intentionally
-
-WidgetsShared/                  # Sources and resources shared by both WidgetKit extensions
-├── App/                        # Widgets, controls, intents, App Group models, and shared @main bundle
-└── Resources/                  # Shared widget assets
-
-WidgetsExtension-iOS/          # Native iOS/iPadOS WidgetKit extension
-└── Resources/                  # iOS plist and Data Protection/App Group entitlements
-
-WidgetsExtension-macOS/        # Native macOS WidgetKit extension
-└── Resources/                  # macOS plist and App Group entitlements
-```
-
-The macOS target includes the synchronized `openclient-llm` group as well as its own group. Shared views therefore live in
-`openclient-llm/Shared/Features/.../Views`, not in a separate iOS `Views/` directory. `ShareExtension`,
-`WidgetsExtension-iOS`, and `WidgetsExtension-macOS` do not link the shared feature layer; they communicate through
-`group.com.artcc.openclient-llm` and deep links. Through synchronized-group membership exceptions, `AppGroupStore.swift`,
-`WidgetConversation.swift`, and `WidgetControlStore.swift` are compiled into both apps and both widget extensions.
-
-Feature folders are pragmatic rather than uniform. Create only the subfolders a feature needs. `Shortcuts`, for example,
-currently contains intents directly, while larger features use several layer folders.
-
-## Current Layering
-
-The dominant flow is:
+The usual dependency direction is:
 
 ```text
 View -> ViewModel -> UseCase -> Repository -> APIClient / local storage
-                         \----> Manager
+                 \-----------------------> Manager
 ```
 
-- Views own `@Observable` ViewModels with `@State`, render state, and send events.
-- ViewModels are explicit `@MainActor` classes and generally expose a nested `Event`, `State`, and `LoadedState`.
-- UseCases represent operations, but some are thin adapters over Managers or `APIClient` rather than Repository clients.
-- Repositories handle network mapping, attachments, and conversation persistence where that abstraction is useful.
-- Managers provide settings, keychain, cloud, audio, App Group, notification, and system-service integration.
-- `APIClient` is the OpenAI-compatible networking and streaming boundary.
+- Views render state and emit events. They do not perform persistence, networking, or business decisions.
+- ViewModels coordinate screen behavior and own UI state. Use `@Observable`, keep explicit `@MainActor`, and prefer
+  `send(_:)` as the UI event entry point while preserving established awaitable APIs where needed.
+- UseCases represent meaningful operations or business rules. Do not create a pass-through UseCase only to satisfy the
+  nominal layer sequence.
+- Repositories own data access, mapping, and persistence abstractions where those boundaries add value.
+- Managers provide transversal settings, credentials, sync, routing, device, and SDK services. A ViewModel may depend on a
+  Manager directly when it represents UI-facing state or a system service and a UseCase would only forward the call.
+- `APIClient` is the networking and streaming boundary. Feature-specific request and response mapping belongs near the
+  repository or feature that owns the contract.
+- Prefer protocol-backed dependencies and initializer injection at useful test seams.
+- Keep asynchronous ownership and state mutation in the ViewModel rather than starting unowned work from Views.
 
-Current code does **not** enforce a pure ViewModel-to-UseCase boundary. Several ViewModels inject Managers directly,
-including settings, memory, profile, cloud sync, shortcuts, sharing, and URL-scheme services. Treat that as current
-implementation, not as evidence that every new dependency should bypass a UseCase.
+## Feature Structure
 
-## Preferred Rules For New Work
+- Organize feature code by ownership, creating only the Models, Repositories, UseCases, ViewModels, and Views folders the
+  feature actually needs.
+- Follow the nearest feature when choosing between a single file and a cohesive `Type+Concern.swift` split.
+- Avoid moving code into `Core` merely because it is reusable once; promote it only when it has stable cross-feature
+  ownership.
+- Preserve persisted formats, deep links, App Group identifiers, and extension contracts unless migration and compatibility
+  are explicitly part of the task.
 
-- Preserve the existing View -> ViewModel -> UseCase -> Repository/Manager flow when it adds a meaningful business or
-  test seam. Do not add a pass-through UseCase solely to satisfy a diagram.
-- Views must not perform persistence, networking, or business decisions.
-- Prefer protocol-backed dependencies and initializer injection for testable boundaries.
-- A ViewModel may use a Manager directly when it represents UI-facing state or a system service and a UseCase would only
-  forward the same call. Follow the nearest feature's established pattern.
-- Keep `LogManager` available as a static diagnostic utility at any layer.
-- Put code used by both apps under `openclient-llm/Shared/`. Put genuinely platform-only app code in the corresponding
-  target directory. Use `#if os(iOS)` or `#if os(macOS)` for small differences inside otherwise shared views.
-- Do not move extension/widget code into Shared unless target membership and extension constraints are deliberately
-  changed.
-- Use `@Observable`, not `ObservableObject` or `@Published`, and keep explicit `@MainActor` on ViewModels.
-- Prefer `async`/`await` and native throwing APIs. `Result` remains appropriate for configurable test doubles and stored
-  outcomes.
+## Structural Changes
 
-## ViewModel Shape
-
-Use the Event/State shape for screen ViewModels, while allowing feature-specific states and synchronous or asynchronous
-event handling:
-
-```swift
-@Observable
-@MainActor
-final class FeatureViewModel {
-    enum Event {
-        case viewAppeared
-    }
-
-    enum State: Equatable {
-        case loading
-        case loaded(LoadedState)
-    }
-
-    struct LoadedState: Equatable {}
-
-    private(set) var state: State = .loading
-
-    func send(_ event: Event) {
-        switch event {
-        case .viewAppeared:
-            state = .loaded(.init())
-        }
-    }
-}
-```
-
-Extensions such as `ChatViewModel+Streaming.swift` are an established way to split a large feature while retaining one
-ViewModel type. Do not force every type or helper into this template.
-
-## Maintenance
-
-- File System Synchronized Groups usually discover new files automatically, but verify target inclusion and platform
-  compilation when adding files under a shared group.
-- Update `ARCHITECTURE.md` when targets, top-level directories, feature modules, layer ownership, or platform strategy
-  change. It is a structural overview, not an inventory that must list every source file.
-- Keep detailed style, concurrency, testing, and SwiftUI rules in their focused specifications rather than duplicating
-  them here.
+- New Swift files require the standard repository header and correct target inclusion.
+- Update `ARCHITECTURE.md` when targets, top-level ownership, layer responsibilities, or platform strategy intentionally
+  change. It is an overview, not a source inventory.
+- Apply `concurrency.instructions.md`, `code-style.instructions.md`, and platform/UI specs in addition to this file when
+  their scopes are involved.

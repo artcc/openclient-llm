@@ -27,8 +27,8 @@ final class ShareViewController: SLComposeServiceViewController {
             try? ShareExtensionStore.save(item)
             context?.completeRequest(returningItems: []) { _ in
                 guard let appURL = URL(string: "openclient://share") else { return }
-                Task { @MainActor [weak self] in
-                    self?.openContainingApp(url: appURL)
+                Task { @MainActor in
+                    self.openContainingApp(url: appURL)
                 }
             }
         }

@@ -6,44 +6,27 @@ description: "Use when implementing or changing iCloud synchronization, iCloud D
 
 ## Scope
 
-This specification is the authoritative contract for OpenClient synchronization through the app's private iCloud
-Documents container. It covers conversations, attachments, the user profile, memory items, custom prompt templates, and
-the metadata required to reconcile or delete them.
+OpenClient synchronizes conversations and their attachments, the user profile, memory items, custom prompt templates, and
+their deletion metadata through the private iCloud Documents container. The contract is file based through `Codable` and
+`FileManager`; SwiftData, CloudKit records, third-party databases, and server-side synchronization are outside its scope.
 
-The synchronization implementation must remain file based through `Codable` and `FileManager`. SwiftData, CloudKit
-records, third-party databases, and a server-side synchronization service are outside the scope of this feature.
+## Data-Safety Guarantees
 
-## Implementation Status
+- Existing local and cloud JSON files are user data and remain readable across compatible upgrades.
+- Empty or missing data, unavailable containers, pending downloads, decode failures, and unsupported schemas never imply
+  deletion.
+- Writes and deletes begin only after all reconciliation inputs and deletion metadata that can affect the decision are
+  current and validated.
+- Reconciliation is deterministic and idempotent. At most one operation mutates local or cloud state at a time; triggers
+  received during a run are coalesced into at most one follow-up run.
+- Permanent deletion requires explicit user intent or durable deletion metadata created by that intent.
+- A category failure is retained as a partial result and never converted into global success. iCloud file access does not
+  block the main actor.
 
-The file-based iCloud Documents synchronization stabilization was completed in this order:
-
-- [x] Synchronization contract, runtime-state contract, and compatible schema versioning.
-- [x] Testable serialized storage infrastructure and critical correctness fixes.
-- [x] Consistent reconciliation for conversations, attachments, profile, memory, and prompt templates.
-- [x] Accurate Settings state and user communication.
-- [x] Cloud inventory plus durable individual and global deletion.
-- [x] Automated two-device coverage.
-
-## Core Guarantees
-
-- Existing local and cloud JSON files are user data and must remain readable across upgrades.
-- Synchronization must never infer deletion from an empty directory, a missing file, an unavailable container, a pending
-  iCloud download, a decoding failure, or an unsupported schema.
-- A write or delete may begin only after all metadata that can affect its reconciliation decision is current.
-- Repeating the same synchronization with unchanged inputs must produce the same result and no additional writes.
-- At most one synchronization operation may mutate local or cloud state at a time. Triggers received during a run are
-  coalesced into at most one follow-up run.
-- User data may be permanently deleted only after an explicit user action or after applying durable deletion metadata
-  created by such an action.
-- No iCloud file operation may block the main actor.
-- A failure in one data category must be reported. It must not be converted into global success or silently discarded.
-
-## Storage Backend
+## Version 1 Container And Layout
 
 Both app targets use the private ubiquity container `iCloud.com.artcc.openclient-llm` with the `CloudDocuments` service.
-The developer and the configured LiteLLM server have no access to this container.
-
-The current Version 1 layout under the container's `Documents` directory is:
+Neither the developer nor the configured LiteLLM server can access it.
 
 ```text
 Documents/
@@ -62,17 +45,14 @@ Documents/
   SyncManifest.json
 ```
 
-`ConversationTombstones.json` is the legacy aggregate tombstone file. Readers must continue to merge it with per-record
-tombstones while it can exist in shipped installations. New user data must not be stored in synchronization metadata.
-`CloudPurgeMarker.json` is the verified global deletion barrier shared by every category. It is synchronization metadata,
-not an independently manageable user record.
+`ConversationTombstones.json` is the legacy aggregate tombstone file and is merged with per-record tombstones.
+`ConversationDeleteAll.json` remains compatible conversation-wide deletion metadata. New user records are never stored in
+metadata files. `CloudPurgeMarker.json` is the shared global deletion barrier, not a user record.
 
-## Schema Versioning
+## Schema And Serialization
 
-Version 1 is the current storage schema. A missing `SyncManifest.json` means legacy Version 1 and is valid. The absence of
-the manifest must never make the container look empty or unsupported.
-
-When written, the additive manifest has this schema:
+Version 1 is the current schema. A missing `SyncManifest.json` is valid legacy Version 1 and never means that the container
+is empty or unsupported. When present, the additive manifest is:
 
 ```json
 {
@@ -82,132 +62,85 @@ When written, the additive manifest has this schema:
 }
 ```
 
-Manifest rules:
+- `format` matches exactly. Versions are positive, `minimumReaderVersion <= schemaVersion`, and mutation is allowed only
+  when `minimumReaderVersion` is supported. Unknown fields are ignored.
+- A malformed manifest, unknown format, invalid version range, or unsupported minimum reader version makes cloud storage
+  read-only for that run: no write, migration, or deletion is allowed.
+- An incompatible layout requires a new schema version and explicit tested migration. Migration writes, reads back, and
+  validates the new representation before recording completion; replaced or removed files are first preserved in local
+  recovery storage, and old cleanup waits for verified synchronization.
+- Synchronized JSON uses sorted, pretty-printed keys and ISO 8601 UTC dates with microsecond precision. Readers accept ISO
+  8601 dates. Writes are atomic, coordinated where required, read back, byte-checked, and decoded before success.
 
-- `format` must match exactly.
-- `schemaVersion` describes the layout written by the newest participating app.
-- `minimumReaderVersion` is the oldest implementation allowed to mutate that layout.
-- Unknown fields are ignored for forward-compatible additive changes.
-- A malformed manifest, an unknown format, or an unsupported version puts synchronization into a read-only failure state.
-  The app must not write, migrate, or delete cloud files in that state.
-- An incompatible layout change requires an incremented schema version and an explicit, tested migration.
-- Migration writes the new representation first, reads it back, validates it, and only then records completion.
-- Files that would be replaced or removed during migration must first be copied to local recovery storage outside the
-  iCloud container. Corrupt or unrecognized files are preserved and reported.
-- Cleanup of a previous representation is deferred until the new representation has completed verified synchronization.
+## Runtime Contract
 
-## User Intent And Runtime State
+Persisted `isCloudSyncEnabled` records user intent only. Availability and `CloudSyncStatus` are ephemeral:
 
-The persisted `isCloudSyncEnabled` setting represents only user intent. It does not mean that iCloud is available or that
-data is synchronized.
-
-Runtime state is ephemeral and has these semantic states:
-
-| State | Meaning |
+| `CloudSyncStatus` | Meaning |
 |---|---|
-| `disabled` | User intent is off. No observers, retries, downloads, writes, or deletes are active. |
-| `checkingAvailability` | The app is resolving account, container, schema, and initial metadata state. |
-| `idle` | User intent is on and the container is usable, but no complete successful run is currently asserted. |
-| `synchronizing` | A serialized reconciliation is in progress. |
-| `waitingForDownloads` | Required ubiquitous items are not current; their downloads have been requested and no writes are allowed. |
-| `synchronized` | Every enabled data category completed successfully in the same run. |
-| `unavailable` | The account or container cannot currently be used. User intent may remain on. |
-| `failed` | A non-pending operation failed. The error and affected categories are retained for UI and retry. |
+| `disabled` | User intent is off; no synchronization work is active. |
+| `checkingAvailability` | Account, container, schema, and initial metadata are being resolved. |
+| `idle(lastSuccessfulSyncAt:)` | The container is usable, without asserting a complete current run. |
+| `synchronizing` | Serialized reconciliation is running. |
+| `waitingForDownloads` | Required ubiquitous items are not current; no writes are allowed. |
+| `synchronized(lastSuccessfulSyncAt:)` | Every data category succeeded in the same run. |
+| `unavailable` | The account or container is unavailable; user intent may remain enabled. |
+| `failed` | A non-pending failure affects the recorded categories. |
+| `incomplete` | Categories have mixed pending, unavailable, or failed outcomes; unaffected work is not reported as global success. |
 
-Rules for state and settings:
+The last successful date is local diagnostic state, not proof of present availability. Disabling sync cancels pending work,
+observation, and retries without deleting data. Enabling performs availability, schema, and metadata preflight before any
+user-data write.
 
-- Availability and runtime state are never persisted as if they were user preferences.
-- The last successful synchronization date is local diagnostic state, not proof that the current container is available.
-- Turning synchronization off must always be possible, including while iCloud is unavailable.
-- Turning synchronization off cancels pending work and stops observers. It does not delete local or cloud data.
-- Enabling synchronization performs availability, schema, and metadata preflight before any user data write.
-- `synchronized` describes conversations, attachments, profile, memory, and templates together. A conversation-only result
-  must never be presented as global synchronization success.
+## Reconciliation
 
-## Reconciliation Rules
+Each category follows the same safety sequence: resolve the container and schema; gather metadata and request placeholder
+downloads; stop without writes if required input is pending; decode local, cloud, and deletion inputs independently; merge
+deterministically; persist and verify local then cloud output; and apply deletion only after its metadata is durable.
 
-All categories follow these common rules:
+- Local-only records upload and cloud-only records download unless rejected by durable deletion metadata. An empty side
+  contributes no records and never removes records from the other side.
+- Conversations are keyed by `Conversation.id`; the newest valid `updatedAt` wins. A tombstone rejects versions not newer
+  than its deletion date. Attachments are children of conversations; referenced files are materialized, and unreferenced
+  cloud folders are removed only after verified parent reconciliation.
+- Memory is merged by `MemoryItem.id`, and custom templates by `PromptTemplate.id`, using their modification values and
+  durable per-item deletion metadata. Built-in templates are not cloud user data.
+- The profile is a singleton resolved by modification metadata and `UserProfileDeletion.json`. Unsafe automatic choices
+  remain conflicts.
+- Equal modification values with different content are deterministic conflicts; the losing valid representation is
+  preserved in local recovery storage before replacement.
 
-1. Resolve the container and validate the manifest.
-2. Gather metadata and request required placeholder downloads.
-3. If required input is pending, return `waitingForDownloads` without writing user data.
-4. Decode local data, cloud data, and deletion metadata independently.
-5. Merge logical records deterministically.
-6. Persist local output and verify it.
-7. Persist cloud output through coordinated atomic writes and verify it.
-8. Apply durable deletions only after their metadata is safely stored.
-9. Return a per-category result and derive the global runtime state.
+## Tombstones And Purge
 
-An item present only locally is uploaded unless durable deletion metadata rejects it. An item present only in iCloud is
-downloaded unless durable deletion metadata rejects it. An empty side contributes no records; it is not an instruction to
-remove records from the other side.
+- Individual deletion stores durable metadata before removing payloads. Tombstones merge by newest deletion date and are
+  retained so offline devices cannot resurrect stale records.
+- Delete-all stores `CloudPurgeMarker.json` before deleting any category and journals per-category completion for safe,
+  resumable cleanup. The marker rejects records whose modification value is not newer than `deletedAt`; later records can
+  synchronize normally.
+- Deletion is idempotent. An absent payload is success only when the required deletion metadata exists. Metadata is not an
+  independently deletable user record.
+- Partial purge failures preserve the marker and unfinished categories for retry; they never report complete deletion.
 
-Category identity and conflict rules:
+## Availability, Recovery, And Privacy
 
-- Conversations are records keyed by `Conversation.id`. The newest valid `updatedAt` wins. A tombstone rejects only a
-  version that is not newer than its deletion date.
-- Attachments are children of a conversation and are never reconciled as independent user records. Referenced files are
-  materialized; unreferenced cloud folders are cleaned only after the parent reconciliation is verified.
-- Memory is merged by `MemoryItem.id`, not by treating `Memory.json` as an indivisible winner. Item updates require a
-  modification value and item deletions require durable metadata.
-- Custom prompt templates are records keyed by `PromptTemplate.id`. Built-in templates are never cloud user data. Template
-  updates require a modification value and deletions require durable metadata.
-- The profile is a singleton record. Its modification metadata and deletion marker determine the winner. If an automatic
-  choice cannot be made safely, the conflict UI must explicitly refer only to the profile.
-- Equal modification values with different content are conflicts. Resolution must be deterministic and the losing valid
-  representation must remain recoverable.
+- Availability requires a current ubiquity identity and resolvable container URL. Identity changes and app activation
+  invalidate the snapshot and require a new preflight.
+- Metadata observation exists only while intent is enabled and the container is available. It establishes an initial
+  baseline; events are debounced and coalesced, and idempotent comparison prevents write feedback loops.
+- Errors distinguish unavailable account/container, pending downloads, unsupported schema, invalid data, coordinated file
+  access failure, insufficient storage, and partial category failure. Transient retries use bounded backoff; disabling sync
+  cancels them.
+- A valid losing or replaced representation is preserved in local recovery storage. Corrupt or unrecognized files are
+  preserved and reported. Recovery never uploads unvalidated data.
+- Logs never contain raw paths, profile or memory content, conversation content, or attachment content.
 
-## Deletion Rules
+## Certification
 
-- Individual deletion writes durable deletion metadata before removing the corresponding local or cloud data.
-- Deletion metadata is merged using the newest deletion date and is intentionally retained so an offline device cannot
-  resurrect old content.
-- A delete-all operation writes its purge marker before deleting any category.
-- A purge marker rejects records whose modification value is not newer than the marker. Records created or deliberately
-  updated after the purge remain eligible to synchronize.
-- Delete operations are idempotent. An already absent payload is success only when its required deletion metadata exists.
-- The cloud-management UI uses synchronized deletion semantics: deletion affects iCloud and all synchronized devices.
-  Removing only a cloud copy while synchronization remains active is not supported because another device can re-upload it.
-- Internal manifests, tombstones, and purge markers are not presented as independently deletable user records.
+Changes to synchronization behavior require:
 
-## Availability And Observation
-
-- Availability requires a valid ubiquity identity and a resolvable container URL, but these checks are runtime snapshots,
-  not permanent facts.
-- The app observes ubiquity identity changes and re-checks availability when becoming active.
-- Metadata observation starts only when user intent is enabled and the container is available. It stops when either ceases
-  to be true and can start again later.
-- Initial metadata gathering always establishes a baseline. Starting while synchronization is disabled must not leave an
-  observer that can neither emit nor restart.
-- Metadata events are debounced and coalesced. Writes generated by the app may trigger observation, but idempotent file
-  comparison and the serialized coordinator must prevent feedback loops.
-
-## Error And Recovery Contract
-
-- Errors distinguish unavailable account/container, pending download, unsupported schema, invalid data, coordinated file
-  access failure, insufficient storage, and partial category failure.
-- Transient failures may retry with bounded backoff. Permanent failures wait for explicit user action or a relevant system
-  event. Disabling synchronization cancels retries.
-- Raw file paths, profile content, memory content, conversation content, and attachment content must not be logged.
-- A valid representation that loses conflict resolution is copied to local recovery storage before it can be replaced.
-- Automatic recovery never uploads an unvalidated file.
-
-## User Communication
-
-Settings must communicate user intent and runtime state separately. It must identify all synchronized categories, show
-pending downloads and failures, retain the last successful date, and provide retry when appropriate. Manual synchronization
-must cover every category; otherwise it must be labeled with the category it actually affects.
-
-Destructive actions require confirmation that explains their device-wide synchronized effect. A partial delete must list
-the categories that failed and remain retryable; it must not report that all data was deleted.
-
-## Certification Requirements
-
-A synchronization behavior is not complete until it has:
-
-- Unit tests against an injectable temporary cloud root.
-- Deterministic two-device tests with separate local roots and a shared cloud root.
-- Tests for local-only, cloud-only, equal, divergent, pending, unavailable, corrupt, deleted, and repeated inputs.
+- Unit coverage against an injectable temporary cloud root.
+- Deterministic two-device coverage with separate local roots and one shared cloud root.
+- Cases for local-only, cloud-only, equal, divergent, pending, unavailable, corrupt, deleted, partial, and repeated inputs.
 - iOS and macOS verification.
-- Manual validation with two app installations using a real test iCloud account for placeholder and metadata behavior that
-  cannot be faithfully reproduced by the local test harness.
+- Manual two-installation validation with a test iCloud account for placeholder and metadata behavior that the local harness
+  cannot reproduce faithfully.
