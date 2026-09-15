@@ -148,19 +148,17 @@ final class ResetAppDataUseCaseTests: XCTestCase {
 
     func test_fence_nestedCategoryOperation_executesWithoutDeadlock() async throws {
         // Given
-        mockSettingsManager.deleteAllCalled = false
         let operationGate = try XCTUnwrap(categoryOperationGate)
-        let settingsManager = try XCTUnwrap(mockSettingsManager)
 
         // When
-        try await operationGate.fence {
+        let didExecute = try await operationGate.fence {
             try await operationGate.perform {
-                settingsManager.deleteAllCalled = true
+                true
             }
         }
 
         // Then
-        XCTAssertTrue(mockSettingsManager.deleteAllCalled)
+        XCTAssertTrue(didExecute)
     }
 
     func test_execute_profileCloudOperationInFlight_waitsBeforeResettingData() async throws {

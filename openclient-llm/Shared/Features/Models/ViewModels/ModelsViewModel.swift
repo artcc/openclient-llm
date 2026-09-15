@@ -75,6 +75,7 @@ final class ModelsViewModel {
     private let fetchModelsUseCase: FetchModelsUseCaseProtocol
     private let settingsManager: SettingsManagerProtocol
     private var errorDismissTask: Task<Void, Never>?
+    private var hasStartedInitialLoad = false
 
     // MARK: - Init
 
@@ -125,6 +126,8 @@ final class ModelsViewModel {
 
 private extension ModelsViewModel {
     func loadModels() {
+        guard !hasStartedInitialLoad else { return }
+        hasStartedInitialLoad = true
         state = .loading
 
         Task {
@@ -287,7 +290,10 @@ private extension ModelsViewModel {
                 .notifications(named: .appDataDidReset)
             for await _ in notifications {
                 guard let self else { return }
-                await MainActor.run { self.loadModels() }
+                await MainActor.run {
+                    self.hasStartedInitialLoad = false
+                    self.loadModels()
+                }
             }
         }
     }

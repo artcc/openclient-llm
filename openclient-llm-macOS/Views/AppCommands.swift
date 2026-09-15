@@ -11,24 +11,23 @@ import SwiftUI
 struct AppCommands: Commands {
     // MARK: - Properties
 
-    @FocusedValue(\.newChatAction) private var newChatAction
-    @FocusedValue(\.newPrivateChatAction) private var newPrivateChatAction
+    @FocusedValue(\.conversationListViewModel) private var conversationListViewModel
 
     // MARK: - View
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
             Button(String(localized: "New Chat")) {
-                newChatAction?()
+                conversationListViewModel?.send(.newConversationTapped)
             }
             .keyboardShortcut("n", modifiers: .command)
-            .disabled(newChatAction == nil)
+            .disabled(conversationListViewModel == nil)
 
             Button(String(localized: "New Private Chat")) {
-                newPrivateChatAction?()
+                conversationListViewModel?.send(.newPrivateConversationTapped)
             }
             .keyboardShortcut("n", modifiers: [.command, .shift])
-            .disabled(newPrivateChatAction == nil)
+            .disabled(conversationListViewModel == nil)
 
             Divider()
         }
@@ -38,6 +37,5 @@ struct AppCommands: Commands {
 // MARK: - FocusedValues
 
 extension FocusedValues {
-    @Entry var newChatAction: (() -> Void)?
-    @Entry var newPrivateChatAction: (() -> Void)?
+    @Entry var conversationListViewModel: ConversationListViewModel?
 }
