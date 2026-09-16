@@ -1,15 +1,17 @@
 ---
 description: "Use when handling credentials, sensitive data, user or remote input, networking, persistence, logging, cryptography, authentication, or extension boundaries."
-applyTo: "**/*.swift"
 ---
 
 # Security
+
+Apply these rules to new or materially changed paths while keeping reviews and edits within the requested scope.
 
 ## Data Classification And Storage
 
 - Classify data before persisting or sharing it. Credentials, tokens, private keys, and equivalent secrets belong in
   `KeychainManager`, never `UserDefaults`, logs, source code, or plain files.
-- Store non-sensitive preferences through `SettingsManager`. Do not move sensitive values there for convenience.
+- Store app-facing non-sensitive user preferences through `SettingsManager`. App Group snapshots, cross-process signals,
+  migration markers, caches, and other specialized state may use dedicated stores.
 - Choose Keychain accessibility from the actual access requirement. Prefer device-only accessibility when migration is not
   required, and enable synchronization only for an explicitly designed feature.
 - Treat values compiled from build configuration into an app bundle as recoverable client configuration, not privileged
@@ -19,8 +21,9 @@ applyTo: "**/*.swift"
 
 ## Logging And Diagnostics
 
-- Never log credentials, authorization headers, private keys, personal data, conversations, prompts, attachments, request
-  bodies, response bodies, or raw server errors that may contain user data.
+- Do not add logging of credentials, authorization headers, private keys, personal data, conversations, prompts,
+  attachments, request bodies, response bodies, or raw server errors that may contain user data. Redact such data when
+  modifying an existing diagnostic path.
 - Log categories, status, sizes, identifiers safe for diagnostics, and redacted outcomes rather than payloads.
 - Debug-only logging is still disclosure. Do not rely on build configuration as the sole privacy control.
 - Sanitize propagated errors before presenting or recording them; preserve useful diagnostics without exposing secrets or

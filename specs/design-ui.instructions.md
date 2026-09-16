@@ -1,6 +1,5 @@
 ---
 description: "Use when changing OpenClient SwiftUI visuals, interaction feedback, accessibility, localization, or visible UI states."
-applyTo: "{openclient-llm/Shared/**/Views/**/*.swift,openclient-llm-macOS/**/*.swift,WidgetsShared/**/*.swift}"
 ---
 
 # OpenClient UI Design
@@ -12,6 +11,8 @@ applyTo: "{openclient-llm/Shared/**/Views/**/*.swift,openclient-llm-macOS/**/*.s
 - Use the surrounding feature code for concrete details not specified here, such as exact icons, copy, spacing, navigation,
   and animation values. Those details do not override this contract.
 - Do not use this specification as a reason to redesign unrelated UI.
+- Accessibility, motion, preview, and state-presentation rules apply to new or materially changed surfaces; they do not
+  require unrelated retrofits of untouched views.
 
 ## Native Visual Language
 
@@ -34,8 +35,8 @@ applyTo: "{openclient-llm/Shared/**/Views/**/*.swift,openclient-llm-macOS/**/*.s
 
 ## Interaction
 
-- Keep motion restrained, interruptible, and tied to meaningful state changes. Respect Reduce Motion and avoid animation
-  that destabilizes live or frequently updating content.
+- Keep new or changed motion restrained, interruptible, and tied to meaningful state changes. Respect Reduce Motion when
+  adding repeating, spatial, or decorative animation, and avoid animation that destabilizes live content.
 - Preserve native keyboard, pointer, focus, context-menu, and touch behavior for each platform.
 - Keep interactive targets reachable and clearly labelled when their visible content does not communicate the action.
 - Confirm destructive operations that can remove user data or cannot be undone. Use the platform-native destructive role
@@ -44,6 +45,9 @@ applyTo: "{openclient-llm/Shared/**/Views/**/*.swift,openclient-llm-macOS/**/*.s
 ## Accessibility And Localization
 
 - Localize every user-facing source string in English according to the repository localization rules.
+- Use localized SwiftUI literals, `String(localized:)`, or `LocalizedStringResource` according to the receiving API. Keep
+  user, model, server, tag, and filename data verbatim. Permission prompts are maintained in localized
+  `InfoPlist.strings`; do not edit `Localizable.xcstrings` manually.
 - Support VoiceOver with meaningful labels, values, hints when needed, logical reading order, and no interaction available
   only through visual position, color, hover, or gesture.
 - Preserve sufficient contrast, Dynamic Type reflow, text selection where expected, and platform-appropriate target sizes.
@@ -51,7 +55,8 @@ applyTo: "{openclient-llm/Shared/**/Views/**/*.swift,openclient-llm-macOS/**/*.s
 
 ## Visible States
 
-- Never leave a screen blank while data is loading, unavailable, empty, or failed.
+- New or materially changed primary surfaces must distinguish loading, unavailable, empty, and failed states rather than
+  presenting unexplained blank content. Structural subviews may intentionally render no content.
 - Reuse the feature's existing loading, empty, error, disconnected, disabled, and in-progress presentations.
 - Keep recoverable errors near their context with an available recovery action when one exists; reserve blocking
   presentation for decisions that require it.

@@ -39,7 +39,7 @@ contains every conversation available at export time.
 | `version` | Integer | Yes | Exactly `1`. |
 | `exportedAt` | ISO 8601 date | Yes | Document creation time. |
 | `conversations` | Array | Yes | Zero or more exported conversations. |
-| `conversation` | Object | Yes | A Codable persisted `Conversation`, including its messages and optional compatible metadata. |
+| `conversation` | Object | Yes | A persisted `Conversation` encoded by the Version 1 model contract. |
 | `attachments` | Array | Yes | Portable binary payloads referenced by `conversation`. |
 | `attachments[].messageId` | UUID | Yes | Message containing the attachment metadata. |
 | `attachments[].attachmentId` | UUID | Yes | Attachment identifier on that message. |
@@ -48,6 +48,9 @@ contains every conversation available at export time.
 Version 1 rules:
 
 - Dates are ISO 8601. Required fields must decode; unknown JSON keys are ignored.
+- A conversation requires `id`, `title`, `modelId`, `messages`, `createdAt`, and `updatedAt`. Each message requires `id`,
+  `role`, `content`, and `timestamp`. Attachment metadata requires `id`, `type`, and `fileName`. Their decoders supply the
+  compatible defaults for fields added during Version 1.
 - Conversation and message UUIDs are unique across the document. Each payload references attachment metadata on its
   declared message, and a message cannot contain duplicate payload entries for the same attachment UUID.
 - Attachment bytes live in `attachments`; metadata `fileRelativePath` is retained only for Codable compatibility and is
@@ -56,7 +59,8 @@ Version 1 rules:
   `tagColors`, branch references, compacted-context metadata, and `imageGenerationAttempted`; their model decoders define
   defaults. Tags without a color use orange.
 - `contextWindowTokens`, when present, is greater than zero. A context summary and its inclusive cursor are an indivisible
-  pair: the summary is non-empty and the cursor identifies a message in the same conversation.
+  pair: the summary is non-empty and the cursor identifies a message in the same conversation. If another message follows
+  that cursor, it is a user message.
 - Tag names remain strings in `tags`; optional `tagColors` maps those names to stable semantic color identifiers.
 
 ## Current Importer Behavior
@@ -65,8 +69,8 @@ Version 1 rules:
   attachment references, and context metadata before persisting anything. Malformed UUIDs, dates, or required fields
   invalidate the document; unsupported format or version is rejected explicitly after decoding.
 - Imported conversations, messages, and attachments receive new UUIDs. Existing conversations are never overwritten.
-  Branch references are remapped when both endpoints are imported; external references are removed. Summary cursors use
-  the message UUID map.
+  Parent-conversation and branched-message references are remapped independently when their UUID exists in the imported
+  document; references without a mapped UUID are removed. Summary cursors use the message UUID map.
 - Attachment payloads are decoded and written to new local paths; exported paths are ignored. Missing or invalid base64
   for declared attachment metadata skips that attachment and increments `skippedAttachmentCount`; a missing required
   `data` field or an invalid payload reference invalidates the document.
@@ -81,8 +85,9 @@ Version 1 rules:
   `toolName` or an unambiguous assistant call with the same `toolCallId`.
 - Import never executes tool calls. Tool transcripts, including `imageGenerationAttempted`, are restored as historical
   data only.
-- Persistence is atomic for the import batch: a failure removes newly written attachments and rolls back every conversation
-  already restored by that document.
+- Local persistence is atomic for the import batch: a local write or verification failure removes newly written attachments
+  and rolls back every conversation already restored by that document. When cloud sync is enabled, synchronization occurs
+  before and after the local commit; a failure after that commit is reported but does not roll back the local batch.
 
 ## Privacy And Limits
 

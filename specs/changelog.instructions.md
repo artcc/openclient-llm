@@ -48,8 +48,8 @@ The changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) a
 
 ## When to Update
 
-Update `CHANGELOG.md` only when a feature or breaking change is implemented, or a bug fix is confirmed. Do not add
-speculative or mid-implementation entries.
+Update `CHANGELOG.md` when a feature or breaking change is implemented, a bug fix is confirmed, or a toolchain, platform,
+or infrastructure change materially affects users or contributors. Do not add speculative or mid-implementation entries.
 
 ## Unreleased Section
 

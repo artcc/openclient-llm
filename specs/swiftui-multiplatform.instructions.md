@@ -1,6 +1,5 @@
 ---
 description: "Use when deciding how OpenClient SwiftUI code and behavior are shared or adapted across iOS, iPadOS, and macOS."
-applyTo: "{openclient-llm/Shared/**/Views/**/*.swift,openclient-llm-macOS/**/*.swift,WidgetsShared/**/*.swift}"
 ---
 
 # OpenClient SwiftUI Multiplatform Structure
@@ -16,7 +15,9 @@ applyTo: "{openclient-llm/Shared/**/Views/**/*.swift,openclient-llm-macOS/**/*.s
 ## Shared And Platform-Specific Code
 
 - Shared app UI and feature code lives under `openclient-llm/Shared/` and is compiled by the iOS and macOS app targets.
-- Keep genuinely platform-specific app, commands, menu bar, lifecycle, and UI code in its platform target directory.
+- Keep platform app entry points, lifecycle, commands, menu bar, and independent platform-only UI in the platform target
+  directory. A focused platform extension tightly coupled to a shared feature may remain beside that feature behind a
+  file-level platform guard.
 - Keep a view shared when its structure and behavior are substantially the same. Use a small `#if os(...)` branch for a
   localized platform difference.
 - Split platform implementations when composition or interaction is fundamentally different. Do not accumulate broad
@@ -44,8 +45,9 @@ applyTo: "{openclient-llm/Shared/**/Views/**/*.swift,openclient-llm-macOS/**/*.s
 
 ## Previews
 
-- Provide preview coverage for primary screens and reusable visual components, in the same file or an existing dedicated
-  preview file.
+- Provide preview coverage for new or materially changed primary screens and reusable visual components, in the same file
+  or an existing dedicated preview file. Existing views and widgets may rely on their current composed or timeline
+  snapshots until they are changed.
 - Cover the meaningful states and layout variants needed to understand a component, not an exhaustive snapshot matrix.
 - Include representative compact and wide contexts when adaptation is part of the component's responsibility.
 - Platform adapters and infrastructure-only views may rely on a composed parent preview when that exercises their UI.

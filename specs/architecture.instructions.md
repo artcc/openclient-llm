@@ -1,6 +1,5 @@
 ---
 description: "Use when creating Swift files or features, assigning target ownership, or changing View, ViewModel, UseCase, Repository, Manager, networking, or storage boundaries."
-applyTo: "**/*.swift"
 ---
 
 # Architecture
@@ -28,7 +27,8 @@ View -> ViewModel -> UseCase -> Repository -> APIClient / local storage
                  \-----------------------> Manager
 ```
 
-- Views render state and emit events. They do not perform persistence, networking, or business decisions.
+- Views render state and emit events. Keep new business decisions, persistence, and general service networking out of
+  Views. Existing focused UI adapters may bridge file import, transfer, or remote media loading at the presentation edge.
 - ViewModels coordinate screen behavior and own UI state. Use `@Observable`, keep explicit `@MainActor`, and prefer
   `send(_:)` as the UI event entry point while preserving established awaitable APIs where needed.
 - UseCases represent meaningful operations or business rules. Do not create a pass-through UseCase only to satisfy the
@@ -36,8 +36,9 @@ View -> ViewModel -> UseCase -> Repository -> APIClient / local storage
 - Repositories own data access, mapping, and persistence abstractions where those boundaries add value.
 - Managers provide transversal settings, credentials, sync, routing, device, and SDK services. A ViewModel may depend on a
   Manager directly when it represents UI-facing state or a system service and a UseCase would only forward the call.
-- `APIClient` is the networking and streaming boundary. Feature-specific request and response mapping belongs near the
-  repository or feature that owns the contract.
+- `APIClient` is the primary boundary for the configured LiteLLM/OpenAI-compatible API and streaming transport.
+  Specialized repositories may use focused `URLSession` clients for pre-configuration checks, provider enrichment, or
+  external resources. Feature-specific mapping stays near the repository or feature that owns the contract.
 - Prefer protocol-backed dependencies and initializer injection at useful test seams.
 - Keep asynchronous ownership and state mutation in the ViewModel rather than starting unowned work from Views.
 

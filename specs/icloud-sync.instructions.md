@@ -20,8 +20,9 @@ their deletion metadata through the private iCloud Documents container. The cont
 - Reconciliation is deterministic and idempotent. At most one operation mutates local or cloud state at a time; triggers
   received during a run are coalesced into at most one follow-up run.
 - Permanent deletion requires explicit user intent or durable deletion metadata created by that intent.
-- A category failure is retained as a partial result and never converted into global success. iCloud file access does not
-  block the main actor.
+- A category failure is retained as a partial result and never converted into global success. Most category operations use
+  asynchronous file coordination; conversation preflight also retains synchronous snapshot boundaries. Do not introduce
+  additional main-actor file work unless the task explicitly changes those boundaries.
 
 ## Version 1 Container And Layout
 
@@ -42,12 +43,14 @@ Documents/
   Memory.json
   MemoryTombstones.json
   CloudPurgeMarker.json
+  CloudPurgeJournal.json
   SyncManifest.json
 ```
 
 `ConversationTombstones.json` is the legacy aggregate tombstone file and is merged with per-record tombstones.
 `ConversationDeleteAll.json` remains compatible conversation-wide deletion metadata. New user records are never stored in
-metadata files. `CloudPurgeMarker.json` is the shared global deletion barrier, not a user record.
+metadata files. `CloudPurgeMarker.json` is the shared global deletion barrier, and `CloudPurgeJournal.json` records
+per-category purge progress; neither is a user record.
 
 ## Schema And Serialization
 
@@ -62,6 +65,10 @@ is empty or unsupported. When present, the additive manifest is:
 }
 ```
 
+Version 1 payload files use the compatible `Codable` models and defaults implemented for conversations, memory, prompt
+templates, user profiles, tombstones, and purge metadata. Adding a required field that existing Version 1 readers cannot
+decode is an incompatible schema change.
+
 - `format` matches exactly. Versions are positive, `minimumReaderVersion <= schemaVersion`, and mutation is allowed only
   when `minimumReaderVersion` is supported. Unknown fields are ignored.
 - A malformed manifest, unknown format, invalid version range, or unsupported minimum reader version makes cloud storage
@@ -69,8 +76,10 @@ is empty or unsupported. When present, the additive manifest is:
 - An incompatible layout requires a new schema version and explicit tested migration. Migration writes, reads back, and
   validates the new representation before recording completion; replaced or removed files are first preserved in local
   recovery storage, and old cleanup waits for verified synchronization.
-- Synchronized JSON uses sorted, pretty-printed keys and ISO 8601 UTC dates with microsecond precision. Readers accept ISO
-  8601 dates. Writes are atomic, coordinated where required, read back, byte-checked, and decoded before success.
+- Synchronized JSON uses sorted, pretty-printed keys and ISO 8601 dates. Category data written through `SyncJSONCoding`
+  uses the canonical UTC representation with microsecond precision; auxiliary metadata written through the generic cloud
+  writer uses `JSONEncoder`'s ISO 8601 strategy. Writes are atomic, coordinated where required, and byte-checked after
+  writing. Category flows perform any additional decode verification required by that format.
 
 ## Runtime Contract
 
@@ -80,7 +89,7 @@ Persisted `isCloudSyncEnabled` records user intent only. Availability and `Cloud
 |---|---|
 | `disabled` | User intent is off; no synchronization work is active. |
 | `checkingAvailability` | Account, container, schema, and initial metadata are being resolved. |
-| `idle(lastSuccessfulSyncAt:)` | The container is usable, without asserting a complete current run. |
+| `idle(lastSuccessfulSyncAt:)` | Intent is enabled and no reconciliation is active; startup may publish it before the current availability preflight completes. |
 | `synchronizing` | Serialized reconciliation is running. |
 | `waitingForDownloads` | Required ubiquitous items are not current; no writes are allowed. |
 | `synchronized(lastSuccessfulSyncAt:)` | Every data category succeeded in the same run. |
@@ -88,9 +97,9 @@ Persisted `isCloudSyncEnabled` records user intent only. Availability and `Cloud
 | `failed` | A non-pending failure affects the recorded categories. |
 | `incomplete` | Categories have mixed pending, unavailable, or failed outcomes; unaffected work is not reported as global success. |
 
-The last successful date is local diagnostic state, not proof of present availability. Disabling sync cancels pending work,
-observation, and retries without deleting data. Enabling performs availability, schema, and metadata preflight before any
-user-data write.
+The last successful date and an initial `idle` state are local diagnostic state, not proof of present availability.
+Disabling sync cancels pending work and observation without deleting data. Enabling performs availability, schema, and
+metadata preflight before any user-data write.
 
 ## Reconciliation
 
@@ -128,10 +137,10 @@ deterministically; persist and verify local then cloud output; and apply deletio
 - Metadata observation exists only while intent is enabled and the container is available. It establishes an initial
   baseline; events are debounced and coalesced, and idempotent comparison prevents write feedback loops.
 - Errors distinguish unavailable account/container, pending downloads, unsupported schema, invalid data, coordinated file
-  access failure, insufficient storage, and partial category failure. Transient retries use bounded backoff; disabling sync
-  cancels them.
-- A valid losing or replaced representation is preserved in local recovery storage. Corrupt or unrecognized files are
-  preserved and reported. Recovery never uploads unvalidated data.
+  access failure, insufficient storage, and partial category failure. Later metadata, lifecycle, or user triggers can start
+  another reconciliation; disabling sync cancels pending work.
+- A valid losing or replaced representation is preserved in local recovery storage. Corrupt recognized JSON is preserved
+  and reported; unrelated or unrecognized files may be ignored. Recovery never uploads unvalidated data.
 - Logs never contain raw paths, profile or memory content, conversation content, or attachment content.
 
 ## Certification
@@ -141,6 +150,7 @@ Changes to synchronization behavior require:
 - Unit coverage against an injectable temporary cloud root.
 - Deterministic two-device coverage with separate local roots and one shared cloud root.
 - Cases for local-only, cloud-only, equal, divergent, pending, unavailable, corrupt, deleted, partial, and repeated inputs.
-- iOS and macOS verification.
-- Manual two-installation validation with a test iCloud account for placeholder and metadata behavior that the local harness
-  cannot reproduce faithfully.
+- iOS verification and a macOS build for shared synchronization changes; add platform-specific tests when a suitable test
+  target exists.
+- Manual two-installation validation with a test iCloud account when changing placeholder, metadata-query, identity, or
+  other behavior that the local harness cannot reproduce faithfully.

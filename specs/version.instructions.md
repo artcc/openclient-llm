@@ -66,8 +66,9 @@ minor-fixes bullet when it accurately summarizes the build or complements substa
 
 ## Remote Config Decisions
 
-The local `config.json` and `config-dev.json` files mirror Remote Config. Synchronize only their `latest_version` values by
-default; do not assume production and development behavior should match.
+The ignored local `config.json` and `config-dev.json` files are release-management copies of the Remote Config structure;
+the repository does not prove that they match deployed state. Synchronize only their `latest_version` values by default,
+and do not assume production and development behavior should match.
 
 Explicitly ask before enabling `force_update` and identify whether it applies to production, development, or both. Also
 ask before any destructive banner change: disabling, replacing, removing content, or changing `dismiss_banner_key`. Keep
@@ -76,9 +77,9 @@ mechanically.
 
 ### New banner questions
 
-For a confirmed new banner, collect any missing message, platforms, target config files, activation state, localized copy,
-CTA action, and URL when applicable. Generate a stable release-and-message `dismiss_banner_key` unless supplied; do not
-change the key merely to re-show unchanged content.
+For a confirmed new banner, collect any missing platforms, target config files, activation state, and localized items. Each
+item requires `title`, `subtitle`, `cta`, `action`, `url`, and `emoji`; include an English fallback. Generate a stable
+release-and-message `dismiss_banner_key` unless supplied; do not change the key merely to re-show unchanged content.
 
 ### Valid banner actions
 

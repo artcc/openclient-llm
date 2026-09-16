@@ -28,6 +28,8 @@ then update both in the same change. If intent remains unclear, stop and ask for
 - Preserve the architecture, conventions, and nearby implementation patterns unless the task explicitly changes them.
 - Keep applicable specs synchronized whenever behavior, compatibility, architecture, or a documented invariant changes.
   Do not leave a known mismatch for a later documentation pass.
+- Keep pending improvements and technical debt in `IMPROVEMENTS.md`, not in specifications. Specs contain only current
+  contracts and guidance.
 - Do not discard, overwrite, or reformat unrelated user changes. Limit edits to the requested scope.
 - Do not add or update dependencies without explicit permission. Read package declarations from the Xcode project rather
   than duplicating their inventory here.
@@ -45,22 +47,22 @@ scope is expressible by path. Update this table when adding or removing a spec.
 
 | File | Read when |
 |---|---|
-| `agent-tool-calling.instructions.md` | Implementing tool calling, tool UI, or the agent loop. |
-| `architecture.instructions.md` | Creating Swift files, features, targets, or changing layer boundaries. |
-| `changelog.instructions.md` | Updating `CHANGELOG.md`. |
-| `chat-visual-style.instructions.md` | Designing chat-specific SwiftUI. |
-| `code-style.instructions.md` | Writing or reviewing Swift style. |
-| `concurrency.instructions.md` | Working with async code, isolation, tasks, or `Sendable`. |
-| `conversation-backup-format.instructions.md` | Changing conversation backup export, import, validation, or versioning. |
-| `design-ui.instructions.md` | Designing general SwiftUI, accessibility, haptics, or animation. |
-| `icloud-sync.instructions.md` | Changing iCloud synchronization, storage, conflicts, or cloud data management. |
-| `litellm-api.instructions.md` | Changing LiteLLM/OpenAI-compatible API integration. |
-| `readme.instructions.md` | Updating `README.md`. |
-| `security.instructions.md` | Handling sensitive data, input, credentials, networking, or security review. |
-| `swiftui-multiplatform.instructions.md` | Building shared iOS, iPadOS, or macOS SwiftUI. |
-| `testing.instructions.md` | Adding or changing tests, fixtures, or mocks. |
-| `version.instructions.md` | Changing release versions, build metadata, or TestFlight notes. |
-| `web-browsing.instructions.md` | Implementing web search or browsing features. |
+| `specs/agent-tool-calling.instructions.md` | Implementing tool calling, tool UI, or the agent loop. |
+| `specs/architecture.instructions.md` | Creating Swift files, features, targets, or changing layer boundaries. |
+| `specs/changelog.instructions.md` | Updating `CHANGELOG.md`. |
+| `specs/chat-visual-style.instructions.md` | Designing chat-specific SwiftUI. |
+| `specs/code-style.instructions.md` | Writing or reviewing Swift style. |
+| `specs/concurrency.instructions.md` | Working with async code, isolation, tasks, or `Sendable`. |
+| `specs/conversation-backup-format.instructions.md` | Changing conversation backup export, import, validation, or versioning. |
+| `specs/design-ui.instructions.md` | Designing general SwiftUI, accessibility, haptics, or animation. |
+| `specs/icloud-sync.instructions.md` | Changing iCloud synchronization, storage, conflicts, or cloud data management. |
+| `specs/litellm-api.instructions.md` | Changing LiteLLM/OpenAI-compatible API integration. |
+| `specs/readme.instructions.md` | Updating `README.md`. |
+| `specs/security.instructions.md` | Handling sensitive data, input, credentials, networking, or security review. |
+| `specs/swiftui-multiplatform.instructions.md` | Building shared iOS, iPadOS, or macOS SwiftUI. |
+| `specs/testing.instructions.md` | Adding or changing tests, fixtures, or mocks. |
+| `specs/version.instructions.md` | Changing release versions, build metadata, or TestFlight notes. |
+| `specs/web-browsing.instructions.md` | Implementing web search or browsing features. |
 
 ## Architecture At A Glance
 

@@ -1,6 +1,5 @@
 ---
 description: "Use when changing LiteLLM web-search configuration, registration, execution, source persistence, or citation context."
-applyTo: "{openclient-llm/Shared/Features/Chat/**/*.swift,openclient-llm/Shared/Features/Settings/**/*.swift}"
 ---
 
 # Web Search
@@ -11,8 +10,8 @@ applyTo: "{openclient-llm/Shared/Features/Chat/**/*.swift,openclient-llm/Shared/
   `POST /v1/search/{search_tool_name}` endpoint and must never call a search provider directly.
 - Provider credentials and provider selection remain on the LiteLLM server. Do not add provider SDKs, provider-specific
   routing, client-side search keys, native `web_search_options`, or manual search-result injection.
-- Discover available server configurations through `GET /v1/search/tools`. The selected tool name must be a path component
-  supplied by settings, not a model-provided value.
+- Discover available server configurations through `GET /v1/search/tools`. Settings supply the selected server tool name
+  used in the endpoint; the model cannot choose or override it.
 
 ## Availability And Routing
 

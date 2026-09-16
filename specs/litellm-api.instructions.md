@@ -6,8 +6,10 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
 
 ## Configuration And Layering
 
-- Build every API URL relative to the user-configured base URL. Add `Authorization: Bearer <key>` only when the Keychain
-  value is nonempty; never hardcode hosts or credentials.
+- Build API URLs by appending each repository's endpoint path to the user-configured server base URL. The current endpoint
+  set mixes OpenAI-compatible paths such as `models` with LiteLLM paths such as `v1/search/tools`; preserve those spellings
+  and test base-path behavior when changing URL construction. Add `Authorization: Bearer <key>` only when the Keychain
+  value is nonempty; never hardcode credentials.
 - `APIClient` owns HTTP construction, decoding, SSE transport, multipart uploads, downloads, and typed `APIError` mapping.
   Repositories map endpoint DTOs, UseCases apply business rules, and ViewModels coordinate them.
 - Use `.convertFromSnakeCase` for API response decoding. Keep request models `Encodable` and transport values `Sendable`.
@@ -67,12 +69,12 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
 
 ## Security And Logging
 
-- Validate HTTP status before decoding. Map authentication, rate limiting, transport, timeout, malformed response, and
-  cancellation failures to typed errors without exposing server payloads.
-- Bound uploads, generated images, downloads, MCP arguments/results, and delegated image inputs before expensive decoding
-  or allocation. Accept remote image downloads only on the dedicated image response path and only over HTTP(S).
+- Validate HTTP status before decoding. Map authentication, rate limiting, transport, timeout, and malformed responses to
+  the existing typed errors without exposing server payloads. Preserve current cancellation behavior unless the task
+  explicitly changes it together with its callers.
+- Preserve the limits already enforced for generated images, MCP values, tool results, and delegated image inputs. New or
+  changed upload and download paths should reject oversized content as early as their transport API permits. Accept remote
+  image downloads only on the dedicated image response path and only over HTTP(S).
 - Log request method, relative endpoint, status, counts, sizes, timing-relevant state, and redacted errors only in debug
   builds. Never log request or response payloads, SSE chunk previews, prompts, messages, tool arguments/results, OCR,
   base64/data URLs, downloaded content, API keys, or authorization scopes.
-- `ChatRepository` still includes a short payload preview when an SSE chunk cannot be decoded. Treat it as unresolved
-  hardening, not as an approved logging pattern; remove or redact it when changing that error path.

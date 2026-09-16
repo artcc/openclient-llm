@@ -1,6 +1,6 @@
 ---
 description: "Use when changing OpenClient chat messages, attachments, composer, streaming presentation, Markdown, actions, or scrolling."
-applyTo: "openclient-llm/Shared/Features/Chat/Views/**/*.swift"
+applyTo: "{openclient-llm/Shared/Features/Chat/**/*.swift,openclient-llm/Shared/Core/Utils/Markdown*.swift,openclient-llm/Shared/Core/Utils/RenderedMarkdown.swift,openclient-llm-macOS/Views/MenuBarChatView.swift}"
 ---
 
 # OpenClient Chat Visual Style
@@ -26,8 +26,9 @@ applyTo: "openclient-llm/Shared/Features/Chat/Views/**/*.swift"
 
 ## Message Content And Attachments
 
-- Render user source text as entered. Render completed assistant content with the existing structured Markdown pipeline,
-  including its current text, link, list, table, quotation, media, and code-block behavior.
+- Render user source text as entered. Render completed assistant content through `RenderedMarkdown`, preserving support for
+  headings, paragraphs, emphasis, links, lists and task lists, quotations, rules, code, tables, images, footnotes, and the
+  supported inline subscript and superscript forms.
 - During streaming, favor immediate stable text over repeatedly reparsing final Markdown. Switch to final Markdown when the
   response completes.
 - Keep code and other horizontally constrained content readable and selectable without widening the conversation column.
@@ -55,9 +56,10 @@ applyTo: "openclient-llm/Shared/Features/Chat/Views/**/*.swift"
 
 ## Streaming Stability
 
-- Show an immediate, localized waiting state until content arrives, then use the implemented streaming indicator.
-- Publish streamed content at the cadence established by the current pipeline; do not add per-token container animations,
-  repeated Markdown layout, or lazy-row behavior that destabilizes scrolling.
+- Show an immediate, localized waiting state until content arrives, then transition to the streaming presentation.
+- Group streamed UI updates rather than publishing every token independently; the exact debounce interval is an
+  implementation detail. Do not add per-token container animations, repeated Markdown layout, or lazy-row behavior that
+  destabilizes scrolling.
 - Keep message identity and row layout stable throughout reasoning, tool execution, answer generation, cancellation, error,
   and completion.
 - Finalization must remove transient streaming presentation and render the final assistant Markdown without losing content.
@@ -65,18 +67,19 @@ applyTo: "openclient-llm/Shared/Features/Chat/Views/**/*.swift"
 ## Scroll Follow
 
 - Follow the bottom for initial entry and active responses only while follow mode is attached.
-- Detach immediately when the user deliberately reads history, preserve their position, and expose the implemented route
-  back to the latest content.
-- Resume follow only through the current explicit return behavior or the start of a new response.
+- Detach immediately when the user deliberately reads history, preserve their position, and expose an explicit route back
+  to the latest content.
+- Resume follow when that route is used or a new response starts.
 - Drive automatic positioning from semantic chat and scroll phases, not from message visibility or continuously changing
   geometry. Visibility may inform presentation such as date context, but not automatic scrolling.
-- Preserve native scroll indicators and keyboard-dismiss behavior where the platform implementation provides them.
+- Preserve the main conversation's native scroll and keyboard-dismiss behavior. Horizontal code, table, and attachment
+  scrollers may hide indicators when their content and interaction remain discoverable.
 
 ## Chat Accessibility
 
-- Maintain a logical conversation reading order and expose message role, content, metadata, attachment state, streaming
-  state, and available actions to assistive technologies.
-- Keep streamed announcements useful without announcing every fragment.
+- For new or materially changed message presentation, maintain a logical reading order and expose the meaningful role,
+  content, state, and available actions to assistive technologies without duplicating the full visual tree.
+- Group any streamed accessibility announcements; do not announce every fragment.
 - Ensure Dynamic Type can reflow messages, metadata, Markdown, attachments, and composer controls without clipping or
   hiding actions.
 - Localize all chat labels, status, errors, metadata, and accessibility text; this specification does not define their copy.

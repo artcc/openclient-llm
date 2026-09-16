@@ -50,8 +50,10 @@ conformance:
 
 ## Reliability
 
-- Keep tests independent, repeatable, and free of real user settings, Keychain entries, App Group data, or persistent files.
-- Use isolated stores and unique namespaces for persistence tests, then remove only data created by that test.
+- Keep tests independent, repeatable, and free of production user settings, Keychain namespaces, App Group data, or
+  persistent files.
+- Persistence and Keychain tests may use isolated stores, synthetic values, and unique namespaces. Remove only data created
+  by that test.
 - Avoid force unwraps in test code; use XCTest unwrapping and explicit failures.
 - Assert public outputs and meaningful side effects rather than incidental call sequences unless ordering is itself required.
 

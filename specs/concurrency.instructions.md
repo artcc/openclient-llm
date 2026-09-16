@@ -1,9 +1,11 @@
 ---
 description: "Use when writing async code, choosing actor isolation, managing tasks or cancellation, applying Sendable, or reviewing thread safety."
-applyTo: "**/*.swift"
 ---
 
 # Swift Concurrency
+
+Apply these rules to new concurrency code and to behavior being materially changed, without expanding the task into
+unrelated refactoring.
 
 ## Configuration And Isolation
 

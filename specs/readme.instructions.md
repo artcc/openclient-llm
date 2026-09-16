@@ -1,6 +1,6 @@
 ---
 description: "Use when updating the README, adding badges, updating the architecture diagram, documenting new features, or changing project documentation."
-applyTo: "**/README.md"
+applyTo: "{README.md,ARCHITECTURE.md}"
 ---
 
 # README Maintenance

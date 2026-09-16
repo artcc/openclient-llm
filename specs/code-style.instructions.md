@@ -50,8 +50,8 @@ applyTo: "**/*.swift"
 
 ## SwiftUI And Localization
 
-- Primary screens and reusable visual components need preview coverage, either locally or through a representative composed
-  preview.
+- New or materially changed primary screens and reusable visual components need preview coverage, either locally or
+  through a representative composed preview. Existing components without previews do not require unrelated retrofit work.
 - Localize every user-facing source string. Write source strings in English.
 - Use `String(localized:)` when an API requires `String`; localized literals are appropriate for APIs accepting
   `LocalizedStringKey` or `LocalizedStringResource`.
