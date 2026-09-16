@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## [1.7.10-build-112] - 2026-09-16
+
+### Changed
+
+- Build compatibility with Xcode 27 and the iOS 27 and macOS 27 SDKs
+
+### Fixed
+
+- The Models screen no longer repeatedly requests model data when its SwiftUI task restarts
+- **Minor bug fixes**
+
 ## [1.7.5-build-110] - 2026-09-15
 
 ### Added

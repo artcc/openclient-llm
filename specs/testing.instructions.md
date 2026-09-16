@@ -1,162 +1,65 @@
 ---
-description: "Use when writing unit tests, integration tests, creating mocks, test doubles, or structuring test files. Covers testing ViewModels, UseCases, Repositories, and API integration."
+description: "Use when adding or changing XCTest coverage, test doubles, fixtures, async synchronization, or test organization."
+applyTo: "openclient-llm-test/**/*.swift"
 ---
 
-# Testing Guidelines
+# Testing
 
-## Overview
+## Scope And Boundaries
 
-All current tests live in the iOS-hosted `openclient-llm-test/` XCTest target. There is no UI test target and no dedicated
-integration-test suite.
+- Add focused tests for changed behavior at the smallest useful boundary. Do not add ceremonial tests for pass-through
+  types or test private implementation details.
+- Test ViewModels through events and observable state, UseCases through business outcomes, Repositories through mapping and
+  persistence boundaries, and Managers through their public contracts.
+- Unit tests must isolate external services with protocol-backed doubles. Real network or service integration requires an
+  explicit task scope, opt-in configuration, and safeguards against accidental CI execution.
+- Mirror production feature or core ownership in the test directory. Put reusable doubles in `Mocks/`; keep a small,
+  single-use helper private to its test file.
+- Large test types may use cohesive `Type+Concern.swift` splits or focused XCTest classes.
 
-## Test Types
+## New Test Conventions
 
-### Unit Tests
+Apply these conventions to new tests and substantially rewritten tests; do not churn unrelated existing tests solely for
+conformance:
 
-Test a single unit in isolation with mocked dependencies.
+- Test files and classes use `<TypeUnderTest>Tests`.
+- Test methods use `test_<method>_<scenario>_<expectedResult>()` with meaningful domain terms.
+- Organize setup, action, and assertions as Given-When-Then, using `// Given`, `// When`, and `// Then` when the separation
+  improves readability.
+- Keep each test focused on one behavioral intent, with all assertions needed to describe that outcome.
+- Use `@testable import openclient_llm` for internal production APIs.
+- Mark XCTest classes `@MainActor` where required by production isolation and follow the suite's established class-level
+  annotation pattern rather than annotating individual methods inconsistently.
 
-**What to test:**
-- **ViewModels**: Event/State transitions, business logic coordination
-- **UseCases**: Business rules, data transformations, edge cases
-- **Repositories**: Data mapping, caching logic (mock the APIClient)
-- **Managers**: Transversal service behavior
+## Test Doubles
 
-Some tests exercise multiple local layers, persistence behavior, cloud-sync mapping, widget snapshots, or streaming logic,
-but they remain in the normal feature/core folders. The suite currently contains no tests guarded by `LITELLM_TEST_URL`,
-no real-server tests, and no `Integration/` directory. Do not create a network integration suite unless the task explicitly
-requires one and its opt-in configuration is defined.
+- Prefer configurable protocol-backed doubles with explicit defaults that fail clearly when required behavior is not set.
+- Record only the calls and values needed by assertions.
+- Reset or recreate mutable state per test; do not depend on test execution order.
+- Follow `concurrency.instructions.md` for `Sendable`. Test-only use and `@MainActor` on the XCTest class do not by themselves
+  make a mutable mock safe.
 
-## File Organization
+## Async And Concurrent Tests
 
-```
-openclient-llm-test/
-├── Features/
-│   └── Chat/
-│       ├── ChatViewModelTests.swift
-│       ├── ChatViewModelTests+StreamingConcern.swift
-│       └── SendMessageUseCaseTests.swift
-├── Core/
-│   └── Managers/
-│       └── SettingsManagerTTSTests.swift
-└── Mocks/
-    ├── MockChatRepository.swift
-    ├── MockAPIClient.swift
-    └── MockSettingsManager.swift
-```
+- Prefer direct `async` test methods for async APIs.
+- Synchronize deterministically with controllable dependencies, continuations, XCTest expectations, actor gates, clocks,
+  or bounded signals appropriate to the behavior. Expectations remain valid when testing callbacks or explicit events.
+- Avoid arbitrary sleeps, timing guesses, unbounded polling, and reliance on scheduler order.
+- Fulfill continuations and expectations exactly once, bound waits with meaningful timeouts, and clean up long-lived tasks.
+- Exercise cancellation, stale-result rejection, and ordering when those behaviors are part of the contract.
 
-## Naming Conventions
+## Reliability
 
-- Test files: `<TypeUnderTest>Tests.swift`
-- Test classes: `<TypeUnderTest>Tests`
-- Test methods: `test_<method>_<scenario>_<expectedResult>()`
+- Keep tests independent, repeatable, and free of production user settings, Keychain namespaces, App Group data, or
+  persistent files.
+- Persistence and Keychain tests may use isolated stores, synthetic values, and unique namespaces. Remove only data created
+  by that test.
+- Avoid force unwraps in test code; use XCTest unwrapping and explicit failures.
+- Assert public outputs and meaningful side effects rather than incidental call sequences unless ordering is itself required.
 
-```swift
-func test_send_viewAppeared_setsLoadedState() async { }
-func test_execute_withInvalidURL_throwsConnectionError() async { }
-func test_fetchModels_serverUnavailable_returnsEmpty() async { }
-```
+## Validation
 
-## Test Structure (Given-When-Then)
-
-```swift
-import XCTest
-@testable import openclient_llm
-
-@MainActor
-final class SendMessageUseCaseTests: XCTestCase {
-    // MARK: - Properties
-
-    private var sut: SendMessageUseCase!
-    private var mockRepository: MockChatRepository!
-
-    // MARK: - Setup
-
-    override func setUp() {
-        super.setUp()
-
-        mockRepository = MockChatRepository()
-        sut = SendMessageUseCase(repository: mockRepository)
-    }
-
-    override func tearDown() {
-        sut = nil
-        mockRepository = nil
-
-        super.tearDown()
-    }
-
-    // MARK: - Tests
-
-    func test_execute_withValidMessage_returnsResponse() async throws {
-        // Given
-        mockRepository.sendMessageResult = .success(.stub())
-
-        // When
-        let response = try await sut.execute(message: "Hello")
-
-        // Then
-        XCTAssertFalse(response.content.isEmpty)
-    }
-}
-```
-
-## Mocking Pattern
-
-Use protocol-backed dependencies where production code exposes a protocol. Shared mocks live in `Mocks/`; a small helper
-used by only one test file may remain private in that file.
-
-```swift
-// Protocol (in Shared/Features/Chat/Repositories/)
-protocol ChatRepositoryProtocol: Sendable {
-    func sendMessage(_ message: String, model: String) async throws -> ChatResponse
-}
-
-// Mock (in openclient-llm-test/Mocks/)
-// Safety: Only used within serialized @MainActor test methods.
-final class MockChatRepository: ChatRepositoryProtocol, @unchecked Sendable {
-    var sendMessageResult: Result<ChatResponse, Error> = .failure(MockError.notConfigured)
-
-    func sendMessage(_ message: String, model: String) async throws -> ChatResponse {
-        try sendMessageResult.get()
-    }
-}
-```
-
-## Async Testing
-
-Use `async` test methods directly — no need for expectations with modern concurrency:
-
-```swift
-func test_fetchModels_returnsModelList() async throws {
-    let models = try await sut.execute()
-    XCTAssertEqual(models.count, 3)
-}
-```
-
-Mark the **XCTest class**, not individual methods, `@MainActor`. The test target has no default actor isolation and the
-current suite applies this annotation to every XCTest class:
-
-```swift
-@MainActor
-final class FeatureTests: XCTestCase {
-    func test_send_viewAppeared_loadsData() async {
-        viewModel.send(.viewAppeared)
-        XCTAssertEqual(viewModel.state, .loaded(.init()))
-    }
-}
-```
-
-Large test types may be split with `Type+Concern.swift` extensions or into focused XCTest classes, matching the existing
-Chat and Settings suites. Keep each file under the corresponding `Features/<Feature>/` or `Core/<Area>/` path.
-
-## Rules
-
-- Add focused tests for changed behavior at the smallest useful boundary; do not require one ceremonial test file for
-  every pass-through type.
-- ViewModels should be tested for all Event → State transitions
-- Never test private methods — test through the public API
-- Use `@testable import` to access internal types
-- Keep tests fast — mock all external dependencies in unit tests
-- No sleep/delays — use async/await patterns for timing
-- `@unchecked Sendable` mocks require the standard safety comment and must only be mutated from the MainActor-isolated
-  tests that own them.
+- Ask the user before running any test, build, linter, or related validation command.
+- Once authorized, run the smallest relevant test target or class first. Broaden validation only when the change crosses
+  shared boundaries or focused results justify it.
+- Report skipped validation and residual coverage risks explicitly.

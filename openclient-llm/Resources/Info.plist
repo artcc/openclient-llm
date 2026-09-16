@@ -2,15 +2,26 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).streaming.*</string>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.artcc.openclient-llm</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>openclient</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>OpenClient uses the microphone to record audio for transcription by the AI model.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>OpenClient uses speech recognition to transcribe your voice locally on device.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Poppins-Black.ttf</string>
@@ -28,26 +39,11 @@
 		<string>processing</string>
 		<string>remote-notification</string>
 	</array>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>$(PRODUCT_BUNDLE_IDENTIFIER).streaming.*</string>
-	</array>
 	<key>VOTICE_API_KEY</key>
 	<string>$(VOTICE_API_KEY)</string>
 	<key>VOTICE_API_SECRET</key>
 	<string>$(VOTICE_API_SECRET)</string>
 	<key>VOTICE_APP_ID</key>
 	<string>$(VOTICE_APP_ID)</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.artcc.openclient-llm</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>openclient</string>
-			</array>
-		</dict>
-	</array>
 </dict>
 </plist>

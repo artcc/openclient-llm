@@ -16,7 +16,7 @@ nonisolated protocol CloudContainerProviding: Sendable {
     func currentSession() -> CloudSyncSession?
 }
 
-extension CloudContainerProviding {
+nonisolated extension CloudContainerProviding {
     func currentSession() -> CloudSyncSession? {
         guard isAvailable(),
               let firstIdentity = identityData(),
