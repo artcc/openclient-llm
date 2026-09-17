@@ -274,11 +274,8 @@ private extension ConversationListView {
                 Section {
                     // pinned tag filter bar — no rows
                 } header: {
-                    VStack(spacing: 0) {
-                        tagFilterBar(loadedState)
-                        Divider()
-                    }
-                    .listRowInsets(EdgeInsets())
+                    tagFilterBar(loadedState)
+                        .listRowInsets(EdgeInsets())
                 }
             }
             ForEach(loadedState.groupedConversations) { section in
@@ -426,14 +423,10 @@ private extension ConversationListView {
             .lineLimit(1)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-#if os(macOS)
-            .background(isSelected ? Color.appAccent : Color.primary.opacity(0.08), in: .capsule)
-#else
             .glassEffect(
                 isSelected ? .regular.tint(Color.appAccent).interactive() : .regular.interactive(),
                 in: .capsule
             )
-#endif
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

@@ -7,14 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## [1.7.10-build-112] - 2026-09-16
+## [1.7.10-build-113] - 2026-09-17
 
 ### Changed
 
 - Build compatibility with Xcode 27 and the iOS 27 and macOS 27 SDKs
+- Tag filter chips in the conversation list now render with Liquid Glass on macOS, matching iOS and iPadOS
+- Onboarding actions now use Liquid Glass button styles on macOS, matching iOS and iPadOS
+- The remote banner now animates into view on macOS with the same transition used on iOS and iPadOS
 
 ### Fixed
 
+- The conversation list no longer shows a duplicate separator between the tag filter bar and the conversation sections
 - The Models screen no longer repeatedly requests model data when its SwiftUI task restarts
 - **Minor bug fixes**
 
