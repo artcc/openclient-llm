@@ -147,11 +147,7 @@ private extension OnboardingView {
                             .frame(minHeight: 44)
 #endif
                     }
-#if os(macOS)
-                    .buttonStyle(.bordered)
-#else
                     .buttonStyle(.glass)
-#endif
                 } else {
                     Text("OpenClient")
                         .font(.headline)
@@ -167,11 +163,7 @@ private extension OnboardingView {
                         .frame(minWidth: 44, minHeight: 44)
 #endif
                 }
-#if os(macOS)
-                .buttonStyle(.bordered)
-#else
                 .buttonStyle(.glass)
-#endif
                 .accessibilityHint("Finish onboarding without saving these server settings.")
             }
 
@@ -303,11 +295,9 @@ private extension OnboardingView {
                 .frame(maxWidth: .infinity, minHeight: 44)
 #endif
         }
-#if os(macOS)
-        .buttonStyle(.borderedProminent)
-        .frame(maxWidth: .infinity, alignment: .trailing)
-#else
         .buttonStyle(.glassProminent)
+#if os(macOS)
+        .frame(maxWidth: .infinity, alignment: .trailing)
 #endif
         .controlSize(.large)
         .disabled(loadedState.currentStep == .serverConfiguration && loadedState.connectionStatus != .success)

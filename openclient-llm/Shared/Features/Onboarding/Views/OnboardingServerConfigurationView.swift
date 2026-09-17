@@ -188,11 +188,7 @@ private extension OnboardingServerConfigurationView {
                     .frame(minHeight: 44)
 #endif
             }
-#if os(macOS)
-            .buttonStyle(.bordered)
-#else
             .buttonStyle(.glass)
-#endif
             .controlSize(.large)
             .disabled(state.serverURL.isEmpty || state.connectionStatus == .testing)
 
