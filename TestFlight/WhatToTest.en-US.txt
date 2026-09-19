@@ -1,6 +1,10 @@
 Hi there! We've got some great new features for you in this update.
 
 • OpenClient is now ready for Xcode 27 and the latest iOS 27 and macOS 27 SDKs, keeping your experience up to date across iPhone, iPad, and Mac.
+• On Mac, tag filters in your conversation list and the onboarding buttons now use the same Liquid Glass style you already enjoy on iPhone and iPad.
+• Announcements on the Home screen now animate into view on Mac with the same smooth transition used on iPhone and iPad.
+• Your conversation list no longer shows a duplicate separator above your chats.
+• The Models screen no longer repeats requests while loading, so it stays responsive.
 • Minor bug fixes and improvements for a smoother experience.
 
 Thanks for your continued support and for helping us build the best possible LLM client together.
