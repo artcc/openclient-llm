@@ -22,6 +22,7 @@ openclient-llm/                    # iOS target
 │   │   ├── Chat/
 │   │   │   ├── Models/
 │   │   │   ├── Repositories/
+│   │   │   ├── Tools/
 │   │   │   ├── UseCases/
 │   │   │   ├── ViewModels/
 │   │   │   └── Views/
@@ -57,6 +58,7 @@ openclient-llm/                    # iOS target
 │   │   │   └── Views/
 │   │   ├── Settings/
 │   │   │   ├── Models/
+│   │   │   ├── UseCases/
 │   │   │   ├── ViewModels/
 │   │   │   └── Views/
 │   │   ├── Shortcuts/             # AppIntents and AppShortcutsProvider
@@ -72,6 +74,7 @@ openclient-llm/                    # iOS target
 │   │   ├── Models/                # App-side share payload and other core models
 │   │   ├── Networking/
 │   │   │   └── Models/
+│   │   ├── Tips/
 │   │   ├── Utils/
 │   │   └── Views/
 │   └── Resources/
@@ -130,7 +133,8 @@ openclient-llm-test/               # Unit tests
 │   ├── Onboarding/
 │   ├── PromptTemplates/
 │   └── Settings/
-└── Mocks/                         # MockXxx per protocol, @unchecked Sendable
+├── Mocks/                         # Reusable protocol-backed test doubles
+└── Support/                       # Shared test harnesses and infrastructure
 ```
 
 The Xcode project contains six native targets: `openclient-llm`, `openclient-llm-macOS`,

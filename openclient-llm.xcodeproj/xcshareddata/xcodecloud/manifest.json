@@ -1,0 +1,9 @@
+{
+  "id" : "e1ddf089-c526-4ba6-a3fe-f2b17221e288",
+  "targets" : [
+    {
+      "id" : "3BC047B8-924D-4C73-8AB4-7E876C31042B",
+      "name" : "openclient-llm"
+    }
+  ]
+}

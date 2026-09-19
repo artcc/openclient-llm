@@ -60,12 +60,7 @@ struct ConversationListView: View {
         }
         .navigationTitle(String(localized: "Chats"))
 #if os(macOS)
-        .focusedSceneValue(\.newChatAction) {
-            viewModel.send(.newConversationTapped)
-        }
-        .focusedSceneValue(\.newPrivateChatAction) {
-            viewModel.send(.newPrivateConversationTapped)
-        }
+        .focusedSceneValue(\.conversationListViewModel, viewModel)
         .task(id: macSearchRequestID) {
             guard macSearchRequestID > 0 else { return }
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -279,11 +274,8 @@ private extension ConversationListView {
                 Section {
                     // pinned tag filter bar — no rows
                 } header: {
-                    VStack(spacing: 0) {
-                        tagFilterBar(loadedState)
-                        Divider()
-                    }
-                    .listRowInsets(EdgeInsets())
+                    tagFilterBar(loadedState)
+                        .listRowInsets(EdgeInsets())
                 }
             }
             ForEach(loadedState.groupedConversations) { section in
@@ -431,14 +423,10 @@ private extension ConversationListView {
             .lineLimit(1)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-#if os(macOS)
-            .background(isSelected ? Color.appAccent : Color.primary.opacity(0.08), in: .capsule)
-#else
             .glassEffect(
                 isSelected ? .regular.tint(Color.appAccent).interactive() : .regular.interactive(),
                 in: .capsule
             )
-#endif
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

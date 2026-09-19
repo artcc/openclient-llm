@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/License-AGPL%20v3.0-blue?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/Platform-iOS%2026+%20|%20iPadOS%2026+%20|%20macOS%2026+-blue?style=flat-square" alt="Platform" />
   <img src="https://img.shields.io/badge/Swift-6+-orange?style=flat-square&logo=swift" alt="Swift" />
-  <img src="https://img.shields.io/badge/Version-1.7.5-brightgreen?style=flat-square" alt="Version 1.7.5" />
+  <img src="https://img.shields.io/badge/Version-1.7.10-brightgreen?style=flat-square" alt="Version 1.7.10" />
 </p>
 
 OpenClient connects directly to the AI server you configure, without an OpenClient-hosted proxy or subscription.
@@ -115,8 +115,6 @@ servers that provide the endpoints used by your selected features; point the app
 | AppIntents | Apple Shortcuts, Siri & Control Center integration |
 | WidgetKit | Native iOS, iPadOS, and macOS widgets plus a New Chat system control |
 | Votice | In-app feedback & feature requests |
-
-This project was developed entirely with Xcode, Visual Studio Code and GitHub Copilot (with Claude Opus / Sonnet 4.6).
 
 ## Architecture
 

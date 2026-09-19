@@ -12,11 +12,13 @@ for that requested operation.
 ## Setup
 
 1. Before the first XcodeBuildMCP build or test call, use `session_show_defaults`.
-2. Before building, create `Secrets.xcconfig` from the template in `AGENTS.md` if it is missing; never overwrite it.
+2. Before building, create `Secrets.xcconfig` from the setup template in `README.md` if it is missing; never overwrite it.
 3. Prefer XcodeBuildMCP and use the project, scheme, and simulator defaults from `.xcodebuildmcp/config.yaml`. Only repair
    defaults that are missing or wrong.
-4. Disable code signing for builds and tests. Add the test timeout arguments documented in `AGENTS.md` for test runs.
-5. If an MCP request fails or times out, use the complete `xcodebuild` fallback from `AGENTS.md`.
+4. Disable code signing for builds and tests with `CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO`. For tests, add
+   `-test-timeouts-enabled YES -maximum-test-execution-time-allowance 120`.
+5. If an MCP request fails or times out, use `xcodebuild` with the current project, scheme, and destination from the
+   session defaults or `.xcodebuildmcp/config.yaml`; preserve the same signing and timeout arguments.
 
 ## Operations
 

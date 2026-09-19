@@ -9,8 +9,8 @@
 import Foundation
 @testable import openclient_llm
 
-// Safety: Only used within serialized @MainActor test methods.
-final class MockPrepareImageAttachmentUseCase: PrepareImageAttachmentUseCaseProtocol, @unchecked Sendable {
+// Safety: Tests configure `result` before each awaited execution and never mutate it while `execute` is running.
+nonisolated final class MockPrepareImageAttachmentUseCase: PrepareImageAttachmentUseCaseProtocol, @unchecked Sendable {
     // MARK: - Properties
 
     var result: Result<PreparedImageAttachment, Error>?
