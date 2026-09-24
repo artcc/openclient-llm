@@ -71,7 +71,7 @@ struct ImageGenerationRepository: ImageGenerationRepositoryProtocol {
             model: model,
             prompt: prompt,
             numberOfImages: 1,
-            responseFormat: "b64_json"
+            responseFormat: ["dall-e-2", "dall-e-3"].contains(model) ? "b64_json" : nil
         )
         return try await apiClient.request(
             endpoint: "images/generations",

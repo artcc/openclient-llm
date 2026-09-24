@@ -30,6 +30,55 @@ final class ImageGenerationRepositoryTests: XCTestCase {
         XCTAssertEqual(apiClient.lastRequestEndpoint, "images/generations")
         XCTAssertEqual(apiClient.lastRequestTimeoutInterval, 600)
         XCTAssertNil(apiClient.lastMultipartEndpoint)
+        let body = try XCTUnwrap(apiClient.lastRequestBody)
+        let json = try JSONEncoder().encode(body)
+        let fields = try XCTUnwrap(JSONSerialization.jsonObject(with: json) as? [String: Any])
+        XCTAssertEqual(fields["model"] as? String, "gpt-image-2")
+        XCTAssertEqual(fields["prompt"] as? String, "A cat")
+        XCTAssertEqual(fields["n"] as? Int, 1)
+        XCTAssertNil(fields["response_format"])
+    }
+
+    func test_generateImage_gptImageAndAlias_omitUnsupportedResponseFormat() async throws {
+        for model in ["gpt-image-1.5", "custom-image-alias"] {
+            // Given
+            let apiClient = MockAPIClient()
+            apiClient.requestResult = ImageGenerationResponse(data: [
+                .init(url: nil, b64Json: Data([1, 2, 3]).base64EncodedString(), revisedPrompt: nil)
+            ])
+            let sut = ImageGenerationRepository(apiClient: apiClient)
+
+            // When
+            _ = try await sut.generateImage(prompt: "A cat", model: model, images: [])
+
+            // Then
+            let body = try XCTUnwrap(apiClient.lastRequestBody)
+            let json = try JSONEncoder().encode(body)
+            let fields = try XCTUnwrap(JSONSerialization.jsonObject(with: json) as? [String: Any])
+            XCTAssertEqual(fields["model"] as? String, model)
+            XCTAssertNil(fields["response_format"])
+        }
+    }
+
+    func test_generateImage_dallEModels_requestBase64ResponseFormat() async throws {
+        for model in ["dall-e-2", "dall-e-3"] {
+            // Given
+            let apiClient = MockAPIClient()
+            apiClient.requestResult = ImageGenerationResponse(data: [
+                .init(url: nil, b64Json: Data([1, 2, 3]).base64EncodedString(), revisedPrompt: nil)
+            ])
+            let sut = ImageGenerationRepository(apiClient: apiClient)
+
+            // When
+            _ = try await sut.generateImage(prompt: "A cat", model: model, images: [])
+
+            // Then
+            let body = try XCTUnwrap(apiClient.lastRequestBody)
+            let json = try JSONEncoder().encode(body)
+            let fields = try XCTUnwrap(JSONSerialization.jsonObject(with: json) as? [String: Any])
+            XCTAssertEqual(fields["model"] as? String, model)
+            XCTAssertEqual(fields["response_format"] as? String, "b64_json")
+        }
     }
 
     func test_generateImage_multipleImages_sendsOrderedMultipartFilesAndFields() async throws {
@@ -87,7 +136,7 @@ final class ImageGenerationRepositoryTests: XCTestCase {
             let sut = ImageGenerationRepository(apiClient: apiClient)
 
             // When
-            let result = try await sut.generateImage(prompt: "A cat", model: "gpt-image-2", images: images)
+            let result = try await sut.generateImage(prompt: "A cat", model: "custom-image-alias", images: images)
 
             // Then
             XCTAssertEqual(result.data, Data([9, 8, 7]))
@@ -95,6 +144,12 @@ final class ImageGenerationRepositoryTests: XCTestCase {
             XCTAssertEqual(result.revisedPrompt, "A blue cat")
             XCTAssertEqual(apiClient.lastRequestEndpoint, images.isEmpty ? "images/generations" : nil)
             XCTAssertEqual(apiClient.lastMultipartEndpoint, images.isEmpty ? nil : "images/edits")
+            if images.isEmpty {
+                let body = try XCTUnwrap(apiClient.lastRequestBody)
+                let json = try JSONEncoder().encode(body)
+                let fields = try XCTUnwrap(JSONSerialization.jsonObject(with: json) as? [String: Any])
+                XCTAssertNil(fields["response_format"])
+            }
         }
     }
 
