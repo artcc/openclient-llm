@@ -5,6 +5,7 @@
 • Los anuncios de la pantalla de Inicio ahora aparecen con una animación fluida en Mac, con la misma transición que en iPhone e iPad.
 • La lista de conversaciones ya no muestra un separador duplicado encima de tus chats.
 • La pantalla de Modelos ya no repite solicitudes mientras se carga, para mantenerse ágil.
+• La generación de imágenes ya funciona con modelos GPT Image a través de LiteLLM, sin que las solicitudes fallen por un ajuste no compatible.
 • Pequeñas correcciones de errores y mejoras para disfrutar de una experiencia más fluida.
 
 Gracias por seguir apoyándonos y por ayudarnos a crear juntos el mejor cliente posible para modelos de lenguaje.
