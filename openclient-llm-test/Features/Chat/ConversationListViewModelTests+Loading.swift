@@ -6,6 +6,7 @@
 //  Copyright © 2026 Arturo Carretero Calvo. All rights reserved.
 //
 
+import Observation
 import XCTest
 @testable import openclient_llm
 
@@ -21,10 +22,12 @@ extension ConversationListViewModelTests {
         ]
         mockLoadConversations.result = .success(conversations)
         mockFetchModels.result = .success([LLMModel(id: "gpt-4")])
+        let modelsLoaded = expectation(description: "Available models loaded")
 
         // When
         sut.send(.viewAppeared)
-        for _ in 0..<10 { await Task.yield() }
+        Self.observeModelsLoaded(sut, expectation: modelsLoaded)
+        await fulfillment(of: [modelsLoaded], timeout: 2)
 
         // Then
         guard case .loaded(let loadedState) = sut.state else {
@@ -92,5 +95,24 @@ extension ConversationListViewModelTests {
         }
         XCTAssertEqual(loadedState.conversations.count, 1)
         XCTAssertTrue(loadedState.availableModels.isEmpty)
+    }
+}
+
+// MARK: - Private
+
+private extension ConversationListViewModelTests {
+    static func observeModelsLoaded(_ sut: ConversationListViewModel, expectation: XCTestExpectation) {
+        if case .loaded(let loadedState) = sut.state, !loadedState.availableModels.isEmpty {
+            expectation.fulfill()
+            return
+        }
+        withObservationTracking {
+            _ = sut.state
+        } onChange: { [weak sut] in
+            Task { @MainActor in
+                guard let sut else { return }
+                observeModelsLoaded(sut, expectation: expectation)
+            }
+        }
     }
 }

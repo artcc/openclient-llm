@@ -5,6 +5,7 @@ Hi there! We've got some great new features for you in this update.
 • Announcements on the Home screen now animate into view on Mac with the same smooth transition used on iPhone and iPad.
 • Your conversation list no longer shows a duplicate separator above your chats.
 • The Models screen no longer repeats requests while loading, so it stays responsive.
+• Image generation now works with GPT Image models through LiteLLM, without requests failing because of an unsupported setting.
 • Minor bug fixes and improvements for a smoother experience.
 
 Thanks for your continued support and for helping us build the best possible LLM client together.

@@ -51,6 +51,8 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
 - Dedicated `.imageGeneration` models use `POST /images/generations`; the existing dedicated edit flow uses multipart
   `POST /images/edits`. Dedicated responses may contain bounded base64 data or an HTTP(S) URL handled by the existing image
   repository.
+- Dedicated generation requests include `response_format: "b64_json"` only for explicit `dall-e-2` and `dall-e-3` IDs;
+  omit it for GPT image models and unknown or aliased IDs, which may return base64 data or an HTTP(S) URL.
 - Chat image generation accepts text only, returns the first native image, supplies no tools, and has no fallback to a
   dedicated endpoint. Dedicated generation and editing must not be described as the same capability.
 - Generated output is capped at 25 MiB. Preserve typed image data out of model-facing tool text and persist it according to
