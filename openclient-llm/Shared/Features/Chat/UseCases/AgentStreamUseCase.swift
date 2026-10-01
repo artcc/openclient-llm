@@ -13,6 +13,7 @@ import Foundation
 enum AgentEvent: Sendable {
     case token(String)
     case reasoning(String)
+    case responseDiscarded
     case toolCallStarted(ToolCall)
     case toolCallCompleted(toolCallId: String, result: String, searchResults: [LiteLLMSearchResult]?)
     case transcriptAppended([ChatMessage])
@@ -78,7 +79,7 @@ struct AgentStreamUseCase: AgentStreamUseCaseProtocol {
     private static let maxToolCalls = 20
     private static let maxToolCallsPerIteration = 8
     private static let maximumToolResultCharacters = 12_000
-    private let repository: ChatRepositoryProtocol
+    let repository: ChatRepositoryProtocol
     private let timeout: Duration
     private let chunkDelay: Duration
 
@@ -142,7 +143,7 @@ struct AgentStreamUseCase: AgentStreamUseCaseProtocol {
 
 // MARK: - AgentLoopContext
 
-private nonisolated struct AgentLoopContext: Sendable {
+nonisolated struct AgentLoopContext: Sendable {
     let model: String
     let parameters: ModelParameters
     let contextWindowTokens: Int?
@@ -176,10 +177,14 @@ private extension AgentStreamUseCase {
                 contextWindowTokens: context.contextWindowTokens,
                 tools: tools
             )
-            let response = try await request(context: context, messages: requestMessages, tools: tools)
+            let round = try await request(context: context, messages: requestMessages, tools: tools)
+            let response = round.response
             aggregateUsage = emitUsage(response.usage, aggregate: aggregateUsage, continuation: context.continuation)
             guard let choice = response.choices.first else { throw AgentStreamError.invalidResponse }
             let toolCalls = choice.message.toolCalls ?? []
+            if round.streamed, !toolCalls.isEmpty || !hasPresentableFinalContent(choice) {
+                context.continuation.yield(.responseDiscarded)
+            }
             if toolCalls.isEmpty, hasPresentableFinalContent(choice) {
                 await context.timeoutController.pause()
             }
@@ -196,7 +201,8 @@ private extension AgentStreamUseCase {
             } else if try await handleFinalChoice(
                 choice,
                 continuation: context.continuation,
-                delay: chunkDelay
+                delay: chunkDelay,
+                hasStreamedText: round.streamed
             ) {
                 guard !forceFinalResponse else { throw AgentStreamError.invalidResponse }
                 forceFinalResponse = true
@@ -206,22 +212,6 @@ private extension AgentStreamUseCase {
             }
         }
         throw AgentStreamError.iterationLimitReached
-    }
-
-    func request(
-        context: AgentLoopContext,
-        messages: [ChatMessage],
-        tools: [ToolDefinition]
-    ) async throws -> ChatCompletionResponse {
-        guard context.isConfigurationCurrent() else { throw AgentStreamError.configurationChanged }
-        let response = try await repository.agentCompletion(
-            messages: messages,
-            model: context.model,
-            parameters: context.parameters,
-            tools: tools.isEmpty ? nil : tools
-        )
-        guard context.isConfigurationCurrent() else { throw AgentStreamError.configurationChanged }
-        return response
     }
 
     func completeToolRound(

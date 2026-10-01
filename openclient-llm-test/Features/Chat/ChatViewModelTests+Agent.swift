@@ -122,7 +122,7 @@ extension ChatViewModelTests {
         XCTAssertEqual(lastAssistant?.content, "Agent answer")
     }
 
-    func test_sendMessage_agentToken_publishesDirectlyWithoutServerStreamingBuffer() async throws {
+    func test_sendMessage_agentToken_publishesFirstTokenWhileResponseIsPending() async throws {
         // Given
         let mockAgent = MockAgentStreamUseCase()
         mockAgent.events = [.token("Agent")]
@@ -164,7 +164,7 @@ extension ChatViewModelTests {
         }
         XCTAssertEqual(loadedState.streamingRevision, 1)
         XCTAssertTrue(sutWithAgent.streamingUpdateBuffer.updates.isEmpty)
-        XCTAssertNil(sutWithAgent.streamingUpdateBuffer.flushTask)
+        XCTAssertTrue(loadedState.isStreaming)
         sutWithAgent.send(.stopStreamingTapped)
     }
 

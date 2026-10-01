@@ -56,6 +56,9 @@ applyTo: "{openclient-llm/Shared/Features/Chat/**/*.swift,openclient-llm/Shared/
 
 ## Streaming Stability
 
+- Agent text/vision deltas use the shared grouped-update buffer. Flush before completion, failure, or transcript/image
+  checkpoints. Discard buffered provisional text when the agent discards a round; preserve attachments and token usage.
+
 - Show an immediate, localized waiting state until content arrives, then transition to the streaming presentation.
 - Group streamed UI updates rather than publishing every token independently; the exact debounce interval is an
   implementation detail. Do not add per-token container animations, repeated Markdown layout, or lazy-row behavior that

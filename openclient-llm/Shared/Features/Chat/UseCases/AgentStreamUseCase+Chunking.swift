@@ -12,12 +12,14 @@ nonisolated extension AgentStreamUseCase {
     func handleFinalChoice(
         _ choice: ChatCompletionResponse.Choice,
         continuation: AsyncThrowingStream<AgentEvent, Error>.Continuation,
-        delay: Duration
+        delay: Duration,
+        hasStreamedText: Bool = false
     ) async throws -> Bool {
         let content = choice.message.content ?? ""
         let reasoning = choice.message.reasoningContent
         guard hasPresentableFinalContent(choice) else { return true }
         guard try yieldNativeImages(choice, continuation: continuation) else { return false }
+        guard !hasStreamedText else { return false }
         if let reasoning, !reasoning.isEmpty {
             try await yieldChunked(
                 reasoning,

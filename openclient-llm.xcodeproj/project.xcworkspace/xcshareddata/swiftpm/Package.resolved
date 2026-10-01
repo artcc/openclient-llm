@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ArtCC/votice-sdk",
       "state" : {
-        "revision" : "2c87516b7d1c6a762f80b6e97089f34e76135c40",
-        "version" : "1.0.25"
+        "revision" : "caed570854fb16a9ff3963184adee575aa9232a4",
+        "version" : "1.1.0"
       }
     }
   ],

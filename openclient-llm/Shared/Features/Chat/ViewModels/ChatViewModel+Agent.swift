@@ -116,6 +116,10 @@ extension ChatViewModel {
             state.messages[index].content += text
         case .reasoning(let text):
             state.messages[index].reasoningContent = (state.messages[index].reasoningContent ?? "") + text
+        case .responseDiscarded:
+            state.messages[index].content = ""
+            state.messages[index].reasoningContent = nil
+            state.streamingRevision += 1
         case .usage(let usage):
             state.messages[index].tokenUsage = usage
         case .promptUsage(let promptTokens):
@@ -139,6 +143,7 @@ extension ChatViewModel {
 private extension ChatViewModel {
     func handleAgentStreamFailure(_ error: Error, assistantMessageId: UUID, modelId: String) async {
         guard !Task.isCancelled, isActiveStream(assistantMessageId) else { return }
+        flushStreamingTextUpdates(for: assistantMessageId)
         guard case .loaded(var currentState) = state else { return }
         LogManager.error("performAgentStreaming error model=\(modelId): \(error)")
         if let index = currentState.messages.firstIndex(where: { $0.id == assistantMessageId }),
@@ -168,14 +173,14 @@ private extension ChatViewModel {
         }
         switch event {
         case .token(let text):
-            guard !text.isEmpty else { return true }
             return await publishAgentTextUpdate(.token(text), assistantMessageId: assistantMessageId)
         case .reasoning(let text):
-            guard !text.isEmpty else { return true }
             return await publishAgentTextUpdate(.reasoning(text), assistantMessageId: assistantMessageId)
         case .completed:
-            break
+            flushStreamingTextUpdates(for: assistantMessageId)
         default:
+            flushStreamingTextUpdates(for: assistantMessageId)
+            if case .responseDiscarded = event { resetStreamingTextUpdates() }
             guard case .loaded(var currentState) = state else { return false }
             applyAgentEvent(event, to: &currentState, assistantMessageId: assistantMessageId)
             state = .loaded(currentState)
@@ -190,10 +195,9 @@ private extension ChatViewModel {
     }
 
     func publishAgentTextUpdate(_ update: StreamingTextUpdate, assistantMessageId: UUID) async -> Bool {
-        guard case .loaded(var currentState) = state else { return false }
-        applyStreamingTextUpdates([update], to: &currentState, assistantMessageId: assistantMessageId)
-        state = .loaded(currentState)
-        await Task.yield()
+        guard case .loaded = state, isActiveStream(assistantMessageId) else { return false }
+        let didPublish = enqueueStreamingTextUpdate(update, assistantMessageId: assistantMessageId)
+        if didPublish { await Task.yield() }
         return true
     }
 
@@ -201,7 +205,7 @@ private extension ChatViewModel {
         switch event {
         case .token:
             .responding
-        case .reasoning, .transcriptAppended:
+        case .reasoning, .transcriptAppended, .responseDiscarded:
             .thinking
         case .toolCallStarted(let call) where call.function.name == "generate_image":
             .generatingImage
@@ -404,6 +408,7 @@ private extension ChatViewModel {
         modelId: String,
         reportedPromptTokens: Int?
     ) async {
+        flushStreamingTextUpdates(for: assistantId)
         guard isActiveStream(assistantId), case .loaded(var finalState) = state else { return }
         finalState.isStreaming = false
         finalState.isSearchingWeb = false

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## [1.7.20-build-118] - 2026-10-01
+
+### Changed
+
+- Agent text and vision rounds now stream reasoning and responses as they arrive, while native image-generation rounds retain their existing completion flow
+- Agent streaming now groups interface updates and flushes pending content before completion, errors, or persistence checkpoints
+
+### Fixed
+
+- Streamed tool calls are reconstructed and validated before execution, rejecting incomplete responses, malformed fragments, and duplicate call identifiers
+- SSE parsing now preserves tool arguments across data fields with or without a space, multiline events, and LF, CRLF, or CR line endings
+- Provisional text and reasoning are discarded as soon as tool calls are detected, preventing failed tool rounds from being saved as assistant answers
+
 ## [1.7.15-build-117] - 2026-09-24
 
 ### Fixed
