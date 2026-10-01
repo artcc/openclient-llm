@@ -10,8 +10,18 @@ description: "Use when changing automatic agent routing, tool registration, tool
 - Every other model with `.functionCalling` uses `AgentStreamUseCase` automatically. There is no separate agent-mode
   setting; web search only changes registry contents.
 - Models without `.functionCalling` use regular chat streaming and receive no tools.
-- Agent rounds use non-streaming chat completions. Final reasoning, text, and native images are emitted as `AgentEvent`s;
-  text is paced locally for the streaming UI.
+- Text and vision agent rounds use streaming chat completions, including rounds with no tools or forced-final retries.
+  Forward reasoning and presentable text as deltas arrive; do not replay them after the completion is assembled.
+- Native image-generation rounds retain non-streaming completions and image-first, locally paced presentation. Choose this
+  transport before sending; never retry a partially received request through another transport.
+- Streaming tool calls are accumulated by their tool-call index. Require a terminal choice before completing a round;
+  missing identity, duplicate IDs, malformed chunks, premature EOF, and tool calls truncated by a token limit fail the round.
+  A complete call remains authoritative with either `stop` or `tool_calls` as its finish reason.
+- Text and reasoning shown before a tool-call round or an invalid final response are provisional. Discard that visible
+  progress before tools or the forced-final retry, preserving delivered images and usage. Never persist partial tool calls.
+- For streaming rounds, discard provisional progress as soon as the first decoded tool-call delta is detected and suppress
+  subsequent text and reasoning from that round, even if validation or transport later fails. Tool detection does not
+  authorize execution. Interrupted text-only responses may retain their partial content.
 
 ## Tool Protocol And Transcript
 

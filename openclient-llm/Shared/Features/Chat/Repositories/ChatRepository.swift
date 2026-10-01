@@ -25,6 +25,12 @@ protocol ChatRepositoryProtocol: Sendable {
         parameters: ModelParameters,
         tools: [ToolDefinition]?
     ) async throws -> ChatCompletionResponse
+    func streamAgentCompletion(
+        messages: [ChatMessage],
+        model: String,
+        parameters: ModelParameters,
+        tools: [ToolDefinition]?
+    ) -> AsyncThrowingStream<AgentCompletionEvent, Error>
 }
 
 enum StreamChunk: Sendable {
@@ -37,9 +43,9 @@ enum StreamChunk: Sendable {
 struct ChatRepository: ChatRepositoryProtocol {
     // MARK: - Properties
 
-    private let apiClient: APIClientProtocol
+    let apiClient: APIClientProtocol
     private let attachmentRepository: AttachmentRepositoryProtocol
-    private let responseModalities: [String]?
+    let responseModalities: [String]?
     private let requestTimeoutInterval: TimeInterval
 
     // MARK: - Init
@@ -164,8 +170,8 @@ struct ChatRepository: ChatRepositoryProtocol {
 
 // MARK: - Private
 
-private extension ChatRepository {
-    func runStream(
+extension ChatRepository {
+    private func runStream(
         dataStream: AsyncThrowingStream<Data, Error>,
         decoder: JSONDecoder,
         continuation: AsyncThrowingStream<StreamChunk, Error>.Continuation

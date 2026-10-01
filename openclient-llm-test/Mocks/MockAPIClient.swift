@@ -22,6 +22,9 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
     var lastMCPToolName: String?
     var lastMCPArguments: String?
     var streamChunks: [Data] = []
+    var streamResponses: [[Data]] = []
+    var streamOverride: AsyncThrowingStream<Data, Error>?
+    private(set) var streamRequestCount = 0
     var streamError: Error?
     var lastStreamEndpoint: String?
     var lastStreamBody: (any Encodable & Sendable)?
@@ -62,7 +65,9 @@ final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
     ) -> AsyncThrowingStream<Data, Error> {
         lastStreamEndpoint = endpoint
         lastStreamBody = body
-        let chunks = streamChunks
+        streamRequestCount += 1
+        if let streamOverride { return streamOverride }
+        let chunks = streamResponses.isEmpty ? streamChunks : streamResponses.removeFirst()
         let error = streamError
         return AsyncThrowingStream { continuation in
             Task {

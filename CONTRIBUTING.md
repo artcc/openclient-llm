@@ -34,7 +34,7 @@ EOF
 open openclient-llm.xcodeproj
 # Or build from terminal:
 xcodebuild build -project openclient-llm.xcodeproj -scheme openclient-llm \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max'
+  -destination 'platform=iOS Simulator,name=iPhone 18 Pro Max'
 ```
 
 When using OpenCode with **XcodeBuildMCP**, the project skills under `.opencode/skills/` guide builds, launches, tests,

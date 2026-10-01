@@ -83,7 +83,7 @@ final class ChatViewModelNativeImageTransportTests: XCTestCase {
             // Then
             XCTAssertEqual(request.timeoutInterval, 60)
             XCTAssertNil(request.body.modalities)
-            XCTAssertEqual(request.body.stream, !usesAgent)
+            XCTAssertTrue(request.body.stream)
         }
     }
 
