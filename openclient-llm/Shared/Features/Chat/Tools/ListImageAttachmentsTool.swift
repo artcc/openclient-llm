@@ -22,7 +22,8 @@ struct ListImageAttachmentsTool: ChatToolProtocol {
                 description: "Find image attachment UUIDs from this conversation, including compacted history. " +
                     "Returns up to 10 IDs in chronological attachment order, total count, " +
                     "and next_offset if more exist. " +
-                    "Use only when the image IDs you need are missing from context, then call analyze_images.",
+                    "Use when an ID needed for analyze_images or edit_image is missing from context. " +
+                    "For the most recent image, use total to request the last page rather than scanning every page.",
                 parameters: ToolParameters(
                     type: "object",
                     properties: [

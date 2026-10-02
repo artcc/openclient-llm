@@ -25,6 +25,13 @@ nonisolated struct ChatMessage: Identifiable, Equatable, Sendable, Codable {
     var isFavourite: Bool
     /// Local per-user-turn reservation, independent of tool transcript delivery.
     var imageGenerationAttempted: Bool?
+    var imageOperationAttempted: ImageOperation?
+
+    enum ImageOperation: String, Sendable, Codable, Hashable {
+        case generation
+        case editing
+        case unknown
+    }
 
     enum Role: String, Sendable, Equatable, Codable {
         case user
@@ -48,7 +55,8 @@ nonisolated struct ChatMessage: Identifiable, Equatable, Sendable, Codable {
         toolCallId: String? = nil,
         toolName: String? = nil,
         isFavourite: Bool = false,
-        imageGenerationAttempted: Bool? = nil
+        imageGenerationAttempted: Bool? = nil,
+        imageOperationAttempted: ImageOperation? = nil
     ) {
         self.id = id
         self.role = role
@@ -63,6 +71,7 @@ nonisolated struct ChatMessage: Identifiable, Equatable, Sendable, Codable {
         self.toolName = toolName
         self.isFavourite = isFavourite
         self.imageGenerationAttempted = imageGenerationAttempted
+        self.imageOperationAttempted = imageOperationAttempted
     }
 
     func hasSameRequestContent(as other: ChatMessage) -> Bool {
@@ -98,6 +107,8 @@ nonisolated struct ChatMessage: Identifiable, Equatable, Sendable, Codable {
         toolName = try container.decodeIfPresent(String.self, forKey: .toolName)
         isFavourite = try container.decodeIfPresent(Bool.self, forKey: .isFavourite) ?? false
         imageGenerationAttempted = try container.decodeIfPresent(Bool.self, forKey: .imageGenerationAttempted)
+        imageOperationAttempted = try container.decodeIfPresent(String.self, forKey: .imageOperationAttempted)
+            .map { ImageOperation(rawValue: $0) ?? .unknown }
     }
 }
 
@@ -219,5 +230,6 @@ private extension ChatMessage {
         case toolName
         case isFavourite
         case imageGenerationAttempted
+        case imageOperationAttempted
     }
 }

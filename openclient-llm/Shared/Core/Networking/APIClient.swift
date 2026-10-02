@@ -102,24 +102,22 @@ struct APIClient: APIClientProtocol, Sendable {
                     LogManager.network("← STREAM /\(endpoint) [\(statusCode)] opened")
 
                     var chunkCount = 0
-                    for try await line in bytes.lines {
+                    var parser = ServerSentEventParser()
+                    for try await byte in bytes {
                         guard !Task.isCancelled else {
                             LogManager.debug("Stream cancelled /\(endpoint) after \(chunkCount) chunks")
                             break
                         }
 
-                        guard line.hasPrefix("data: ") else { continue }
-                        let payload = String(line.dropFirst(6))
+                        guard let payload = try parser.append(byte) else { continue }
 
                         if payload.trimmingCharacters(in: .whitespaces) == "[DONE]" {
                             LogManager.network("← STREAM /\(endpoint) [DONE] — \(chunkCount) chunks received")
                             break
                         }
 
-                        if let data = payload.data(using: .utf8) {
-                            chunkCount += 1
-                            continuation.yield(data)
-                        }
+                        chunkCount += 1
+                        continuation.yield(Data(payload.utf8))
                     }
                     continuation.finish()
                 } catch {

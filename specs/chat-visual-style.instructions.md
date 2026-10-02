@@ -35,6 +35,19 @@ applyTo: "{openclient-llm/Shared/Features/Chat/**/*.swift,openclient-llm/Shared/
 - Present attachments as part of their message or pending composer state. Preserve aspect ratio, recognizable previews,
   loading/failure feedback, and accessible descriptions.
 - Do not invent attachment types, previews, or controls that the current capabilities do not support.
+- Pending image attachments show actual thumbnails, previews, filenames, and removal controls. Photo Library selection
+  accepts multiple images in selection order; load and prepare them sequentially, block sending until preparation finishes,
+  report failed items while retaining successful ones, and discard completions for a different conversation.
+- Scope the preparation queue and counter to a generation. Conversation changes, initial-data reloads, app-data resets,
+  and view disappearance cancel and detach the old queue without waiting for an uncooperative loader. Stale completions
+  cannot change the active counter or draft, and suspended loaders must not retain the ViewModel.
+- Drag-and-drop registers provider loaders synchronously with that same queue before requesting bytes. Text, images, PDFs,
+  and file URLs are loaded in order, scoped to the originating context, and block sending while pending. Drop loaders must
+  not capture the view or its callbacks across suspension; only the active ViewModel applies their prepared results.
+- Conversation images offer `Attach Again` through their context menu and an accessible visible control when image input
+  is allowed and streaming is idle. Reattachment prepares a new pending attachment with a fresh UUID and leaves the source
+  message and draft text intact. Resolve the action using both source message ID and attachment ID, so valid shared image
+  UUIDs across messages remain reusable. Private Chat retains its existing in-memory storage behavior.
 
 ## Message Actions
 
@@ -55,6 +68,9 @@ applyTo: "{openclient-llm/Shared/Features/Chat/**/*.swift,openclient-llm/Shared/
 - Preserve draft content and pending attachments across incidental layout or focus changes.
 
 ## Streaming Stability
+
+- Agent text/vision deltas use the shared grouped-update buffer. Flush before completion, failure, or transcript/image
+  checkpoints. Discard buffered provisional text when the agent discards a round; preserve attachments and token usage.
 
 - Show an immediate, localized waiting state until content arrives, then transition to the streaming presentation.
 - Group streamed UI updates rather than publishing every token independently; the exact debounce interval is an

@@ -47,7 +47,7 @@ extension ChatViewModel {
                 toolContext: AgentToolContext(
                     toolRegistry: registry,
                     additionalExecutionTime: context.selectedModel.supportsNativeImageGeneration
-                        || registry.definitions.contains { $0.function.name == "generate_image" }
+                        || registry.definitions.contains { ["generate_image", "edit_image"].contains($0.function.name) }
                         ? .seconds(600) : .zero,
                     isConfigurationCurrent: { [settingsManager] in
                         settingsManager.getMCPAuthorizationScope() == serverConfigurationScope
@@ -116,6 +116,10 @@ extension ChatViewModel {
             state.messages[index].content += text
         case .reasoning(let text):
             state.messages[index].reasoningContent = (state.messages[index].reasoningContent ?? "") + text
+        case .responseDiscarded:
+            state.messages[index].content = ""
+            state.messages[index].reasoningContent = nil
+            state.streamingRevision += 1
         case .usage(let usage):
             state.messages[index].tokenUsage = usage
         case .promptUsage(let promptTokens):
@@ -139,6 +143,7 @@ extension ChatViewModel {
 private extension ChatViewModel {
     func handleAgentStreamFailure(_ error: Error, assistantMessageId: UUID, modelId: String) async {
         guard !Task.isCancelled, isActiveStream(assistantMessageId) else { return }
+        flushStreamingTextUpdates(for: assistantMessageId)
         guard case .loaded(var currentState) = state else { return }
         LogManager.error("performAgentStreaming error model=\(modelId): \(error)")
         if let index = currentState.messages.firstIndex(where: { $0.id == assistantMessageId }),
@@ -168,14 +173,14 @@ private extension ChatViewModel {
         }
         switch event {
         case .token(let text):
-            guard !text.isEmpty else { return true }
             return await publishAgentTextUpdate(.token(text), assistantMessageId: assistantMessageId)
         case .reasoning(let text):
-            guard !text.isEmpty else { return true }
             return await publishAgentTextUpdate(.reasoning(text), assistantMessageId: assistantMessageId)
         case .completed:
-            break
+            flushStreamingTextUpdates(for: assistantMessageId)
         default:
+            flushStreamingTextUpdates(for: assistantMessageId)
+            if case .responseDiscarded = event { resetStreamingTextUpdates() }
             guard case .loaded(var currentState) = state else { return false }
             applyAgentEvent(event, to: &currentState, assistantMessageId: assistantMessageId)
             state = .loaded(currentState)
@@ -190,10 +195,9 @@ private extension ChatViewModel {
     }
 
     func publishAgentTextUpdate(_ update: StreamingTextUpdate, assistantMessageId: UUID) async -> Bool {
-        guard case .loaded(var currentState) = state else { return false }
-        applyStreamingTextUpdates([update], to: &currentState, assistantMessageId: assistantMessageId)
-        state = .loaded(currentState)
-        await Task.yield()
+        guard case .loaded = state, isActiveStream(assistantMessageId) else { return false }
+        let didPublish = enqueueStreamingTextUpdate(update, assistantMessageId: assistantMessageId)
+        if didPublish { await Task.yield() }
         return true
     }
 
@@ -201,9 +205,9 @@ private extension ChatViewModel {
         switch event {
         case .token:
             .responding
-        case .reasoning, .transcriptAppended:
+        case .reasoning, .transcriptAppended, .responseDiscarded:
             .thinking
-        case .toolCallStarted(let call) where call.function.name == "generate_image":
+        case .toolCallStarted(let call) where ["generate_image", "edit_image"].contains(call.function.name):
             .generatingImage
         case .toolCallStarted, .toolCallCompleted:
             .usingTools
@@ -381,6 +385,15 @@ private extension ChatViewModel {
             displayed in this chat; do not invent image URLs or claim to have inspected a generated image.\n
             """
         }
+        if settingsManager.getIsBuiltInToolEnabled(.editImage) {
+            instructions += """
+            Use edit_image, when available, to modify one existing conversation image. Use its attachment UUID \
+            from context or list_image_attachments; never invent an ID. Select the image requested by the user, \
+            using chronological order for 'the previous image', and ask if the target is ambiguous. \
+            Never substitute generate_image for an unavailable or failed edit. Generation and editing share \
+            one attempt per user turn. The resulting image is already displayed in this chat.\n
+            """
+        }
         return instructions + """
         Image tools delegate only capabilities the current model lacks. If an image operation is unavailable, \
         explain the limitation instead of claiming success.\n
@@ -404,6 +417,7 @@ private extension ChatViewModel {
         modelId: String,
         reportedPromptTokens: Int?
     ) async {
+        flushStreamingTextUpdates(for: assistantId)
         guard isActiveStream(assistantId), case .loaded(var finalState) = state else { return }
         finalState.isStreaming = false
         finalState.isSearchingWeb = false

@@ -54,9 +54,13 @@ extension ChatView {
 
     func attachmentThumbnail(_ attachment: ChatMessage.Attachment, onRemove: @escaping () -> Void) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: attachment.type == .image ? "photo" : "doc.fill")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            if attachment.type == .image {
+                AttachmentImageView(attachment: attachment, thumbnailSize: 64)
+            } else {
+                Image(systemName: "doc.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             Text(attachment.fileName)
                 .font(.caption)
@@ -82,7 +86,20 @@ extension ChatView {
             .accessibilityLabel(Text("Remove attachment \(attachment.fileName)"))
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 2)
-        .glassEffect(.regular, in: .capsule)
+        .padding(.vertical, 6)
+        .glassEffect(.regular, in: .rect(cornerRadius: 16))
     }
+}
+
+#Preview("Pending Images") {
+    ChatView(isPrivateChat: true).attachmentPreview([
+        ChatMessage.Attachment(
+            type: .image, fileName: "Photo 1.gif", mimeType: "image/gif", fileRelativePath: "",
+            transientData: Data(base64Encoded: "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
+        ),
+        ChatMessage.Attachment(
+            type: .image, fileName: "Photo 2.jpg", mimeType: "image/jpeg", fileRelativePath: ""
+        )
+    ], send: { _ in })
+    .frame(width: 360)
 }

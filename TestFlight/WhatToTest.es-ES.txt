@@ -1,11 +1,12 @@
 ¡Hola! Esta actualización viene cargada de novedades.
 
-• OpenClient ya está preparado para Xcode 27 y los últimos SDK de iOS 27 y macOS 27, para ofrecerte una experiencia actualizada en iPhone, iPad y Mac.
-• En Mac, los filtros de etiquetas de la lista de conversaciones y los botones del onboarding ahora usan el mismo estilo Liquid Glass que ya disfrutas en iPhone y iPad.
-• Los anuncios de la pantalla de Inicio ahora aparecen con una animación fluida en Mac, con la misma transición que en iPhone e iPad.
-• La lista de conversaciones ya no muestra un separador duplicado encima de tus chats.
-• La pantalla de Modelos ya no repite solicitudes mientras se carga, para mantenerse ágil.
-• La generación de imágenes ya funciona con modelos GPT Image a través de LiteLLM, sin que las solicitudes fallen por un ajuste no compatible.
+• Respuestas y razonamiento en tiempo real en el chat con herramientas, sin esperar a que termine toda la respuesta.
+• Mejoras en la fluidez y fiabilidad de las respuestas largas y del uso de herramientas.
+• El texto provisional de las llamadas a herramientas fallidas ya no se guarda como una respuesta en el historial.
+• Pide al chat que edite una imagen actual o anterior de la conversación usando el modelo de imágenes compatible que hayas seleccionado.
+• Selecciona varias imágenes de tu fototeca a la vez, manteniendo el orden que elijas.
+• Vuelve a adjuntar imágenes de la conversación sin guardarlas fuera de la app.
+• Consulta las miniaturas y previsualiza las imágenes adjuntas antes de enviar un mensaje.
 • Pequeñas correcciones de errores y mejoras para disfrutar de una experiencia más fluida.
 
 Gracias por seguir apoyándonos y por ayudarnos a crear juntos el mejor cliente posible para modelos de lenguaje.

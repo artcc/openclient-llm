@@ -1,11 +1,12 @@
 Hi there! We've got some great new features for you in this update.
 
-• OpenClient is now ready for Xcode 27 and the latest iOS 27 and macOS 27 SDKs, keeping your experience up to date across iPhone, iPad, and Mac.
-• On Mac, tag filters in your conversation list and the onboarding buttons now use the same Liquid Glass style you already enjoy on iPhone and iPad.
-• Announcements on the Home screen now animate into view on Mac with the same smooth transition used on iPhone and iPad.
-• Your conversation list no longer shows a duplicate separator above your chats.
-• The Models screen no longer repeats requests while loading, so it stays responsive.
-• Image generation now works with GPT Image models through LiteLLM, without requests failing because of an unsupported setting.
+• Real-time responses and reasoning in chats with tools, without waiting for the entire response to finish.
+• Smoother, more reliable long responses and tool use.
+• Provisional text from failed tool calls is no longer saved as an answer in your conversation history.
+• Ask the chat to edit a current or earlier conversation image using your selected compatible image model.
+• Select multiple images from your Photo Library at once, keeping them in the order you choose.
+• Attach conversation images again without saving them outside the app.
+• See thumbnails and preview your attached images before sending a message.
 • Minor bug fixes and improvements for a smoother experience.
 
 Thanks for your continued support and for helping us build the best possible LLM client together.

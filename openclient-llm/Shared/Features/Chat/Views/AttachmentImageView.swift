@@ -22,6 +22,7 @@ struct AttachmentImageView: View {
 
     let attachment: ChatMessage.Attachment
     var thumbnailSize: CGFloat = 175
+    var onReattach: (() -> Void)?
 
     private let repository: AttachmentRepositoryProtocol
 
@@ -37,10 +38,12 @@ struct AttachmentImageView: View {
     init(
         attachment: ChatMessage.Attachment,
         thumbnailSize: CGFloat = 175,
+        onReattach: (() -> Void)? = nil,
         repository: AttachmentRepositoryProtocol = AttachmentRepository()
     ) {
         self.attachment = attachment
         self.thumbnailSize = thumbnailSize
+        self.onReattach = onReattach
         self.repository = repository
     }
 
@@ -64,6 +67,20 @@ struct AttachmentImageView: View {
         .sheet(isPresented: $showPreview) {
             if let data = loadedData {
                 ImagePreviewView(data: data)
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if let onReattach, loadedData != nil {
+                Button(action: onReattach) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .frame(width: 44, height: 44)
+                        .glassEffect(.regular, in: .circle)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(String(localized: "Attach Again"))
+                .help(String(localized: "Attach Again"))
+                .padding(4)
             }
         }
 #if os(macOS)
@@ -145,6 +162,11 @@ private extension AttachmentImageView {
 
     @ViewBuilder
     func imageContextMenu(data: Data) -> some View {
+        if let onReattach {
+            Button(action: onReattach) {
+                Label(String(localized: "Attach Again"), systemImage: "plus.circle")
+            }
+        }
         #if os(iOS)
         Button {
             saveImageToPhotos(data)
@@ -193,4 +215,15 @@ private extension AttachmentImageView {
             fileRelativePath: ""
         )
     )
+}
+
+#Preview("Reusable Image") {
+    AttachmentImageView(
+        attachment: ChatMessage.Attachment(
+            type: .image, fileName: "Photo 1.gif", mimeType: "image/gif", fileRelativePath: "",
+            transientData: Data(base64Encoded: "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
+        ),
+        onReattach: {}
+    )
+    .padding()
 }

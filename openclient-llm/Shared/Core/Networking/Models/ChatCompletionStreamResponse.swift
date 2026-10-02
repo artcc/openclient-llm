@@ -14,6 +14,7 @@ nonisolated struct ChatCompletionStreamResponse: Decodable, Sendable {
     let usage: Usage?
 
     struct Choice: Decodable, Sendable {
+        let index: Int?
         let delta: Delta
         let finishReason: String?
     }
@@ -23,7 +24,19 @@ nonisolated struct ChatCompletionStreamResponse: Decodable, Sendable {
         let content: String?
         let reasoningContent: String?
         let images: [ChatCompletionResponse.ImageItem]?
-        let toolCalls: [ToolCall]?
+        let toolCalls: [ToolCallDelta]?
+    }
+
+    struct ToolCallDelta: Decodable, Sendable {
+        let index: Int
+        let id: String?
+        let type: String?
+        let function: FunctionDelta?
+    }
+
+    struct FunctionDelta: Decodable, Sendable {
+        let name: String?
+        let arguments: String?
     }
 
     struct Usage: Decodable, Sendable {

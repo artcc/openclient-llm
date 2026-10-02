@@ -40,7 +40,9 @@ final class BranchConversationUseCaseTests: XCTestCase {
 
     func test_execute_userAttemptWithoutTranscript_preservesReservationWithNewMessageId() async throws {
         // Given
-        let user = ChatMessage(role: .user, content: "Draw a cat", imageGenerationAttempted: true)
+        let user = ChatMessage(
+            role: .user, content: "Edit a cat", imageGenerationAttempted: true, imageOperationAttempted: .editing
+        )
         let conversation = Conversation(modelId: "principal", messages: [user])
 
         // When
@@ -48,6 +50,7 @@ final class BranchConversationUseCaseTests: XCTestCase {
 
         // Then
         XCTAssertEqual(fork.messages.first?.imageGenerationAttempted, true)
+        XCTAssertEqual(fork.messages.first?.imageOperationAttempted, .editing)
         XCTAssertNotEqual(fork.messages.first?.id, user.id)
         XCTAssertEqual(mockSave.savedConversations.last?.messages.first?.imageGenerationAttempted, true)
     }

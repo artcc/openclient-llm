@@ -236,7 +236,7 @@ final class ChatViewModelImageToolsTests: XCTestCase {
 
     func visualToolNames(_ sut: ChatViewModel) throws -> Set<String> {
         Set(sut.agentToolDefinitions(for: try loadedState(sut)).map(\.function.name))
-            .intersection(["analyze_images", "generate_image", "list_image_attachments"])
+            .intersection(["analyze_images", "generate_image", "edit_image", "list_image_attachments"])
     }
 
     func sendMessage(_ sut: ChatViewModel, prompt: String = "Describe the images") async throws {

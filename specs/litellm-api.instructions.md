@@ -19,13 +19,28 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
 ## OpenAI-Compatible Endpoints
 
 - `GET /models` is the required model catalog endpoint.
-- `POST /chat/completions` serves ordinary streaming chat, non-streaming calls, and non-streaming agent rounds.
-- Streaming requests use SSE lines prefixed with `data: ` and terminate on `[DONE]`. Decode content, reasoning, usage, and
-  native image deltas without retaining raw chunks.
+- `POST /chat/completions` serves ordinary streaming chat, streaming text/vision agent rounds, and non-streaming calls
+  including native image-generation agent rounds.
+- Streaming requests use SSE data events and terminate on `[DONE]`. Accept `data:` with or without one following space,
+  join multiple data fields with newlines, and dispatch only at a blank-line event boundary. Support LF, CRLF, and CR line
+  endings and an initial UTF-8 BOM; ignore comments and other fields. Discard an unfinished event at EOF. Decode content,
+  reasoning, usage, and native image deltas without retaining raw chunks after processing.
 - Agent requests send OpenAI-compatible `tools`, `tool_choice: "auto"`, assistant `tool_calls`, and `role: "tool"`
   messages as specified in `agent-tool-calling.instructions.md`.
+- Agent streaming requests include usage reporting. Accumulate optional tool-call identity/name/argument deltas by index;
+  the response DTO for a complete tool call must not be used to decode an individual delta. Read trailing usage chunks with
+  empty choices. Require a terminal choice and successful transport completion before returning an assembled response.
+- Fail malformed agent chunks instead of skipping them; dropped argument fragments must not change an executed tool call.
+  Do not expose raw payloads in errors or automatically resend a failed streaming completion.
+- Notify the agent when the selected choice first contains decoded tool-call deltas, before validating those calls. Stop
+  publishing text and reasoning for that round, while still accumulating and validating its full response.
 - Multimodal input uses `image_url` content parts with base64 data URLs after the attachment preparation and size checks.
   PDFs remain text extraction inputs.
+- Historical assistant images must not become `image_url` parts in assistant content: the base Chat Completions contract
+  accepts images as user input. At request serialization, keep assistant text and tool transcripts in their original roles
+  and include those images, with their canonical attachment UUIDs and assistant-origin context, in the next user message.
+  If no user follows, append one context-only user message after the completed transcript. Never interrupt a tool-call/result
+  block or mutate persisted history. Use the same projection for regular, agent, streaming, and buffered completions.
 
 ## LiteLLM Enrichment And Fallback
 
@@ -51,6 +66,9 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
 - Dedicated `.imageGeneration` models use `POST /images/generations`; the existing dedicated edit flow uses multipart
   `POST /images/edits`. Dedicated responses may contain bounded base64 data or an HTTP(S) URL handled by the existing image
   repository.
+- The agent's `edit_image` tool reuses that multipart edit flow with one explicitly resolved conversation image and the
+  selected dedicated, vision-capable image specialist. Its authorization scope and eligibility are checked again after
+  attachment preparation, immediately before upload. It never falls back to text-only generation or a chat transport.
 - Dedicated generation requests include `response_format: "b64_json"` only for explicit `dall-e-2` and `dall-e-3` IDs;
   omit it for GPT image models and unknown or aliased IDs, which may return base64 data or an HTTP(S) URL.
 - Chat image generation accepts text only, returns the first native image, supplies no tools, and has no fallback to a

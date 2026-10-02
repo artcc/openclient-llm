@@ -10,7 +10,7 @@ enabledWorkflows:
 sessionDefaults:
   projectPath: "./openclient-llm.xcodeproj"
   scheme: "openclient-llm"
-  simulatorName: "iPhone 17 Pro Max"
+  simulatorName: "iPhone 18 Pro Max"
   useLatestOS: true
   suppressWarnings: true
   bundleId: "com.artcc.openclient-llm"

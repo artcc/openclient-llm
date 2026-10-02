@@ -253,7 +253,8 @@ private extension ImportConversationsUseCase {
             toolCallId: message.toolCallId,
             toolName: message.toolName,
             isFavourite: message.isFavourite,
-            imageGenerationAttempted: message.imageGenerationAttempted
+            imageGenerationAttempted: message.imageGenerationAttempted,
+            imageOperationAttempted: message.imageOperationAttempted
         )
     }
 
