@@ -56,12 +56,16 @@ Version 1 rules:
 - Attachment bytes live in `attachments`; metadata `fileRelativePath` is retained only for Codable compatibility and is
   never a portable restore location. An unreadable local file may be omitted without preventing conversation export.
 - Optional fields remain optional for older Version 1 documents. This includes model parameters, pin state, tags,
-  `tagColors`, branch references, compacted-context metadata, and `imageGenerationAttempted`; their model decoders define
+  `tagColors`, branch references, compacted-context metadata, `imageGenerationAttempted`, and `imageOperationAttempted`;
+  their model decoders define
   defaults. Tags without a color use orange.
 - `contextWindowTokens`, when present, is greater than zero. A context summary and its inclusive cursor are an indivisible
   pair: the summary is non-empty and the cursor identifies a message in the same conversation. If another message follows
   that cursor, it is a user message.
 - Tag names remain strings in `tags`; optional `tagColors` maps those names to stable semantic color identifiers.
+- The optional `imageOperationAttempted` string records `generation`, `editing`, or `unknown`. Missing values remain nil;
+  unrecognized future strings decode as `unknown` without losing the reservation. Import and branching preserve this local
+  metadata, which is not model-facing content. A legacy Boolean reservation without identifiable operation remains consumed.
 
 ## Current Importer Behavior
 
@@ -77,13 +81,14 @@ Version 1 rules:
 - Repeated attachment UUIDs with identical bytes within one conversation share a new UUID. Conflicting bytes receive
   separate UUIDs per message and ambiguous textual or tool references remain unchanged. UUID scope is per conversation.
 - References to successfully restored images are remapped in context summaries, assistant content, and the recognized
-  `analyze_images` and `list_image_attachments` tool fields. Matching is case-insensitive and limited to complete canonical
+  `analyze_images`, `list_image_attachments`, and `edit_image.attachment_id` tool fields. The edit prompt is not rewritten.
+  Matching is case-insensitive and limited to complete canonical
   UUID tokens; identifiers, filenames, paths, PDFs, missing payloads, user/system content, prompts, reasoning, and unrelated
   metadata are not rewritten.
 - Recognized JSON tool envelopes are remapped without normalizing unrelated content. Malformed, deeply nested, or unknown
   JSON and wrappers remain unchanged rather than invalidating an otherwise valid backup. Tool identity comes from
   `toolName` or an unambiguous assistant call with the same `toolCallId`.
-- Import never executes tool calls. Tool transcripts, including `imageGenerationAttempted`, are restored as historical
+- Import never executes tool calls. Tool transcripts and both image reservation fields are restored as historical
   data only.
 - Local persistence is atomic for the import batch: a local write or verification failure removes newly written attachments
   and rolls back every conversation already restored by that document. When cloud sync is enabled, synchronization occurs

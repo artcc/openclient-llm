@@ -40,7 +40,9 @@ final class ImportConversationsUseCaseTests: XCTestCase {
 
     func test_execute_userAttemptWithoutTranscript_preservesReservationWithNewMessageId() async throws {
         // Given
-        let user = ChatMessage(role: .user, content: "Draw a cat", imageGenerationAttempted: true)
+        let user = ChatMessage(
+            role: .user, content: "Edit a cat", imageGenerationAttempted: true, imageOperationAttempted: .editing
+        )
         let document = ConversationExportDocument(conversations: [.init(
             conversation: Conversation(modelId: "principal", messages: [user]), attachments: []
         )])
@@ -51,6 +53,7 @@ final class ImportConversationsUseCaseTests: XCTestCase {
         // Then
         let restored = try XCTUnwrap(mockSaveConversation.savedConversations.first?.messages.first)
         XCTAssertEqual(restored.imageGenerationAttempted, true)
+        XCTAssertEqual(restored.imageOperationAttempted, .editing)
         XCTAssertNotEqual(restored.id, user.id)
     }
 

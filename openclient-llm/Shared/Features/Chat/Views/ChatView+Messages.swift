@@ -16,6 +16,9 @@ extension ChatView {
             $0.role == .assistant && !$0.content.isEmpty
         }?.id
         let lastMessageId = state.messages.last?.id
+        let canReattachImages = !state.isStreaming && (
+            state.selectedModel?.mode != .imageGeneration || state.selectedModel?.supportsNativeVision == true
+        )
 
         // LazyVStack can fail to converge when upward scrolling overlaps live message layout updates.
         return VStack(spacing: 16) {
@@ -45,6 +48,9 @@ extension ChatView {
                             viewModel.send(.forkFromMessage(message.id))
                         } : nil,
                         onFavouriteTapped: { viewModel.send(.toggleFavourite(message.id)) },
+                        onImageReattached: canReattachImages ? {
+                            viewModel.send(.imageReattached(messageId: message.id, attachmentId: $0))
+                        } : nil,
                         onLayoutChanged: isLast ? { renderedMessageRevision += 1 } : nil
                     )
                     .id(message.id)

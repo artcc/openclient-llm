@@ -170,8 +170,8 @@ private extension ChatView {
                 editingMessageText: $editingMessageText
             )
         }
-        .imagePicker(isPresented: $showImagePicker) { data, fileName, type in
-            viewModel.send(.attachmentAdded(data: data, fileName: fileName, type: type))
+        .imagePicker(isPresented: $showImagePicker) { images in
+            viewModel.send(.imagesSelected(images))
         }
         .documentPicker(isPresented: $showDocumentPicker) { data, fileName, type in
             viewModel.send(.attachmentAdded(data: data, fileName: fileName, type: type))
@@ -295,8 +295,8 @@ private extension ChatView {
             }
         }
         .onDisappear(perform: handleViewDisappeared)
-        .imagePicker(isPresented: $showImagePicker) { data, fileName, type in
-            viewModel.send(.attachmentAdded(data: data, fileName: fileName, type: type))
+        .imagePicker(isPresented: $showImagePicker) { images in
+            viewModel.send(.imagesSelected(images))
         }
         .documentPicker(isPresented: $showDocumentPicker) { data, fileName, type in
             viewModel.send(.attachmentAdded(data: data, fileName: fileName, type: type))
@@ -344,10 +344,9 @@ private extension ChatView {
                 .frame(maxWidth: .infinity)
             }
             .modifier(ChatDropModifier(
-                onText: { viewModel.send(.inputChanged($0)) },
-                onAttachment: {
+                onItems: {
                     AppTips.chatAttachments.invalidate(reason: .actionPerformed)
-                    viewModel.send(.attachmentAdded(data: $0, fileName: $1, type: $2))
+                    viewModel.send(.itemsDropped($0))
                 }
             ))
     }

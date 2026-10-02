@@ -22,7 +22,8 @@ nonisolated enum ImageAttachmentContext {
             The following image attachments are not directly available to this model and have not been analyzed yet \
             in this message. If analyze_images is available in the current tool definitions, it can analyze these \
             image IDs. Otherwise, explain that you cannot inspect the images directly. Do not infer visual contents \
-            from these references; use actual analysis results when present.
+            from these references; use actual analysis results when present. \
+            These UUIDs can also identify the target for edit_image when that tool is available.
             {"image_attachment_ids":[\(references)]}
             """
             var projected = message

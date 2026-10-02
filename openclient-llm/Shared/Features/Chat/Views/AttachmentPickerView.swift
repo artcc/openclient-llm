@@ -14,9 +14,9 @@ struct ImagePickerModifier: ViewModifier {
     // MARK: - Properties
 
     @Binding var isPresented: Bool
-    let onAttachmentData: (Data, String, ChatMessage.AttachmentType) -> Void
+    let onImagesSelected: ([ChatViewModel.ImageInput]) -> Void
 
-    @State private var selectedItem: PhotosPickerItem?
+    @State private var selectedItems: [PhotosPickerItem] = []
 
     // MARK: - View
 
@@ -24,18 +24,21 @@ struct ImagePickerModifier: ViewModifier {
         content
             .photosPicker(
                 isPresented: $isPresented,
-                selection: $selectedItem,
+                selection: $selectedItems,
+                selectionBehavior: .ordered,
                 matching: .images
             )
-            .onChange(of: selectedItem) { _, newItem in
-                guard let newItem else { return }
-                Task {
-                    if let data = try? await newItem.loadTransferable(type: Data.self) {
-                        let fileName = "photo_\(Date().timeIntervalSince1970).jpg"
-                        onAttachmentData(data, fileName, .image)
+            .onChange(of: selectedItems) { _, items in
+                guard !items.isEmpty else { return }
+                onImagesSelected(items.enumerated().map { index, item in
+                    ChatViewModel.ImageInput(fileName: String(localized: "Photo \(index + 1)")) {
+                        guard let data = try await item.loadTransferable(type: Data.self) else {
+                            throw ImageGenerationInputError.unreadableImage
+                        }
+                        return data
                     }
-                    selectedItem = nil
-                }
+                })
+                selectedItems = []
             }
     }
 }
@@ -109,9 +112,9 @@ struct ImageFilePickerModifier: ViewModifier {
 extension View {
     func imagePicker(
         isPresented: Binding<Bool>,
-        onAttachmentData: @escaping (Data, String, ChatMessage.AttachmentType) -> Void
+        onImagesSelected: @escaping ([ChatViewModel.ImageInput]) -> Void
     ) -> some View {
-        modifier(ImagePickerModifier(isPresented: isPresented, onAttachmentData: onAttachmentData))
+        modifier(ImagePickerModifier(isPresented: isPresented, onImagesSelected: onImagesSelected))
     }
 
     func documentPicker(

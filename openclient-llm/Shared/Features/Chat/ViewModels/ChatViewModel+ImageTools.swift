@@ -32,6 +32,9 @@ extension ChatViewModel {
         if names.contains("generate_image"), let model = settingsManager.getSelectedImageGenerationModelId() {
             loadedState.imageToolModelNames["generate_image"] = model
         }
+        if names.contains("edit_image"), let model = settingsManager.getSelectedImageGenerationModelId() {
+            loadedState.imageToolModelNames["edit_image"] = model
+        }
         state = .loaded(loadedState)
     }
 
@@ -50,6 +53,7 @@ extension ChatViewModel {
         )
         let attachments = messages.map { $0.flatMap(\.attachments) }
             ?? (loadedState.messages.flatMap(\.attachments) + loadedState.pendingAttachments)
+        var inventoryChecks: [@MainActor @Sendable () -> Bool] = []
         if !principal.supportsNativeVision,
            attachments.contains(where: { $0.type == .image }),
            let specialist = loadedState.availableModels.first(where: {
@@ -59,16 +63,58 @@ extension ChatViewModel {
                 specialist: specialist, principal: principal, state: loadedState,
                 attachments: attachments, repository: repository
             )
+            inventoryChecks.append(imageToolAvailability(
+                model: specialist, principal: principal, state: loadedState, vision: true
+            ))
         }
         if !principal.supportsNativeImageGeneration,
            let specialist = loadedState.availableModels.first(where: {
                $0.id == settingsManager.getSelectedImageGenerationModelId() && $0.isImageGenerationSpecialist
            }) {
-            tools.append(generationTool(
+            let executor = generationTool(
                 specialist: specialist, principal: principal, state: loadedState,
                 messages: messages ?? loadedState.messages, client: client
-            ))
+            )
+            tools.append(executor)
+            if specialist.mode == .imageGeneration, specialist.supportsNativeVision,
+               attachments.contains(where: { $0.type == .image }) {
+                let editing = editingTool(
+                    specialist: specialist, principal: principal, state: loadedState,
+                    attachments: attachments, executor: executor
+                )
+                tools.append(editing)
+                inventoryChecks.append { editing.isAvailableForAdvertisement }
+            }
         }
+        if !inventoryChecks.isEmpty {
+            let checks = inventoryChecks
+            tools.append(ListImageAttachmentsTool(attachments: attachments, isAvailable: {
+                checks.contains { $0() }
+            }))
+        }
+    }
+
+    private func editingTool(
+        specialist: LLMModel,
+        principal: LLMModel,
+        state: LoadedState,
+        attachments: [ChatMessage.Attachment],
+        executor: GenerateImageTool
+    ) -> EditImageTool {
+        let generationAvailable = imageToolAvailability(
+            model: specialist, principal: principal, state: state, vision: false
+        )
+        return EditImageTool(
+            attachments: attachments, conversationId: state.conversation?.id ?? state.pendingSessionId,
+            executor: executor,
+            isAvailable: { [weak self, settingsManager] in
+                guard generationAvailable(), settingsManager.getIsBuiltInToolEnabled(.editImage),
+                      let self else { return false }
+                guard case .loaded(let current) = self.state else { return true }
+                guard let model = current.availableModels.first(where: { $0.id == specialist.id }) else { return false }
+                return model.mode == .imageGeneration && model.supportsNativeVision
+            }
+        )
     }
 
     private func generationTool(
@@ -78,22 +124,33 @@ extension ChatViewModel {
         messages: [ChatMessage],
         client: APIClient
     ) -> GenerateImageTool {
+        let isAvailable = imageToolAvailability(model: specialist, principal: principal, state: state, vision: false)
         let generation: any GenerateImageUseCaseProtocol = imageToolGenerationUseCase ?? (
             specialist.mode == .imageGeneration
-                ? GenerateImageUseCase(repository: ImageGenerationRepository(apiClient: client))
+                ? GenerateImageUseCase(
+                    repository: ImageGenerationRepository(apiClient: client),
+                    attachmentRepository: attachmentRepository,
+                    isRequestAvailable: { [weak self, settingsManager] hasImages in
+                        guard isAvailable() else { return false }
+                        guard hasImages else { return settingsManager.getIsBuiltInToolEnabled(.generateImage) }
+                        guard settingsManager.getIsBuiltInToolEnabled(.editImage),
+                              let self, case .loaded(let current) = self.state,
+                              let model = current.availableModels.first(where: { $0.id == specialist.id }) else {
+                            return false
+                        }
+                        return model.mode == .imageGeneration && model.supportsNativeVision
+                    }
+                )
                     as any GenerateImageUseCaseProtocol
                 : GenerateChatImageUseCase(
                     repository: imageToolChatRepository ?? makeChatRepository(generatesImages: true)
                 ) as any GenerateImageUseCaseProtocol
         )
         let user = messages.last { $0.role == .user }
-        let turn = messages.reversed().prefix { $0.role != .user }
-        let isAvailable = imageToolAvailability(model: specialist, principal: principal, state: state, vision: false)
         return GenerateImageTool(
             modelId: specialist.id,
             generateImageUseCase: generation,
-            hasAttemptedGeneration: user?.imageGenerationAttempted == true
-                || turn.contains { $0.role == .tool && $0.toolName == "generate_image" },
+            hasAttemptedGeneration: ImageOperationAttempt(messages: messages).wasAttempted,
             onAttempt: imageGenerationAttemptCallback(
                 userId: user?.id, conversationId: state.conversation?.id ?? state.pendingSessionId,
                 isAvailable: isAvailable
@@ -106,23 +163,25 @@ extension ChatViewModel {
         userId: UUID?,
         conversationId: UUID,
         isAvailable: @escaping @MainActor @Sendable () -> Bool
-    ) -> @MainActor @Sendable () async throws -> Void {
-        { [weak self] in
+    ) -> @MainActor @Sendable (ChatMessage.ImageOperation) async throws -> Void {
+        { [weak self] operation in
             try Task.checkCancellation()
             guard let self, let userId, isAvailable(),
                   case .loaded(var current) = self.state,
                   (current.conversation?.id ?? current.pendingSessionId) == conversationId,
                   let index = current.messages.lastIndex(where: { $0.role == .user }),
                   current.messages[index].id == userId,
-                  current.messages[index].imageGenerationAttempted != true else { throw CancellationError() }
+                   !ImageOperationAttempt(messages: current.messages).wasAttempted else { throw CancellationError() }
             current.messages[index].imageGenerationAttempted = true
+            current.messages[index].imageOperationAttempted = operation
             self.state = .loaded(current)
             await self.persistConversation()
             try Task.checkCancellation()
             guard isAvailable(), case .loaded(let latest) = self.state,
                   (latest.conversation?.id ?? latest.pendingSessionId) == conversationId,
                   let user = latest.messages.last(where: { $0.role == .user }),
-                  user.id == userId, user.imageGenerationAttempted == true else { throw CancellationError() }
+                   user.id == userId, user.imageGenerationAttempted == true,
+                   user.imageOperationAttempted == operation else { throw CancellationError() }
         }
     }
 
@@ -145,8 +204,7 @@ extension ChatViewModel {
                 maxOutputTokens: specialist.maxOutputTokens,
                 maxInputTokens: specialist.maxInputTokens,
                 isAvailable: isAvailable
-            ),
-            ListImageAttachmentsTool(attachments: attachments, isAvailable: isAvailable)
+            )
         ]
     }
 

@@ -18,6 +18,7 @@ struct GenerateImageUseCase: GenerateImageUseCaseProtocol {
     private let repository: ImageGenerationRepositoryProtocol
     private let attachmentRepository: AttachmentRepositoryProtocol
     private let prepareImageAttachmentUseCase: PrepareImageAttachmentUseCaseProtocol
+    private let isRequestAvailable: @MainActor @Sendable (_ hasImages: Bool) -> Bool
 
     // MARK: - Init
 
@@ -26,11 +27,13 @@ struct GenerateImageUseCase: GenerateImageUseCaseProtocol {
         attachmentRepository: AttachmentRepositoryProtocol = AttachmentRepository(),
         prepareImageAttachmentUseCase: PrepareImageAttachmentUseCaseProtocol = PrepareImageAttachmentUseCase(
             preservesGIF: false
-        )
+        ),
+        isRequestAvailable: @escaping @MainActor @Sendable (_ hasImages: Bool) -> Bool = { _ in true }
     ) {
         self.repository = repository
         self.attachmentRepository = attachmentRepository
         self.prepareImageAttachmentUseCase = prepareImageAttachmentUseCase
+        self.isRequestAvailable = isRequestAvailable
     }
 
     // MARK: - Execute
@@ -63,6 +66,7 @@ struct GenerateImageUseCase: GenerateImageUseCaseProtocol {
             images.append(image)
         }
         try Task.checkCancellation()
+        guard isRequestAvailable(!images.isEmpty) else { throw CancellationError() }
         return try await repository.generateImage(prompt: prompt, model: model, images: images)
     }
 }

@@ -11,6 +11,32 @@ import XCTest
 
 @MainActor
 final class ImportConversationsImageReferencesTests: XCTestCase {
+    func test_execute_editImageRoundTrip_remapsTargetWithoutRewritingPrompt() async throws {
+        // Given
+        let original = image()
+        let prompt = "Keep the text \(original.id.uuidString)"
+        let arguments = try XCTUnwrap(String(data: JSONEncoder().encode([
+            "prompt": prompt, "attachment_id": original.id.uuidString
+        ]), encoding: .utf8))
+        let conversation = Conversation(modelId: "chat", messages: [
+            ChatMessage(role: .user, content: "Edit", attachments: [original], imageGenerationAttempted: true),
+            ChatMessage(role: .assistant, content: "", toolCalls: [toolCall(name: "edit_image", arguments: arguments)])
+        ])
+
+        // When
+        let restored = try await roundTrip([conversation])
+        let imported = try XCTUnwrap(restored.first)
+
+        // Then
+        let restoredId = try XCTUnwrap(imported.messages.first?.attachments.first?.id)
+        let restoredArguments = try XCTUnwrap(imported.messages.last?.toolCalls?.first?.function.arguments)
+        let fields = try JSONDecoder().decode([String: String].self, from: Data(restoredArguments.utf8))
+        XCTAssertNotEqual(restoredId, original.id)
+        XCTAssertEqual(fields["attachment_id"], restoredId.uuidString)
+        XCTAssertEqual(fields["prompt"], prompt)
+        XCTAssertEqual(imported.messages.first?.imageGenerationAttempted, true)
+    }
+
     func test_execute_visualRoundTrip_remapsSummaryTranscriptAndLaterAssistantReferences() async throws {
         // Given
         let images = [image(data: Data([1, 2])), image(data: Data([3, 4]))]

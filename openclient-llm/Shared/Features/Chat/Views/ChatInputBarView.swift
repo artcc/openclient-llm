@@ -128,6 +128,11 @@ private extension ChatInputBarView {
                 return String(localized: "Generating an image with \(model)...")
             }
             return String(localized: "Generating an image...")
+        case "edit_image":
+            if let model = state.imageToolModelNames[toolName] {
+                return String(localized: "Editing an image with \(model)...")
+            }
+            return String(localized: "Editing an image...")
         case "get_current_datetime":
             return String(localized: "Getting the current date and time...")
         case "save_memory":

@@ -47,7 +47,7 @@ extension ChatViewModel {
                 toolContext: AgentToolContext(
                     toolRegistry: registry,
                     additionalExecutionTime: context.selectedModel.supportsNativeImageGeneration
-                        || registry.definitions.contains { $0.function.name == "generate_image" }
+                        || registry.definitions.contains { ["generate_image", "edit_image"].contains($0.function.name) }
                         ? .seconds(600) : .zero,
                     isConfigurationCurrent: { [settingsManager] in
                         settingsManager.getMCPAuthorizationScope() == serverConfigurationScope
@@ -207,7 +207,7 @@ private extension ChatViewModel {
             .responding
         case .reasoning, .transcriptAppended, .responseDiscarded:
             .thinking
-        case .toolCallStarted(let call) where call.function.name == "generate_image":
+        case .toolCallStarted(let call) where ["generate_image", "edit_image"].contains(call.function.name):
             .generatingImage
         case .toolCallStarted, .toolCallCompleted:
             .usingTools
@@ -383,6 +383,15 @@ private extension ChatViewModel {
             instructions += """
             Use generate_image, when available, only when the user requests a new image. Its output is already \
             displayed in this chat; do not invent image URLs or claim to have inspected a generated image.\n
+            """
+        }
+        if settingsManager.getIsBuiltInToolEnabled(.editImage) {
+            instructions += """
+            Use edit_image, when available, to modify one existing conversation image. Use its attachment UUID \
+            from context or list_image_attachments; never invent an ID. Select the image requested by the user, \
+            using chronological order for 'the previous image', and ask if the target is ambiguous. \
+            Never substitute generate_image for an unavailable or failed edit. Generation and editing share \
+            one attempt per user turn. The resulting image is already displayed in this chat.\n
             """
         }
         return instructions + """

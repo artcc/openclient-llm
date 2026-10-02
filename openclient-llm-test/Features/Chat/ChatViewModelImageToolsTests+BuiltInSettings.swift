@@ -13,7 +13,9 @@ import XCTest
 extension ChatViewModelImageToolsTests {
     func test_agentToolDefinitions_individualBuiltInDisabled_omitsOnlyThatTool() throws {
         // Given
-        let sut = makeViewModel(pending: [imageAttachment()])
+        let editor = LLMModel(id: "editor", capabilities: [.vision], mode: .imageGeneration)
+        settings.selectedImageGenerationModelId = editor.id
+        let sut = makeViewModel(pending: [imageAttachment()], extraModels: [editor])
         var state = try loadedState(sut)
         state.isWebSearchEnabled = true
         sut.state = .loaded(state)

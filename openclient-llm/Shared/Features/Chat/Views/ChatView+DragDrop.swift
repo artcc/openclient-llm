@@ -24,17 +24,22 @@ import UniformTypeIdentifiers
 struct ChatDropModifier: ViewModifier {
     // MARK: - Properties
 
-    let onText: (String) -> Void
-    let onAttachment: (Data, String, ChatMessage.AttachmentType) -> Void
+    let onItems: ([ChatViewModel.AttachmentInput]) -> Void
 
     // MARK: - Body
 
     func body(content: Content) -> some View {
         content
             .onDrop(of: [.plainText, .image, .pdf, .fileURL], isTargeted: nil) { providers in
-                Task { await handle(providers) }
+                onItems(Self.inputs(from: providers))
                 return !providers.isEmpty
             }
+    }
+
+    static func inputs(from providers: [NSItemProvider]) -> [ChatViewModel.AttachmentInput] {
+        providers.map { provider in
+            ChatViewModel.AttachmentInput { await load(provider) }
+        }
     }
 }
 
@@ -43,29 +48,22 @@ struct ChatDropModifier: ViewModifier {
 private extension ChatDropModifier {
     // MARK: Dispatch
 
-    func handle(_ providers: [NSItemProvider]) async {
-        for provider in providers {
-            if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
-                if let text = await loadText(from: provider), !text.isEmpty {
-                    onText(text)
-                }
-            } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-                if let (data, name) = await loadImageData(from: provider) {
-                    onAttachment(data, name, .image)
-                }
-            } else if provider.hasItemConformingToTypeIdentifier(UTType.pdf.identifier) {
-                if let (data, name) = await loadPDFData(from: provider) {
-                    onAttachment(data, name, .pdf)
-                }
-            } else if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-                await handleFileURL(from: provider)
-            }
+    static func load(_ provider: NSItemProvider) async -> ChatViewModel.AttachmentInputValue? {
+        if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
+            return await loadText(from: provider).map { .text($0) }
+        } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+            return await loadImageData(from: provider).map { .file($0.0, $0.1, .image) }
+        } else if provider.hasItemConformingToTypeIdentifier(UTType.pdf.identifier) {
+            return await loadPDFData(from: provider).map { .file($0.0, $0.1, .pdf) }
+        } else if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+            return await loadFile(from: provider)
         }
+        return nil
     }
 
     // MARK: Loaders
 
-    func loadText(from provider: NSItemProvider) async -> String? {
+    static func loadText(from provider: NSItemProvider) async -> String? {
         await withCheckedContinuation { continuation in
             provider.loadItem(forTypeIdentifier: UTType.plainText.identifier, options: nil) { item, _ in
                 switch item {
@@ -80,7 +78,7 @@ private extension ChatDropModifier {
         }
     }
 
-    func loadImageData(from provider: NSItemProvider) async -> (Data, String)? {
+    static func loadImageData(from provider: NSItemProvider) async -> (Data, String)? {
         let candidates: [(String, String)] = [
             (UTType.jpeg.identifier, "jpg"),
             (UTType.png.identifier, "png"),
@@ -97,7 +95,7 @@ private extension ChatDropModifier {
         return nil
     }
 
-    func loadPDFData(from provider: NSItemProvider) async -> (Data, String)? {
+    static func loadPDFData(from provider: NSItemProvider) async -> (Data, String)? {
         guard let data = await loadData(from: provider, typeIdentifier: UTType.pdf.identifier) else {
             return nil
         }
@@ -106,25 +104,26 @@ private extension ChatDropModifier {
         return (data, name)
     }
 
-    func handleFileURL(from provider: NSItemProvider) async {
-        guard let url = await loadFileURL(from: provider) else { return }
+    static func loadFile(from provider: NSItemProvider) async -> ChatViewModel.AttachmentInputValue? {
+        guard let url = await loadFileURL(from: provider) else { return nil }
+        guard !Task.isCancelled else { return nil }
         _ = url.startAccessingSecurityScopedResource()
         defer { url.stopAccessingSecurityScopedResource() }
-        guard let data = try? Data(contentsOf: url) else { return }
+        guard let data = try? Data(contentsOf: url) else { return nil }
         let ext = url.pathExtension.lowercased()
         switch ext {
         case "jpg", "jpeg", "png", "heic", "heif", "gif", "webp":
-            onAttachment(data, url.lastPathComponent, .image)
+            return .file(data, url.lastPathComponent, .image)
         case "pdf":
-            onAttachment(data, url.lastPathComponent, .pdf)
+            return .file(data, url.lastPathComponent, .pdf)
         default:
-            break
+            return nil
         }
     }
 
     // MARK: NSItemProvider helpers
 
-    func loadData(from provider: NSItemProvider, typeIdentifier: String) async -> Data? {
+    static func loadData(from provider: NSItemProvider, typeIdentifier: String) async -> Data? {
         await withCheckedContinuation { continuation in
             provider.loadDataRepresentation(forTypeIdentifier: typeIdentifier) { data, _ in
                 continuation.resume(returning: data)
@@ -132,7 +131,7 @@ private extension ChatDropModifier {
         }
     }
 
-    func loadFileURL(from provider: NSItemProvider) async -> URL? {
+    static func loadFileURL(from provider: NSItemProvider) async -> URL? {
         await withCheckedContinuation { continuation in
             provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
                 continuation.resume(returning: item as? URL)

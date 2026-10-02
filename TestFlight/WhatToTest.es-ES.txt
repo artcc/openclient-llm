@@ -3,6 +3,10 @@
 • Respuestas y razonamiento en tiempo real en el chat con herramientas, sin esperar a que termine toda la respuesta.
 • Mejoras en la fluidez y fiabilidad de las respuestas largas y del uso de herramientas.
 • El texto provisional de las llamadas a herramientas fallidas ya no se guarda como una respuesta en el historial.
+• Pide al chat que edite una imagen actual o anterior de la conversación usando el modelo de imágenes compatible que hayas seleccionado.
+• Selecciona varias imágenes de tu fototeca a la vez, manteniendo el orden que elijas.
+• Vuelve a adjuntar imágenes de la conversación sin guardarlas fuera de la app.
+• Consulta las miniaturas y previsualiza las imágenes adjuntas antes de enviar un mensaje.
 • Pequeñas correcciones de errores y mejoras para disfrutar de una experiencia más fluida.
 
 Gracias por seguir apoyándonos y por ayudarnos a crear juntos el mejor cliente posible para modelos de lenguaje.

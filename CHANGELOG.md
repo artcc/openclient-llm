@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## [1.7.20-build-120] - 2026-10-02
+
+### Added
+
+- `edit_image` tool lets function-calling chat models without native image generation edit one current or earlier conversation image through a selected dedicated image model with vision
+- Multiple-image selection from the Photo Library preserves selection order and prepares attachments before sending
+- Attach Again action reuses conversation images as new pending attachments without saving them outside the app or changing the original message
+
+### Changed
+
+- Pending image attachments now show thumbnails with image previews instead of generic icons
+- Delegated image generation and editing share one attempted request per user turn, preserving the limit and delivered images when restoring conversations or regenerating responses
+
+### Fixed
+
+- Pending drag-and-drop loads no longer add attachments or text to a different conversation after navigation or a data reset
+
 ## [1.7.20-build-118] - 2026-10-01
 
 ### Changed

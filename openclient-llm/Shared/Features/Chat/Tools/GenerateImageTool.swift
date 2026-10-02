@@ -15,7 +15,7 @@ final class GenerateImageTool: ChatToolProtocol {
 
     private let modelId: String
     private let generateImageUseCase: GenerateImageUseCaseProtocol
-    private let onAttempt: @MainActor @Sendable () async throws -> Void
+    private let onAttempt: @MainActor @Sendable (ChatMessage.ImageOperation) async throws -> Void
     private let isAvailable: @MainActor @Sendable () -> Bool
     private var hasAttemptedGeneration: Bool
 
@@ -49,7 +49,7 @@ final class GenerateImageTool: ChatToolProtocol {
         modelId: String,
         generateImageUseCase: GenerateImageUseCaseProtocol,
         hasAttemptedGeneration: Bool = false,
-        onAttempt: @escaping @MainActor @Sendable () async throws -> Void = {},
+        onAttempt: @escaping @MainActor @Sendable (ChatMessage.ImageOperation) async throws -> Void = { _ in },
         isAvailable: @escaping @MainActor @Sendable () -> Bool = { true }
     ) {
         self.modelId = modelId
@@ -69,17 +69,28 @@ final class GenerateImageTool: ChatToolProtocol {
               let rawPrompt = input["prompt"] else {
             throw ExecutionError.invalidArguments
         }
+        return try await executeImageRequest(prompt: rawPrompt, attachments: [])
+    }
+
+    // Generation and editing share this executor and its per-turn reservation.
+    func executeImageRequest(
+        prompt rawPrompt: String,
+        attachments: [ChatMessage.Attachment],
+        isRequestAvailable: @MainActor @Sendable () -> Bool = { true }
+    ) async throws -> ToolExecutionResult {
         let prompt = rawPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty, rawPrompt.count <= 8_000 else { throw ExecutionError.invalidPrompt }
         try checkAvailability()
+        guard isRequestAvailable() else { throw ExecutionError.unavailable }
         guard !hasAttemptedGeneration else { throw ExecutionError.turnLimitReached }
         // Reserve before the first suspension; failures may still have incurred a server-side charge.
         hasAttemptedGeneration = true
-        try await onAttempt()
+        try await onAttempt(attachments.isEmpty ? .generation : .editing)
         try checkAvailability()
+        guard isRequestAvailable() else { throw ExecutionError.unavailable }
         let image: GeneratedImage
         do {
-            image = try await generateImageUseCase.execute(prompt: prompt, model: modelId, attachments: [])
+            image = try await generateImageUseCase.execute(prompt: prompt, model: modelId, attachments: attachments)
         } catch {
             if error is CancellationError || (error as? URLError)?.code == .cancelled {
                 throw CancellationError()
@@ -88,10 +99,13 @@ final class GenerateImageTool: ChatToolProtocol {
             throw ExecutionError.requestFailed
         }
         try checkAvailability()
+        guard isRequestAvailable() else { throw ExecutionError.unavailable }
         guard !image.data.isEmpty else { throw ExecutionError.requestFailed }
         let model = MCPDisplayText.sanitize(modelId, fallback: "image model", maximumLength: 200)
         return ToolExecutionResult(
-            text: String(localized: "Generated one image with model \(model)."),
+            text: attachments.isEmpty
+                ? String(localized: "Generated one image with model \(model).")
+                : String(localized: "Edited one image with model \(model)."),
             images: [image]
         )
     }
@@ -117,13 +131,13 @@ final class GenerateImageTool: ChatToolProtocol {
             case .invalidPrompt:
                 String(localized: "The image generation prompt must contain between 1 and 8000 characters.")
             case .unavailable:
-                String(localized:
-                    "Image generation is no longer available. Start a new turn with the current configuration."
-                )
+                String(localized: """
+                    Image generation or editing is no longer available. Start a new turn with the current configuration.
+                    """)
             case .turnLimitReached:
-                String(localized: "Only one image generation request is allowed per turn. Do not retry in this turn.")
+                String(localized: "Only one image generation or editing request is allowed per turn. Do not retry.")
             case .requestFailed:
-                String(localized: "Image generation failed. The request cannot be retried in this turn.")
+                String(localized: "The image request failed. It cannot be retried in this turn.")
             }
         }
     }

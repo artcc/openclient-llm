@@ -31,6 +31,7 @@ struct MessageBubbleView: View {
     var onRegenerateTapped: (() -> Void)?
     var onForkTapped: (() -> Void)?
     var onFavouriteTapped: (() -> Void)?
+    var onImageReattached: ((UUID) -> Void)?
     var onLayoutChanged: (() -> Void)?
     @State var cursorVisible: Bool = false
     @State var renderedMarkdown = RenderedMarkdown.empty
@@ -195,7 +196,10 @@ private extension MessageBubbleView {
 
     @ViewBuilder
     func imageThumbnail(_ attachment: ChatMessage.Attachment) -> some View {
-        AttachmentImageView(attachment: attachment)
+        AttachmentImageView(
+            attachment: attachment,
+            onReattach: onImageReattached.map { action in { action(attachment.id) } }
+        )
             .frame(maxWidth: 175, alignment: .leading)
     }
 

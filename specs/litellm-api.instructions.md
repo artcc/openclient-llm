@@ -36,6 +36,11 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
   publishing text and reasoning for that round, while still accumulating and validating its full response.
 - Multimodal input uses `image_url` content parts with base64 data URLs after the attachment preparation and size checks.
   PDFs remain text extraction inputs.
+- Historical assistant images must not become `image_url` parts in assistant content: the base Chat Completions contract
+  accepts images as user input. At request serialization, keep assistant text and tool transcripts in their original roles
+  and include those images, with their canonical attachment UUIDs and assistant-origin context, in the next user message.
+  If no user follows, append one context-only user message after the completed transcript. Never interrupt a tool-call/result
+  block or mutate persisted history. Use the same projection for regular, agent, streaming, and buffered completions.
 
 ## LiteLLM Enrichment And Fallback
 
@@ -61,6 +66,9 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
 - Dedicated `.imageGeneration` models use `POST /images/generations`; the existing dedicated edit flow uses multipart
   `POST /images/edits`. Dedicated responses may contain bounded base64 data or an HTTP(S) URL handled by the existing image
   repository.
+- The agent's `edit_image` tool reuses that multipart edit flow with one explicitly resolved conversation image and the
+  selected dedicated, vision-capable image specialist. Its authorization scope and eligibility are checked again after
+  attachment preparation, immediately before upload. It never falls back to text-only generation or a chat transport.
 - Dedicated generation requests include `response_format: "b64_json"` only for explicit `dall-e-2` and `dall-e-3` IDs;
   omit it for GPT image models and unknown or aliased IDs, which may return base64 data or an HTTP(S) URL.
 - Chat image generation accepts text only, returns the first native image, supplies no tools, and has no fallback to a

@@ -25,6 +25,9 @@ final class ChatViewModel {
         case systemPromptChanged(String)
         case attachmentAdded(data: Data, fileName: String, type: ChatMessage.AttachmentType)
         case attachmentRemoved(UUID)
+        case imagesSelected([ImageInput])
+        case itemsDropped([AttachmentInput])
+        case imageReattached(messageId: UUID, attachmentId: UUID)
         case modelParametersChanged(ModelParameters)
         case contextWindowChanged(Int?)
         case speakMessageTapped(ChatMessage)
@@ -115,6 +118,8 @@ final class ChatViewModel {
     private var pendingConversation: Conversation?
     var isPreparingAppHandoff = false
     var attachmentPreparationCount = 0
+    var attachmentPreparationGeneration = 0
+    var attachmentPreparationTask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -205,6 +210,7 @@ final class ChatViewModel {
     }
 
     isolated deinit {
+        attachmentPreparationTask?.cancel()
         streamingUpdateBuffer.flushTask?.cancel()
         backgroundPersistenceCheckpointTask?.cancel()
         if let backgroundPersistenceObserver {
@@ -220,6 +226,7 @@ final class ChatViewModel {
     func send(_ event: Event) {
         guard !isPreparingAppHandoff else { return }
         if case .viewDisappeared = event {
+            cancelAttachmentPreparation()
             stopStreaming()
             loadTask?.cancel()
             loadTask = nil
@@ -242,6 +249,12 @@ final class ChatViewModel {
             sendMessage()
         case .stopStreamingTapped:
             stopStreaming()
+        case .imagesSelected(let images):
+            prepareImages(images)
+        case .itemsDropped(let inputs):
+            prepareAttachments(inputs)
+        case .imageReattached(let messageId, let attachmentId):
+            reattachImage(messageId: messageId, attachmentId: attachmentId)
         default:
             sendRoutedEvent(event)
         }
@@ -271,7 +284,8 @@ final class ChatViewModel {
              .mcpToolPermissionChanged, .mcpToolsPermissionChanged,
              .mcpAuthorizationDecision, .mcpAuthorizationSubmitted, .mcpAuthorizationDismissed:
             handleMCPEvent(event)
-        case .viewDisappeared, .viewAppeared, .conversationLoaded, .inputChanged, .sendTapped, .stopStreamingTapped:
+        case .viewDisappeared, .viewAppeared, .conversationLoaded, .inputChanged, .sendTapped, .stopStreamingTapped,
+             .imagesSelected, .itemsDropped, .imageReattached:
             return
         }
     }
@@ -292,6 +306,7 @@ final class ChatViewModel {
 private extension ChatViewModel {
 
     func loadInitialData() {
+        cancelAttachmentPreparation()
         cancelActiveStreaming()
         loadTask?.cancel()
         state = .loading
@@ -346,6 +361,7 @@ private extension ChatViewModel {
     }
 
     func loadConversation(_ conversation: Conversation) {
+        cancelAttachmentPreparation()
         cancelActiveStreaming()
         guard case .loaded(var loadedState) = state else {
             pendingConversation = conversation

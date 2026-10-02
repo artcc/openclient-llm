@@ -101,13 +101,16 @@ extension ImportConversationsUseCase {
         }
 
         func remapToolCall(_ call: ToolCall) -> ToolCall {
-            guard call.function.name == "analyze_images" else { return call }
+            guard ["analyze_images", "edit_image"].contains(call.function.name) else { return call }
+            let arguments = call.function.name == "edit_image"
+                ? remapJSON(call.function.arguments, textKey: "attachment_id")
+                : remapJSON(call.function.arguments, idsKey: "attachment_ids", textKey: "question")
             return ToolCall(
                 id: call.id,
                 type: call.type,
                 function: ToolCallFunction(
                     name: call.function.name,
-                    arguments: remapJSON(call.function.arguments, idsKey: "attachment_ids", textKey: "question")
+                    arguments: arguments
                 )
             )
         }
