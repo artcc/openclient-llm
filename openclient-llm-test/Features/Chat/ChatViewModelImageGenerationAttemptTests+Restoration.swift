@@ -147,7 +147,9 @@ private extension ChatViewModelImageGenerationAttemptTests {
         let id = UUID()
         let attachmentId = UUID()
         return Conversation(id: id, modelId: principal.id, messages: [
-            ChatMessage(role: .user, content: "Draw a cat", imageGenerationAttempted: true),
+            ChatMessage(
+                role: .user, content: "Draw a cat", imageGenerationAttempted: true, imageOperationAttempted: .generation
+            ),
             ChatMessage(role: .assistant, content: "", attachments: [.init(
                 id: attachmentId, type: .image, fileName: "cat.png", mimeType: "image/png",
                 fileRelativePath: "Attachments/\(id)/\(attachmentId).png"

@@ -72,7 +72,7 @@ struct ChatRepository: ChatRepositoryProtocol {
         LogManager.info("sendMessage model=\(model) messages=\(messages.count)")
         let request = ChatCompletionRequest(
             model: model,
-            messages: messages.map { buildCompletionMessage($0) },
+            messages: buildCompletionMessages(messages),
             stream: false,
             temperature: parameters.temperature,
             maxTokens: parameters.maxTokens,
@@ -113,7 +113,7 @@ struct ChatRepository: ChatRepositoryProtocol {
         LogManager.info("streamMessage model=\(model) messages=\(messages.count)")
         let request = ChatCompletionRequest(
             model: model,
-            messages: messages.map { buildCompletionMessage($0) },
+            messages: buildCompletionMessages(messages),
             stream: true,
             temperature: parameters.temperature,
             maxTokens: parameters.maxTokens,
@@ -147,7 +147,7 @@ struct ChatRepository: ChatRepositoryProtocol {
         LogManager.info("agentCompletion model=\(model) messages=\(messages.count) tools=\(tools?.count ?? 0)")
         let request = ChatCompletionRequest(
             model: model,
-            messages: messages.map { buildCompletionMessage($0) },
+            messages: buildCompletionMessages(messages),
             stream: false,
             temperature: parameters.temperature,
             maxTokens: parameters.maxTokens,

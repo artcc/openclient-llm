@@ -56,6 +56,7 @@ struct ImageAndVisionSection: View {
                     "Compatible selected models may be called automatically when the chat model needs help with images."
                 )
                 Text("These additional requests may incur costs, depending on your provider.")
+                Text("Editing uses a dedicated image model with vision and edits one conversation image per turn.")
                 Text("None disables delegation for that role without changing the chat model's native capabilities.")
                 Text("Unavailable selections are kept until you choose another model or None.")
             }

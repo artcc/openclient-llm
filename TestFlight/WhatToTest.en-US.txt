@@ -3,6 +3,10 @@ Hi there! We've got some great new features for you in this update.
 • Real-time responses and reasoning in chats with tools, without waiting for the entire response to finish.
 • Smoother, more reliable long responses and tool use.
 • Provisional text from failed tool calls is no longer saved as an answer in your conversation history.
+• Ask the chat to edit a current or earlier conversation image using your selected compatible image model.
+• Select multiple images from your Photo Library at once, keeping them in the order you choose.
+• Attach conversation images again without saving them outside the app.
+• See thumbnails and preview your attached images before sending a message.
 • Minor bug fixes and improvements for a smoother experience.
 
 Thanks for your continued support and for helping us build the best possible LLM client together.

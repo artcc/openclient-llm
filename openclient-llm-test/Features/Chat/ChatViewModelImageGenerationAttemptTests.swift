@@ -220,7 +220,8 @@ extension ChatViewModelImageGenerationAttemptTests {
         model: LLMModel? = nil,
         isPrivate: Bool = false,
         agentUseCase: (any AgentStreamUseCaseProtocol)? = nil,
-        search: (any WebSearchUseCaseProtocol)? = nil
+        search: (any WebSearchUseCaseProtocol)? = nil,
+        specialist: LLMModel? = nil
     ) -> ChatViewModel {
         let selected = model ?? principal
         let conversation = conversation ?? Conversation(modelId: selected.id, messages: [
@@ -230,7 +231,7 @@ extension ChatViewModelImageGenerationAttemptTests {
             isPrivateChat: isPrivate,
             state: .loaded(.init(
                 conversation: isPrivate ? nil : conversation, messages: conversation.messages,
-                selectedModel: selected, availableModels: [selected, generator],
+                selectedModel: selected, availableModels: [selected, specialist ?? generator],
                 modelCatalogScope: settings.getMCPAuthorizationScope(), isWebSearchEnabled: search != nil
             )),
             fetchModelsUseCase: MockFetchModelsUseCase(),

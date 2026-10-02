@@ -76,6 +76,7 @@ final class ChatViewModelTests: XCTestCase {
             saveSelectedModelUseCase: mockSaveSelectedModel,
             setWebSearchEnabledUseCase: mockSetWebSearchEnabled,
             fetchMCPToolsUseCase: mockFetchMCPTools,
+            settingsManager: MockSettingsManager(),
             resolveAudioModelIdsUseCase: mockResolveAudioModelIds,
             getUserProfileContextUseCase: mockGetUserProfileContext,
             getMemoryContextUseCase: mockGetMemoryContext,

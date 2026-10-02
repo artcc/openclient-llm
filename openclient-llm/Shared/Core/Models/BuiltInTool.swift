@@ -16,6 +16,7 @@ enum BuiltInTool: String, CaseIterable, Identifiable, Sendable {
     case analyzeImages = "analyze_images"
     case listImageAttachments = "list_image_attachments"
     case generateImage = "generate_image"
+    case editImage = "edit_image"
 
     var id: String { rawValue }
 
@@ -28,6 +29,7 @@ enum BuiltInTool: String, CaseIterable, Identifiable, Sendable {
         case .analyzeImages: String(localized: "Analyze Images")
         case .listImageAttachments: String(localized: "List Attached Images")
         case .generateImage: String(localized: "Generate an Image")
+        case .editImage: String(localized: "Edit an Image")
         }
     }
 
@@ -50,13 +52,17 @@ enum BuiltInTool: String, CaseIterable, Identifiable, Sendable {
                 """)
         case .listImageAttachments:
             String(localized: """
-                Finds references to images attached to the conversation for image analysis. \
-                Requires a selected vision model when the chat model cannot see images.
+                Finds references to conversation images for available image analysis or editing tools.
                 """)
         case .generateImage:
             String(localized: """
                 Uses your selected image generation model to create an image \
                 when the chat model cannot generate one itself.
+                """)
+        case .editImage:
+            String(localized: """
+                Edits one conversation image with your selected image generation model. Requires a dedicated \
+                image model with vision and a chat model without native image generation.
                 """)
         }
     }

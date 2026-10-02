@@ -21,7 +21,7 @@ extension ChatRepository {
         }
         let request = ChatCompletionRequest(
             model: model,
-            messages: messages.map { buildCompletionMessage($0) },
+            messages: buildCompletionMessages(messages),
             stream: true,
             temperature: parameters.temperature,
             maxTokens: parameters.maxTokens,

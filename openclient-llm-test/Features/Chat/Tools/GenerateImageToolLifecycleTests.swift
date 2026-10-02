@@ -17,7 +17,7 @@ final class GenerateImageToolLifecycleTests: XCTestCase {
         useCase.result = .success(GeneratedImage(data: Data([1]), mimeType: "image/png", revisedPrompt: nil))
         let started = expectation(description: "Attempt checkpoint started")
         let checkpoint = AttemptCheckpoint()
-        let sut = GenerateImageTool(modelId: "generator", generateImageUseCase: useCase, onAttempt: {
+        let sut = GenerateImageTool(modelId: "generator", generateImageUseCase: useCase, onAttempt: { _ in
             checkpoint.callCount += 1
             await withCheckedContinuation { continuation in
                 checkpoint.continuation = continuation
@@ -49,7 +49,7 @@ final class GenerateImageToolLifecycleTests: XCTestCase {
         // Given
         let useCase = MockGenerateImageUseCase()
         let checkpoint = AttemptCheckpoint()
-        let sut = GenerateImageTool(modelId: "generator", generateImageUseCase: useCase, onAttempt: {
+        let sut = GenerateImageTool(modelId: "generator", generateImageUseCase: useCase, onAttempt: { _ in
             checkpoint.callCount += 1
         })
 
@@ -72,7 +72,7 @@ final class GenerateImageToolLifecycleTests: XCTestCase {
     func test_execute_callbackCancellation_propagatesWithoutRequest() async {
         // Given
         let useCase = MockGenerateImageUseCase()
-        let sut = GenerateImageTool(modelId: "generator", generateImageUseCase: useCase, onAttempt: {
+        let sut = GenerateImageTool(modelId: "generator", generateImageUseCase: useCase, onAttempt: { _ in
             throw CancellationError()
         })
 
@@ -95,7 +95,7 @@ final class GenerateImageToolLifecycleTests: XCTestCase {
         let checkpoint = AttemptCheckpoint()
         let sut = GenerateImageTool(
             modelId: "generator", generateImageUseCase: useCase,
-            onAttempt: { checkpoint.isAvailable = false },
+            onAttempt: { _ in checkpoint.isAvailable = false },
             isAvailable: { checkpoint.isAvailable }
         )
 
@@ -118,7 +118,7 @@ final class GenerateImageToolLifecycleTests: XCTestCase {
         let useCase = MockGenerateImageUseCase()
         let started = expectation(description: "Attempt checkpoint started")
         let checkpoint = AttemptCheckpoint()
-        let sut = GenerateImageTool(modelId: "generator", generateImageUseCase: useCase, onAttempt: {
+        let sut = GenerateImageTool(modelId: "generator", generateImageUseCase: useCase, onAttempt: { _ in
             await withCheckedContinuation { continuation in
                 checkpoint.continuation = continuation
                 started.fulfill()
