@@ -42,19 +42,23 @@ SwiftLint fixes, test coverage, and opt-in LiteLLM integration checks.
 
 ## How to Contribute
 
+Write all GitHub issue and Pull Request titles and descriptions in English. Add the most appropriate existing labels
+to issues and Pull Requests whenever you have permission; maintainers can apply them otherwise.
+
 ### Reporting Bugs
 
-- Use GitHub Issues
-- Include: device/OS version, steps to reproduce, expected vs actual behavior
-- Add screenshots or logs if applicable
+- Use the **Bug report** form in GitHub Issues; it automatically applies the `bug` label
+- Include: app version and build, platform/OS version, steps to reproduce, expected vs actual behavior
+- Include device, backend/version, model, screenshots, or logs when relevant, with credentials and personal data removed
 
 ### Suggesting Features
 
-- Open a GitHub Issue with the `enhancement` label
+- Use the **Feature request** form in GitHub Issues; it automatically applies the `enhancement` label
 - Describe the use case and why it would be useful
 
 ### Issues
 
+- Blank issues remain available for questions or topics that do not fit either form; write these in English too
 - Add the most appropriate label whenever possible when creating an issue
 - If a branch has already been created for the work, link it to the issue in GitHub's Development section
 
@@ -102,6 +106,7 @@ Update settings view for macOS layout
 
 ## Pull Request Guidelines
 
+- Complete the Pull Request template in English and add relevant existing labels whenever possible
 - Keep PRs focused — one feature or fix per PR
 - Provide a clear description of what changed and why
 - Reference related issues (e.g., `Closes #12`)
