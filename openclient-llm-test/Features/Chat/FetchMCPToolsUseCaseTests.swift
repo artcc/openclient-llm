@@ -69,6 +69,64 @@ final class FetchMCPToolsUseCaseTests: XCTestCase {
         XCTAssertEqual(result.tools.map(\.name), ["search"])
     }
 
+    func test_execute_emptyAllowedTools_preservesSuccessfullyDiscoveredTools() async {
+        // Given
+        let server = MCPServerInfo(
+            serverId: "srv-1",
+            serverName: "GitHub",
+            description: nil,
+            allowedTools: []
+        )
+        let tools = [
+            MCPToolInfo(name: "search", description: nil, serverId: "", serverName: "", inputSchema: nil),
+            MCPToolInfo(name: "issues", description: nil, serverId: "", serverName: "", inputSchema: nil)
+        ]
+        let repository = MockMCPRepository(servers: [server], toolsByServerId: [server.serverId: tools])
+        let settings = MockSettingsManager()
+        settings.serverBaseURL = "https://example.com"
+        let sut = FetchMCPToolsUseCase(repository: repository, settingsManager: settings)
+
+        // When
+        let result = await sut.execute()
+
+        // Then
+        XCTAssertEqual(result.servers, [server])
+        XCTAssertEqual(result.tools, tools.map { $0.withServer(server) })
+        XCTAssertTrue(result.failedServerIds.isEmpty)
+        XCTAssertNil(result.errorMessage)
+    }
+
+    func test_execute_emptySuccessfulDiscovery_doesNotRetainPreviousTools() async {
+        // Given
+        let server = MCPServerInfo(
+            serverId: "srv-1",
+            serverName: "GitHub",
+            description: nil,
+            allowedTools: []
+        )
+        let previousTool = MCPToolInfo(
+            name: "search",
+            description: nil,
+            serverId: server.serverId,
+            serverName: server.serverName,
+            inputSchema: nil
+        )
+        let repository = MockMCPRepository(servers: [server], toolsByServerId: [server.serverId: []])
+        let settings = MockSettingsManager()
+        settings.serverBaseURL = "https://example.com"
+        let sut = FetchMCPToolsUseCase(repository: repository, settingsManager: settings)
+
+        // When
+        let result = await sut.execute()
+
+        // Then
+        XCTAssertEqual(result.servers, [server])
+        XCTAssertTrue(result.tools.isEmpty)
+        XCTAssertTrue(result.failedServerIds.isEmpty)
+        XCTAssertNil(result.errorMessage)
+        XCTAssertTrue(result.mergingPreviouslyDiscoveredTools([previousTool]).isEmpty)
+    }
+
     func test_execute_whenOneServerFails_keepsOtherServersAndReportsWarning() async {
         // Given
         let goodServer = MCPServerInfo(serverId: "good", serverName: "Good", description: nil, allowedTools: nil)

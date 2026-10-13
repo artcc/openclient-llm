@@ -148,7 +148,11 @@ private extension FetchMCPToolsUseCase {
             let server = result.server
             tools += discoveredTools
                 .map { $0.withServer(server) }
-                .filter { server.allowedTools?.contains($0.name) ?? true }
+                .filter { tool in
+                    // LiteLLM can redact this list; successful tool discovery already enforces server permissions.
+                    guard let allowedTools = server.allowedTools, !allowedTools.isEmpty else { return true }
+                    return allowedTools.contains(tool.name)
+                }
         }
         let errorMessage = failedServerNames.isEmpty ? nil : String(
             localized: "Some MCP servers could not be loaded: \(failedServerNames.joined(separator: ", "))."

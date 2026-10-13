@@ -82,6 +82,10 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
   Search behavior belongs to `web-browsing.instructions.md`.
 - `GET /v1/mcp/server` discovers MCP servers, `GET /mcp-rest/tools/list?server_id=...` discovers their tools, and
   `POST /mcp-rest/tools/call` executes a tool with server ID, original tool name, and parsed object arguments.
+- After successful tool discovery, absent or empty server `allowed_tools` metadata adds no client-side restriction:
+  LiteLLM can redact it to `[]` for route-restricted virtual keys, while the tools endpoint enforces server permissions.
+  Nonempty lists still filter discovered tools. An empty successful tool response removes previous tools. For failed-server
+  retention, preserve the conservative policy: an explicit empty list does not retain previous tools or enabled IDs.
 - Missing search or MCP endpoints disable only those optional features. They must not prevent model listing or chat.
 - Connection testing uses `GET /models`. LiteLLM detection separately uses `GET /health/readiness` and requires a successful
   JSON response containing `litellm_version`.
