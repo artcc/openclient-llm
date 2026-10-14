@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## [1.7.25-build-121] - 2026-10-13
+## [1.7.25-build-123] - 2026-10-14
 
 ### Fixed
 
