@@ -1,0 +1,45 @@
+name: Feature request
+description: Suggest an improvement to OpenClient.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please write the issue title and description in English.
+        Search existing issues first and add other relevant labels whenever you have permission.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What need would this feature address, and who would benefit?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe how you would like the feature to work.
+    validations:
+      required: true
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Affected platforms
+      multiple: true
+      options:
+        - iOS
+        - iPadOS
+        - macOS
+        - Not platform-specific
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any alternatives or workarounds you have tried.
+  - type: textarea
+    id: context
+    attributes:
+      label: Examples or additional context
+      description: Include mockups, screenshots, or examples if they help explain your proposal.

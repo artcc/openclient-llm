@@ -38,6 +38,8 @@ then update both in the same change. If intent remains unclear, stop and ask for
 - Use the project `xcode-verify` skill for Xcode validation; it owns setup and fallback details, while
   `.xcodebuildmcp/config.yaml` owns the default project, scheme, and simulator selection.
 - Do not commit, push, amend, or perform destructive Git operations unless explicitly requested.
+- Write all GitHub issue and Pull Request titles and descriptions in English. Apply relevant existing labels whenever
+  permissions allow, using issue forms and the Pull Request template when available.
 - Run `git diff --check` before reporting implementation work complete, unless the user forbids Git commands.
 
 ## Specifications

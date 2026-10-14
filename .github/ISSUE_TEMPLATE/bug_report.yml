@@ -1,0 +1,85 @@
+name: Bug report
+description: Report a reproducible problem in OpenClient.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please write the issue title and description in English.
+        Search existing issues first and add other relevant labels whenever you have permission.
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem description
+      description: What is going wrong?
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: OpenClient version and build
+      placeholder: "For example: 1.7.25 (build 121)"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Affected platforms
+      multiple: true
+      options:
+        - iOS
+        - iPadOS
+        - macOS
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: Operating system version
+      description: Include the OS version for each affected platform.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: Device model, if relevant.
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include the steps needed to reproduce the problem and how often it happens.
+      placeholder: |
+        1. Open...
+        2. Select...
+        3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happens instead? Include any error message.
+    validations:
+      required: true
+  - type: textarea
+    id: backend
+    attributes:
+      label: Backend and model
+      description: If relevant, include the server software and version, model ID, and configuration needed to reproduce the problem. Do not include API keys or credentials.
+      placeholder: |
+        Backend and version:
+        Model ID:
+        Relevant configuration:
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Screenshots, logs, or additional context
+      description: Remove credentials, private URLs, and personal data before attaching screenshots or logs.
