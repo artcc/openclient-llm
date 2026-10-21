@@ -17,7 +17,7 @@ struct ChatView: View {
     @State var renderedMessageRevision = 0
     @State var frozenMessageListState: ChatMessageListState?
     @State private var showSystemPromptSheet: Bool = false
-    @State private var showModelParametersSheet: Bool = false
+    @State var showModelParametersSheet: Bool = false
     @State private var showFavouritesSheet: Bool = false
     @State private var showMediaGallery: Bool = false
     @State var scrollToMessageId: UUID?
@@ -137,10 +137,7 @@ private extension ChatView {
             )
         }
         .sheet(isPresented: $showModelParametersSheet) {
-            ChatModelParametersView(
-                viewModel: viewModel,
-                isPresented: $showModelParametersSheet
-            )
+            modelParametersSheet
         }
         .sheet(isPresented: $showFavouritesSheet) {
             if case .loaded(let loadedSt) = viewModel.state {
@@ -246,10 +243,7 @@ private extension ChatView {
                 )
             }
             .sheet(isPresented: $showModelParametersSheet) {
-                ChatModelParametersView(
-                    viewModel: viewModel,
-                    isPresented: $showModelParametersSheet
-                )
+                modelParametersSheet
             }
             .sheet(isPresented: $showFavouritesSheet) {
                 if case .loaded(let loadedSt) = viewModel.state {

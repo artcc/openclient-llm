@@ -33,6 +33,9 @@ extension ChatViewModel {
         var pendingSessionId: UUID = UUID()
         var modelParameters: ModelParameters = .default
         var contextWindowTokens: Int?
+        var modelConfiguration: ChatModelConfiguration {
+            ChatModelConfiguration(parameters: modelParameters, contextWindowTokens: contextWindowTokens)
+        }
         var contextUsage: ContextUsage?
         var isSpeaking: Bool = false
         var speakingMessageId: UUID?

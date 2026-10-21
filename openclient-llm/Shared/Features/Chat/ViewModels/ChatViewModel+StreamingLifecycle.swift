@@ -24,6 +24,7 @@ extension ChatViewModel {
         streamTask?.cancel()
         streamTask = nil
         activeAssistantMessageId = nil
+        activeModelConfiguration = nil
         defer { streamingBackgroundUseCase.end(success: false) }
         guard case .loaded(var loadedState) = state else { return }
         guard loadedState.isStreaming else { return }
@@ -56,6 +57,7 @@ extension ChatViewModel {
             self.streamTask = nil
             self.rollbackPendingPreflightCompaction(for: assistantMessageId)
             self.activeAssistantMessageId = nil
+            self.activeModelConfiguration = nil
             guard case .loaded(var currentState) = self.state else { return }
             currentState.isStreaming = false
             currentState.isSearchingWeb = false

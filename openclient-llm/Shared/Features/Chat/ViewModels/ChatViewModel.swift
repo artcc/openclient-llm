@@ -30,6 +30,7 @@ final class ChatViewModel {
         case imageReattached(messageId: UUID, attachmentId: UUID)
         case modelParametersChanged(ModelParameters)
         case contextWindowChanged(Int?)
+        case modelConfigurationChanged(ChatModelConfiguration)
         case speakMessageTapped(ChatMessage)
         case stopSpeakingTapped
         case startRecordingTapped
@@ -106,6 +107,8 @@ final class ChatViewModel {
     var persistenceResetGeneration = 0
     private var loadTask: Task<Void, Never>?
     var activeAssistantMessageId: UUID?
+    var activeModelConfiguration: ChatModelConfiguration?
+    var modelConfigurationObservationTask: Task<Void, Never>?
     var backgroundPersistenceCheckpointTask: Task<Void, Never>?
     var backgroundPersistenceFingerprint: Int?
     var errorDismissTask: Task<Void, Never>?
@@ -210,6 +213,7 @@ final class ChatViewModel {
         observeAppDataReset()
         observeMCPToolSettingsChanges()
         observeBuiltInToolSettingsChanges()
+        observeModelConfigurationChanges()
     }
 
     isolated deinit {
@@ -225,6 +229,7 @@ final class ChatViewModel {
         }
         mcpSettingsObservationTask?.cancel()
         builtInToolSettingsObservationTask?.cancel()
+        modelConfigurationObservationTask?.cancel()
         mcpDiscoveryTask?.cancel()
     }
 
@@ -278,6 +283,7 @@ final class ChatViewModel {
              .attachmentRemoved,
              .modelParametersChanged,
              .contextWindowChanged,
+             .modelConfigurationChanged,
              .speakMessageTapped,
              .stopSpeakingTapped:
             handleConfigurationEvent(event)
@@ -363,6 +369,7 @@ private extension ChatViewModel {
         case .attachmentRemoved(let id): removeAttachment(id)
         case .modelParametersChanged(let parameters): updateModelParameters(parameters)
         case .contextWindowChanged(let tokens): updateContextWindow(tokens)
+        case .modelConfigurationChanged(let configuration): updateModelConfiguration(configuration)
         case .speakMessageTapped(let message): speakMessage(message)
         case .stopSpeakingTapped: stopSpeaking()
         default: break
@@ -420,13 +427,11 @@ private extension ChatViewModel {
     }
 
     func updateModelParameters(_ parameters: ModelParameters) {
-        guard case .loaded(var loadedState) = state else { return }
-        loadedState.modelParameters = parameters
-        if loadedState.conversation != nil {
-            loadedState.conversation?.modelParameters = parameters
-        }
-        state = .loaded(loadedState)
-        scheduleConversationPersistence()
+        guard case .loaded(let loadedState) = state else { return }
+        updateModelConfiguration(ChatModelConfiguration(
+            parameters: parameters,
+            contextWindowTokens: loadedState.contextWindowTokens
+        ))
     }
 
     func speakMessage(_ message: ChatMessage) {

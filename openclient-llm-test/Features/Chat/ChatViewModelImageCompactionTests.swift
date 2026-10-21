@@ -152,7 +152,7 @@ final class ChatViewModelImageCompactionTests: XCTestCase {
             text: "Latest question", messages: messages, modelId: model.id, assistantId: assistant.id,
             systemPrompt: "", parameters: ModelParameters(), webSearchEnabled: false,
             modelCapabilities: model.capabilities, selectedModel: model, contextWindowTokens: nil,
-            contextSummary: nil, contextSummaryCursorMessageId: nil
+            contextSummary: nil, contextSummaryCursorMessageId: nil, conversationConfiguration: .default
         )
         return (sut, context)
     }

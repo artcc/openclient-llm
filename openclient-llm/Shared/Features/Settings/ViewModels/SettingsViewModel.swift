@@ -29,6 +29,7 @@ final class SettingsViewModel {
         case cloudAccountReviewDismissed
         case cloudAvailabilityRefresh
         case showTokenUsageToggled(Bool)
+        case modelConfigurationChanged(ChatModelConfiguration)
         case webSearchToolNameChanged(String)
         case webSearchMaxResultsChanged(Int)
         case fetchSearchToolsTapped
@@ -58,6 +59,7 @@ final class SettingsViewModel {
         var serverPersistenceFailureCount: Int = 0
         var isCloudSyncEnabled: Bool = false
         var showTokenUsage: Bool = true
+        var modelConfiguration: ChatModelConfiguration = .default
         var showCloudSyncConflictAlert: Bool = false
         var showCloudAccountReviewAlert: Bool = false
         var webSearchToolName: String = ""
@@ -194,6 +196,7 @@ extension SettingsViewModel {
             apiKey: settingsManager.getAPIKey(),
             isCloudSyncEnabled: settingsManager.getIsCloudSyncEnabled(),
             showTokenUsage: settingsManager.getShowTokenUsage(),
+            modelConfiguration: settingsManager.getGlobalChatModelConfiguration(),
             webSearchToolName: settingsManager.getWebSearchToolName(),
             webSearchMaxResults: settingsManager.getWebSearchMaxResults(),
             availableSearchTools: settingsManager.getAvailableSearchTools(),

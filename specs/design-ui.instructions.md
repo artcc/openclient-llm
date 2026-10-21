@@ -53,6 +53,13 @@ description: "Use when changing OpenClient SwiftUI visuals, interaction feedback
 - Preserve sufficient contrast, Dynamic Type reflow, text selection where expected, and platform-appropriate target sizes.
 - Do not encode meaning solely through color or animation.
 
+## Model Parameter Editor
+
+- Settings > Chat and each chat's Model Parameters action share the same modal editor and controls. The global editor saves
+  installation defaults; the chat editor saves only conversation overrides. Save the four options together on Done; Reset
+  clears the draft and takes effect on Done. Dismissing without Done discards edits. Explain whole-block precedence in the
+  editor, and show conversation cost only when opened from a chat with available pricing and usage.
+
 ## Visible States
 
 - New or materially changed primary surfaces must distinguish loading, unavailable, empty, and failed states rather than
