@@ -53,6 +53,7 @@ extension ChatInputBarView {
     var canShowMCPTip: Bool {
         !state.isStreaming
             && !state.isRecording
+            && !state.isStartingRecording
             && !state.isTranscribing
             && !state.isSearchingWeb
             && hasAvailableMCPTool

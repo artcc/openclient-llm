@@ -66,6 +66,15 @@ applyTo: "{openclient-llm/Shared/Features/Chat/**/*.swift,openclient-llm/Shared/
 - Reflect action availability explicitly. Sending, stopping, attaching, speaking, and tool-related controls must match the
   current model selection, input, permission, capability, and streaming state.
 - Preserve draft content and pending attachments across incidental layout or focus changes.
+- Audio recording has a cancellable starting state while microphone authorization is pending. Show the recording
+  indicator only after capture starts successfully, and measure duration from the recorder rather than wall-clock time.
+- Starting, recording, and transcribing block duplicate starts, sending, and app handoff. Recording failures and
+  interruptions restore the composer with a localized, actionable error; stopping or cancelling releases capture resources.
+- Conversation changes, initial-data reloads, app-data resets, and view disappearance cancel the entire audio operation.
+  Permission and transcription completions from an invalidated operation cannot affect the current conversation or draft.
+  A transcription must not overwrite draft edits made while it was pending.
+- Local Apple speech recognition waits for a final result or error, resumes its caller once, and cancels the underlying
+  recognition task when its caller cancels.
 
 ## Streaming Stability
 

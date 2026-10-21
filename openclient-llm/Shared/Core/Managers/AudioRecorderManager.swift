@@ -6,7 +6,6 @@
 //  Copyright © 2026 Arturo Carretero Calvo. All rights reserved.
 //
 
-import AVFoundation
 import Foundation
 
 @MainActor
@@ -14,127 +13,106 @@ protocol AudioRecorderManagerProtocol: AnyObject {
     var isRecording: Bool { get }
     var recordingDuration: TimeInterval { get }
 
-    func startRecording()
-    func stopRecording() -> (data: Data?, duration: TimeInterval)
+    func startRecording() async throws
+    func stopRecording() throws -> (data: Data?, duration: TimeInterval)
     func cancelRecording()
 }
 
-@Observable
+enum AudioRecordingError: LocalizedError, Equatable {
+    case permissionDenied
+    case startFailed
+    case interrupted
+    case readFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .permissionDenied:
+            String(localized: "Microphone access is denied. Allow OpenClient to use the microphone in Settings.")
+        case .startFailed:
+            String(localized: "Audio recording could not start. Check your microphone and try again.")
+        case .interrupted:
+            String(localized: "Audio recording was interrupted. Please try again.")
+        case .readFailed:
+            String(localized: "The audio recording could not be read. Please try again.")
+        }
+    }
+}
+
 @MainActor
 final class AudioRecorderManager: AudioRecorderManagerProtocol {
     // MARK: - Properties
 
-    private(set) var isRecording: Bool = false
-    private(set) var recordingDuration: TimeInterval = 0
-
-    private var audioRecorder: AVAudioRecorder?
+    private let session: AudioRecordingSessionProtocol
     private var recordingURL: URL?
-    private var startTime: Date?
+    private var pendingStartID: UUID?
+
+    var isRecording: Bool { session.isRecording }
+    var recordingDuration: TimeInterval { session.currentTime }
+
+    // MARK: - Init
+
+    init(session: AudioRecordingSessionProtocol = AudioRecordingSession()) {
+        self.session = session
+    }
+
+    isolated deinit {
+        cancelRecording()
+    }
 
     // MARK: - Public
 
-    func startRecording() {
+    func startRecording() async throws {
+        try Task.checkCancellation()
+        guard pendingStartID == nil, recordingURL == nil else { throw AudioRecordingError.startFailed }
+        let startID = UUID()
+        pendingStartID = startID
+        defer {
+            if pendingStartID == startID { pendingStartID = nil }
+        }
+
+        let isAuthorized = await session.requestPermission()
+        try Task.checkCancellation()
+        guard pendingStartID == startID else { throw CancellationError() }
+        guard isAuthorized else { throw AudioRecordingError.permissionDenied }
+
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("recording_\(UUID().uuidString).m4a")
-
-        let settings: [String: Any] = [
-            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 44100,
-            AVNumberOfChannelsKey: 1,
-            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-        ]
-
-        #if os(iOS)
-        configureAudioSession()
-        #endif
-
+        recordingURL = url
         do {
-            audioRecorder = try AVAudioRecorder(url: url, settings: settings)
-            audioRecorder?.record()
-            recordingURL = url
-            startTime = Date()
-            isRecording = true
-            startDurationTracking()
+            guard try session.record(to: url), session.isRecording else { throw AudioRecordingError.startFailed }
         } catch {
-            LogManager.error("Failed to start recording: \(error.localizedDescription)")
+            cancelRecording()
+            throw AudioRecordingError.startFailed
         }
     }
 
-    func stopRecording() -> (data: Data?, duration: TimeInterval) {
-        guard let recorder = audioRecorder, recorder.isRecording else {
-            return (nil, 0)
+    func stopRecording() throws -> (data: Data?, duration: TimeInterval) {
+        defer { cancelRecording() }
+        guard let url = recordingURL else { return (nil, 0) }
+        guard session.isRecording else { throw AudioRecordingError.interrupted }
+        // AVAudioRecorder resets currentTime when stopped; capture the actual audio duration first.
+        let duration = session.currentTime
+        session.stop()
+        do {
+            let data = try Data(contentsOf: url)
+            guard !data.isEmpty else { throw AudioRecordingError.readFailed }
+            return (data, duration)
+        } catch {
+            throw AudioRecordingError.readFailed
         }
-
-        recorder.stop()
-        isRecording = false
-        recordingDuration = 0
-
-        #if os(iOS)
-        deactivateAudioSession()
-        #endif
-
-        let duration = startTime.map { Date().timeIntervalSince($0) } ?? 0
-
-        guard let url = recordingURL else {
-            return (nil, 0)
-        }
-
-        let data = try? Data(contentsOf: url)
-        try? FileManager.default.removeItem(at: url)
-        recordingURL = nil
-        audioRecorder = nil
-        startTime = nil
-
-        return (data, duration)
     }
 
     func cancelRecording() {
-        guard let recorder = audioRecorder else { return }
-        recorder.stop()
-        isRecording = false
-        recordingDuration = 0
-        if let url = recordingURL {
-            try? FileManager.default.removeItem(at: url)
-        }
+        pendingStartID = nil
+        session.stop()
+        guard let url = recordingURL else { return }
         recordingURL = nil
-        audioRecorder = nil
-        startTime = nil
-        #if os(iOS)
-        deactivateAudioSession()
-        #endif
-    }
-}
-
-// MARK: - Private
-
-private extension AudioRecorderManager {
-    func startDurationTracking() {
-        Task {
-            while isRecording {
-                try? await Task.sleep(for: .milliseconds(500))
-                recordingDuration = startTime.map { Date().timeIntervalSince($0) } ?? 0
-            }
-        }
-    }
-
-    #if os(iOS)
-    func configureAudioSession() {
-        let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
-            try session.setActive(true)
+            try FileManager.default.removeItem(at: url)
+        } catch CocoaError.fileNoSuchFile {
+            // A failed recorder initialization may not have created a file.
         } catch {
-            LogManager.error("Failed to configure audio session: \(error.localizedDescription)")
+            LogManager.error("Failed to remove a temporary audio recording")
         }
     }
-
-    func deactivateAudioSession() {
-        let session = AVAudioSession.sharedInstance()
-        do {
-            try session.setActive(false, options: .notifyOthersOnDeactivation)
-        } catch {
-            LogManager.error("Failed to deactivate audio session: \(error.localizedDescription)")
-        }
-    }
-    #endif
 }

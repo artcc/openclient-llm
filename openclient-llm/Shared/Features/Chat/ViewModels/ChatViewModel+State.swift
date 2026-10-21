@@ -37,6 +37,7 @@ extension ChatViewModel {
         var isSpeaking: Bool = false
         var speakingMessageId: UUID?
         var isRecording: Bool = false
+        var isStartingRecording: Bool = false
         var recordingDuration: TimeInterval = 0
         var isTranscribing: Bool = false
         var showTokenUsage: Bool = true
