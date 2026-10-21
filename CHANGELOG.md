@@ -7,11 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## [1.7.30-build-125] - Unreleased
+## [1.7.30-build-127] - 2026-10-21
 
 ### Added
 
 - Global model parameters in Settings > Chat provide defaults for temperature, maximum response tokens, Top P, and context window, while chats with custom options use their own complete configuration.
+- Background-interrupted responses now show a saved interruption status and a manual retry action, including when no text has arrived yet.
 
 ### Fixed
 
@@ -19,6 +20,7 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 - Audio recording now reports startup failures and interruptions, measures captured audio duration, and releases recording resources when stopped or cancelled.
 - Pending recording and transcription operations are cancelled when leaving or switching chats, preventing late results from changing another conversation or overwriting draft edits.
 - Apple speech recognition now waits for a final result and cancels the underlying recognition task when transcription is cancelled.
+- Background task expiration during final saving no longer sends an interruption notification for a generation that has already ended.
 
 ## [1.7.25-build-123] - 2026-10-14
 

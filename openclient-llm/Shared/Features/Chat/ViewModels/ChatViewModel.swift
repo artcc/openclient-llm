@@ -39,6 +39,7 @@ final class ChatViewModel {
         case exportConversation
         case exportDataConsumed
         case regenerateLastResponse
+        case retryInterruptedResponse(UUID)
         case editMessage(id: UUID, newContent: String)
         case forkFromMessage(UUID)
         case branchedConversationConsumed
@@ -289,7 +290,7 @@ final class ChatViewModel {
             handleConfigurationEvent(event)
         case .startRecordingTapped, .stopRecordingTapped, .cancelRecordingTapped:
             handleRecordingEvent(event)
-        case .exportConversation, .exportDataConsumed, .regenerateLastResponse,
+        case .exportConversation, .exportDataConsumed, .regenerateLastResponse, .retryInterruptedResponse,
              .editMessage, .forkFromMessage, .branchedConversationConsumed, .toggleFavourite:
             handlePhase6Event(event)
         case .webSearchToggled:

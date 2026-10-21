@@ -192,6 +192,8 @@ extension ChatViewModel {
             clearExportedData()
         case .regenerateLastResponse:
             regenerateLastResponse()
+        case .retryInterruptedResponse(let messageId):
+            retryInterruptedResponse(messageId)
         case .editMessage(let id, let newContent):
             editAndResend(id: id, newContent: newContent)
         case .forkFromMessage(let messageId):

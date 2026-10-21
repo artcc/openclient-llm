@@ -59,6 +59,10 @@ extension ChatViewModel {
             self.activeAssistantMessageId = nil
             self.activeModelConfiguration = nil
             guard case .loaded(var currentState) = self.state else { return }
+            let wasGenerating = currentState.isStreaming
+            if wasGenerating, let index = currentState.messages.firstIndex(where: { $0.id == assistantMessageId }) {
+                currentState.messages[index].responseInterruption = .backgroundTaskEnded
+            }
             currentState.isStreaming = false
             currentState.isSearchingWeb = false
             currentState.activeToolCallIds = []
@@ -66,7 +70,7 @@ extension ChatViewModel {
             self.refreshContextUsage(in: &currentState)
             self.state = .loaded(currentState)
             self.scheduleConversationPersistence()
-            self.notifyStreamingCompletedUseCase.executeExpired()
+            if wasGenerating { self.notifyStreamingCompletedUseCase.executeExpired() }
         }
     }
 

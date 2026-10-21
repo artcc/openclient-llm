@@ -22,6 +22,10 @@ description: "Use when changing automatic agent routing, tool registration, tool
 - For streaming rounds, discard provisional progress as soon as the first decoded tool-call delta is detected and suppress
   subsequent text and reasoning from that round, even if validation or transport later fails. Tool detection does not
   authorize execution. Interrupted text-only responses may retain their partial content.
+- A background-interrupted visible response may retain an interruption marker even with no content. Its manual retry uses
+  existing response regeneration, not edit-and-resend: retain completed tool transcripts and per-turn image reservations,
+  and preserve the existing image-edit/native-restart restrictions. Never restore discarded provisional text or execute
+  incomplete tool calls when displaying or retrying that response.
 
 ## Tool Protocol And Transcript
 

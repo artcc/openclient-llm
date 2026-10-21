@@ -66,6 +66,10 @@ Version 1 rules:
 - The optional `imageOperationAttempted` string records `generation`, `editing`, or `unknown`. Missing values remain nil;
   unrecognized future strings decode as `unknown` without losing the reservation. Import and branching preserve this local
   metadata, which is not model-facing content. A legacy Boolean reservation without identifiable operation remains consumed.
+- The optional message `responseInterruption` string records `backgroundTaskEnded` or `unknown`. Missing values remain nil;
+  future string values decode as `unknown` without invalidating the conversation. It is presentation metadata for a visible
+  assistant response, not model-facing content or evidence of a currently running task. Import and branching preserve it,
+  including on an empty assistant placeholder; neither operation starts or retries a request.
 
 ## Current Importer Behavior
 
