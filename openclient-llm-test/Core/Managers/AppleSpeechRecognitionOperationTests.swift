@@ -11,14 +11,16 @@ import XCTest
 
 @MainActor
 final class AppleSpeechRecognitionOperationTests: XCTestCase {
-    func test_run_nonFinalCallbacks_waitsForFinalResult() async throws {
+    func test_run_backgroundNonFinalCallbacks_waitsForFinalResult() async throws {
         let sut = AppleSpeechRecognitionOperation()
         var cancelled = false
 
         let text = try await sut.run { completion in
-            completion("Partial", false, nil)
-            completion(nil, false, nil)
-            completion("Final text", true, nil)
+            DispatchQueue.global().async {
+                completion("Partial", false, nil)
+                completion(nil, false, nil)
+                completion("Final text", true, nil)
+            }
             return { cancelled = true }
         }
 

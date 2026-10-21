@@ -37,7 +37,7 @@ final class AppleSpeechRecognitionManager: AppleSpeechRecognitionManagerProtocol
         let operation = AppleSpeechRecognitionOperation()
         defer { withExtendedLifetime(recognizer) {} }
         return try await operation.run { completion in
-            let task = recognizer.recognitionTask(with: request) { result, error in
+            let task = recognizer.recognitionTask(with: request) { @Sendable result, error in
                 completion(result?.bestTranscription.formattedString, result?.isFinal ?? false, error)
             }
             return { task.cancel() }
@@ -50,7 +50,8 @@ final class AppleSpeechRecognitionManager: AppleSpeechRecognitionManagerProtocol
 private extension AppleSpeechRecognitionManager {
     func requestAuthorization() async throws {
         let status: SFSpeechRecognizerAuthorizationStatus = await withCheckedContinuation { continuation in
-            SFSpeechRecognizer.requestAuthorization { status in
+            // Speech invokes this callback on a background queue; it must not inherit MainActor isolation.
+            SFSpeechRecognizer.requestAuthorization { @Sendable status in
                 continuation.resume(returning: status)
             }
         }
