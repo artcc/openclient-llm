@@ -18,6 +18,7 @@ struct ChatMessageListState: Equatable {
     let showTokenUsage: Bool
     let isRunningTool: Bool
     let canFork: Bool
+    let canRetryInterruptedResponse: Bool
     let scrollSnapshot: ChatScrollState.Snapshot
 
     init(loadedState: ChatViewModel.LoadedState) {
@@ -29,7 +30,8 @@ struct ChatMessageListState: Equatable {
                 && message.content.isEmpty
                 && (message.reasoningContent ?? "").isEmpty
                 && message.attachments.isEmpty
-            return !isEmptyAssistant || (loadedState.isStreaming && message.id == lastMessageId)
+            return !isEmptyAssistant || message.isInterruptedResponse
+                || (loadedState.isStreaming && message.id == lastMessageId)
         }
         selectedModel = loadedState.selectedModel
         conversationStarters = loadedState.conversationStarters
@@ -39,6 +41,7 @@ struct ChatMessageListState: Equatable {
         showTokenUsage = loadedState.showTokenUsage
         isRunningTool = !loadedState.activeToolCallIds.isEmpty
         canFork = loadedState.conversation != nil
+        canRetryInterruptedResponse = loadedState.canRetryInterruptedResponse
         scrollSnapshot = ChatScrollState.Snapshot(loadedState: loadedState)
     }
 }

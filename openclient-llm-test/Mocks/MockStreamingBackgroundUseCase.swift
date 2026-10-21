@@ -17,7 +17,7 @@ final class MockStreamingBackgroundUseCase: StreamingBackgroundUseCaseProtocol {
     private(set) var phases: [StreamingBackgroundPhase] = []
     private(set) var completionResults: [Bool] = []
     var onEnd: ((Bool) -> Void)?
-    private var expirationHandler: (@MainActor @Sendable () -> Void)?
+    private(set) var expirationHandler: (@MainActor @Sendable () -> Void)?
     private(set) var isActive = false
     var shouldSendCompletionNotification = true
 

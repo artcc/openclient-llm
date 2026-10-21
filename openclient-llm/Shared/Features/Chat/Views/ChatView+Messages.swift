@@ -33,6 +33,7 @@ extension ChatView {
                         hasTTS: state.hasTTS,
                         showTokenUsage: state.showTokenUsage,
                         isLastMessage: isLast,
+                        isInterruptedRetryEnabled: state.canRetryInterruptedResponse,
                         isRunningTool: isLast && state.isRunningTool,
                         showsMessageActionsTip: message.id == tipMessageId && !state.isStreaming,
                         onSpeakTapped: { viewModel.send(.speakMessageTapped(message)) },
@@ -42,7 +43,7 @@ extension ChatView {
                             editingMessageText = message.content
                         } : nil,
                         onRegenerateTapped: (message.role == .assistant && isLast) ? {
-                            viewModel.send(.regenerateLastResponse)
+                            regenerateResponse(for: message)
                         } : nil,
                         onForkTapped: state.canFork ? {
                             viewModel.send(.forkFromMessage(message.id))
@@ -70,7 +71,15 @@ extension ChatView {
             && message.content.isEmpty
             && (message.reasoningContent ?? "").isEmpty
             && message.attachments.isEmpty
-        return !isEmptyAssistant || isStreaming
+        return !isEmptyAssistant || isStreaming || message.isInterruptedResponse
+    }
+
+    private func regenerateResponse(for message: ChatMessage) {
+        if message.isInterruptedResponse {
+            viewModel.send(.retryInterruptedResponse(message.id))
+        } else {
+            viewModel.send(.regenerateLastResponse)
+        }
     }
 
     func handleSend(_ text: String) {

@@ -26,6 +26,16 @@ nonisolated struct ChatMessage: Identifiable, Equatable, Sendable, Codable {
     /// Local per-user-turn reservation, independent of tool transcript delivery.
     var imageGenerationAttempted: Bool?
     var imageOperationAttempted: ImageOperation?
+    var responseInterruption: ResponseInterruption?
+
+    enum ResponseInterruption: String, Sendable, Codable {
+        case backgroundTaskEnded
+        case unknown
+    }
+
+    var isInterruptedResponse: Bool {
+        role == .assistant && (toolCalls?.isEmpty ?? true) && responseInterruption != nil
+    }
 
     enum ImageOperation: String, Sendable, Codable, Hashable {
         case generation
@@ -56,7 +66,8 @@ nonisolated struct ChatMessage: Identifiable, Equatable, Sendable, Codable {
         toolName: String? = nil,
         isFavourite: Bool = false,
         imageGenerationAttempted: Bool? = nil,
-        imageOperationAttempted: ImageOperation? = nil
+        imageOperationAttempted: ImageOperation? = nil,
+        responseInterruption: ResponseInterruption? = nil
     ) {
         self.id = id
         self.role = role
@@ -72,6 +83,7 @@ nonisolated struct ChatMessage: Identifiable, Equatable, Sendable, Codable {
         self.isFavourite = isFavourite
         self.imageGenerationAttempted = imageGenerationAttempted
         self.imageOperationAttempted = imageOperationAttempted
+        self.responseInterruption = responseInterruption
     }
 
     func hasSameRequestContent(as other: ChatMessage) -> Bool {
@@ -109,6 +121,8 @@ nonisolated struct ChatMessage: Identifiable, Equatable, Sendable, Codable {
         imageGenerationAttempted = try container.decodeIfPresent(Bool.self, forKey: .imageGenerationAttempted)
         imageOperationAttempted = try container.decodeIfPresent(String.self, forKey: .imageOperationAttempted)
             .map { ImageOperation(rawValue: $0) ?? .unknown }
+        responseInterruption = try container.decodeIfPresent(String.self, forKey: .responseInterruption)
+            .map { ResponseInterruption(rawValue: $0) ?? .unknown }
     }
 }
 
@@ -231,5 +245,6 @@ private extension ChatMessage {
         case isFavourite
         case imageGenerationAttempted
         case imageOperationAttempted
+        case responseInterruption
     }
 }

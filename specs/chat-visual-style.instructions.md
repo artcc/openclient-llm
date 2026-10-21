@@ -88,6 +88,19 @@ applyTo: "{openclient-llm/Shared/Features/Chat/**/*.swift,openclient-llm/Shared/
 - Keep message identity and row layout stable throughout reasoning, tool execution, answer generation, cancellation, error,
   and completion.
 - Finalization must remove transient streaming presentation and render the final assistant Markdown without losing content.
+- When a background task ends while generation is still active, retain the visible assistant message, including an empty
+  placeholder, and mark it as interrupted. Present that status separately from model content and keep it when reopening a
+  successfully saved conversation. Private Chat retains it only in memory. The system callback can also indicate user
+  cancellation through the system activity; do not claim that a timeout caused it.
+- Offer an explicit retry on the last interrupted response, including responses with no text. Revalidate the message ID,
+  idle generation, selected model, composer availability, and handoff state when invoked. Reuse response regeneration and
+  its rules for tool transcripts, image reservations, attachments, and current effective model configuration. Never retry
+  automatically or describe a retry as resuming the original request.
+- A background task ending during final persistence must not mark an already completed or failed generation as interrupted.
+  Ordinary stop, navigation, and authorization/configuration cancellations do not imply a background-task interruption.
+- Only record observed interruptions. Do not infer them from legacy empty messages or synchronize a device's live execution
+  state as if it were a completed interruption. A process termination without a callback or before the final save may leave
+  only the preceding checkpoint.
 
 ## Scroll Follow
 

@@ -65,5 +65,10 @@ extension ChatViewModel {
         var mcpDiscoveryRevision: Int = 0
         var isLoadingMCPTools: Bool = false
         var mcpToolsError: String?
+
+        var canRetryInterruptedResponse: Bool {
+            selectedModel != nil && !isStreaming && !isPreparingAttachment
+                && !isStartingRecording && !isRecording && !isTranscribing
+        }
     }
 }
