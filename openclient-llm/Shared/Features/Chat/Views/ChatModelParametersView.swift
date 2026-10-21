@@ -55,7 +55,7 @@ struct ChatModelParametersView: View {
             #endif
         }
         #if os(macOS)
-        .frame(width: 500, height: 460)
+        .frame(width: isGlobal ? 700 : 500, height: isGlobal ? 500 : 460)
         #endif
         .task {
             loadCurrentParameters()
