@@ -27,6 +27,7 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     var lastSuccessfulCloudSyncDate: Date?
     var acceptedCloudAccountFingerprint: String?
     var showTokenUsage: Bool = true
+    var globalChatModelConfiguration: ChatModelConfiguration = .default
     var isWebSearchEnabled: Bool = false
     var webSearchToolName: String = "brave-search"
     var webSearchMaxResults: Int = 10
@@ -47,6 +48,14 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     var deleteAllCalled: Bool = false
 
     // MARK: - Public
+
+    func getGlobalChatModelConfiguration() -> ChatModelConfiguration {
+        globalChatModelConfiguration
+    }
+
+    func setGlobalChatModelConfiguration(_ configuration: ChatModelConfiguration) {
+        globalChatModelConfiguration = configuration
+    }
 
     func getIsOnboardingCompleted() -> Bool {
         isOnboardingCompleted
@@ -322,6 +331,7 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     }
 
     func deleteAll() {
+        globalChatModelConfiguration = .default
         isOnboardingCompleted = false
         serverBaseURL = ""
         apiKey = ""

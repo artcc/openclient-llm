@@ -21,6 +21,11 @@ extension SettingsViewModel {
             handlePreferenceToggleEvent(event)
         case .appIconSelected(let icon):
             changeAppIcon(to: icon)
+        case .modelConfigurationChanged(let configuration):
+            guard case .loaded(var loadedState) = state else { return }
+            settingsManager.setGlobalChatModelConfiguration(configuration)
+            loadedState.modelConfiguration = settingsManager.getGlobalChatModelConfiguration()
+            state = .loaded(loadedState)
         case .webSearchToolNameChanged, .webSearchMaxResultsChanged, .fetchSearchToolsTapped,
              .fetchMCPToolsTapped, .mcpToolToggled, .mcpToolsToggled,
              .mcpToolPermissionChanged, .mcpToolsPermissionChanged:

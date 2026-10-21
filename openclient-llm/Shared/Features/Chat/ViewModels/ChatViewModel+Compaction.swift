@@ -168,7 +168,7 @@ private extension ChatViewModel {
         guard case .loaded(var currentState) = state,
               isActiveStream(sendContext.assistantId),
               currentState.selectedModel?.id == sendContext.modelId,
-              currentState.contextWindowTokens == sendContext.contextWindowTokens,
+              currentState.modelConfiguration == sendContext.conversationConfiguration,
               currentState.conversation?.contextSummary == expectedSummary,
               currentState.conversation?.contextSummaryCursorMessageId == expectedCursorMessageId,
               hasSameRequestMessages(currentState.messages, as: sendContext) else {
@@ -197,7 +197,7 @@ private extension ChatViewModel {
         guard case .loaded(let persistedState) = state,
               isActiveStream(sendContext.assistantId),
               persistedState.selectedModel?.id == sendContext.modelId,
-              persistedState.contextWindowTokens == sendContext.contextWindowTokens,
+              persistedState.modelConfiguration == sendContext.conversationConfiguration,
               persistedState.conversation?.contextSummary == compacted.summary,
               persistedState.conversation?.contextSummaryCursorMessageId == compacted.cursorMessageId,
               hasSameRequestMessages(persistedState.messages, as: sendContext) else {

@@ -11,7 +11,10 @@ import SwiftUI
 struct ChatModelParametersView: View {
     // MARK: - Properties
 
-    var viewModel: ChatViewModel
+    let configuration: ChatModelConfiguration
+    var isGlobal = false
+    var estimatedCost: Double?
+    let onSave: (ChatModelConfiguration) -> Void
     @Binding var isPresented: Bool
 
     @State private var temperatureEnabled: Bool = false
@@ -52,7 +55,7 @@ struct ChatModelParametersView: View {
             #endif
         }
         #if os(macOS)
-        .frame(width: 500, height: 460)
+        .frame(width: isGlobal ? 700 : 500, height: isGlobal ? 500 : 460)
         #endif
         .task {
             loadCurrentParameters()
@@ -100,6 +103,12 @@ private extension ChatModelParametersView {
 
     var form: some View {
         Form {
+            Section {
+                Text(configurationDescription)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
             if let estimatedCost, estimatedCost > 0 {
                 costSection(estimatedCost)
             }
@@ -196,17 +205,13 @@ private extension ChatModelParametersView {
         }
     }
 
-    var estimatedCost: Double? {
-        guard case .loaded(let loadedState) = viewModel.state,
-              let model = loadedState.selectedModel,
-              let inputRate = model.inputCostPerToken,
-              let outputRate = model.outputCostPerToken,
-              inputRate > 0 || outputRate > 0 else { return nil }
-
-        let total = loadedState.messages.compactMap(\.tokenUsage).reduce(0.0) { acc, usage in
-            acc + Double(usage.promptTokens) * inputRate + Double(usage.completionTokens) * outputRate
+    var configurationDescription: String {
+        if isGlobal {
+            return String(localized: "Used by chats without custom model parameters.")
         }
-        return total > 0 ? total : nil
+        return String(localized: """
+        Customizing any option replaces the global settings for this chat. Reset all options to use global settings.
+        """)
     }
 
     var parsedContextWindow: Int? {
@@ -228,8 +233,7 @@ private extension ChatModelParametersView {
     }
 
     func loadCurrentParameters() {
-        guard case .loaded(let loadedState) = viewModel.state else { return }
-        let params = loadedState.modelParameters
+        let params = configuration.parameters
         if let temp = params.temperature {
             temperatureEnabled = true
             temperature = temp
@@ -242,7 +246,7 @@ private extension ChatModelParametersView {
             topPEnabled = true
             topP = top
         }
-        if let contextTokens = loadedState.contextWindowTokens {
+        if let contextTokens = configuration.contextWindowTokens {
             contextWindowEnabled = true
             contextWindowText = String(contextTokens)
         }
@@ -254,9 +258,8 @@ private extension ChatModelParametersView {
             maxTokens: maxTokensEnabled ? Int(maxTokens) : nil,
             topP: topPEnabled ? topP : nil
         )
-        viewModel.send(.modelParametersChanged(parameters))
         let contextTokens = contextWindowEnabled ? parsedContextWindow : nil
-        viewModel.send(.contextWindowChanged(contextTokens))
+        onSave(ChatModelConfiguration(parameters: parameters, contextWindowTokens: contextTokens))
     }
 
     func resetParameters() {
@@ -273,7 +276,17 @@ private extension ChatModelParametersView {
 
 #Preview {
     ChatModelParametersView(
-        viewModel: ChatViewModel(),
+        configuration: .default,
+        onSave: { _ in },
+        isPresented: .constant(true)
+    )
+}
+
+#Preview("Global Parameters") {
+    ChatModelParametersView(
+        configuration: ChatModelConfiguration(parameters: ModelParameters(maxTokens: 4096)),
+        isGlobal: true,
+        onSave: { _ in },
         isPresented: .constant(true)
     )
 }

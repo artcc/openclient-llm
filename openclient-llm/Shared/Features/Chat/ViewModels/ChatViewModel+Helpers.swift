@@ -49,13 +49,11 @@ extension ChatViewModel {
     }
 
     func updateContextWindow(_ tokens: Int?) {
-        guard case .loaded(var loadedState) = state else { return }
-        let normalizedTokens = tokens.flatMap { $0 > 0 ? $0 : nil }
-        loadedState.contextWindowTokens = normalizedTokens
-        loadedState.conversation?.contextWindowTokens = normalizedTokens
-        refreshContextUsage(in: &loadedState)
-        state = .loaded(loadedState)
-        scheduleConversationPersistence()
+        guard case .loaded(let loadedState) = state else { return }
+        updateModelConfiguration(ChatModelConfiguration(
+            parameters: loadedState.modelParameters,
+            contextWindowTokens: tokens
+        ))
     }
 
     func isActiveStream(_ assistantMessageId: UUID) -> Bool {
@@ -68,6 +66,7 @@ extension ChatViewModel {
         resetStreamingTextUpdates()
         activeAssistantMessageId = nil
         streamTask = nil
+        finishModelConfiguration()
     }
 
     func buildEffectiveSystemPrompt(
@@ -129,13 +128,14 @@ extension ChatViewModel {
         let messages = loadedState.selectedModel.map {
             ImageAttachmentContext.messagesForModel(partition.messages, model: $0)
         } ?? partition.messages
+        let configuration = activeModelConfiguration ?? effectiveModelConfiguration(for: loadedState)
         loadedState.contextUsage = ContextWindowBuilder().usage(
             messages: messages,
             systemPrompt: systemPrompt,
             summary: loadedState.conversation?.contextSummary,
             model: modelWithContextWindow(
                 loadedState.selectedModel,
-                override: loadedState.contextWindowTokens
+                override: configuration.contextWindowTokens
             ),
             tools: tools,
             compactedMessageCount: partition.compactedCount,
@@ -341,6 +341,7 @@ extension ChatViewModel {
         let retainsContextUsage = hasSameRequestMessages
             && mergedConversation.systemPrompt == loadedState.systemPrompt
             && mergedConversation.contextWindowTokens == loadedState.contextWindowTokens
+            && mergedConversation.modelParameters == loadedState.modelParameters
             && mergedConversation.modelId == loadedState.selectedModel?.id
             && mergedConversation.contextSummary == loadedState.conversation?.contextSummary
             && mergedConversation.contextSummaryCursorMessageId

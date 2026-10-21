@@ -27,6 +27,7 @@ struct SettingsView: View {
     @State private var isShowingUserProfile = false
     @State private var isShowingMemory = false
     @State private var isShowingTools = false
+    @State private var isShowingModelParameters = false
     @State var isShowingCloudData = false
     @State var isShowingHelp = false
     @State var isShowingTipJar = false
@@ -116,6 +117,16 @@ private extension SettingsView {
 #if os(macOS)
                 .frame(width: 700, height: 600)
 #endif
+        }
+        .sheet(isPresented: $isShowingModelParameters) {
+            if let loadedState = currentLoadedState {
+                ChatModelParametersView(
+                    configuration: loadedState.modelConfiguration,
+                    isGlobal: true,
+                    onSave: { viewModel.send(.modelConfigurationChanged($0)) },
+                    isPresented: $isShowingModelParameters
+                )
+            }
         }
         .sheet(isPresented: $isShowingHelp) {
             HelpView()
@@ -289,6 +300,13 @@ private extension SettingsView {
 
     func chatSection(_ loadedState: SettingsViewModel.LoadedState) -> some View {
         Section {
+            Button {
+                isShowingModelParameters = true
+            } label: {
+                settingsDestinationLabel("Model Parameters", systemImage: "slider.horizontal.3")
+            }
+            .buttonStyle(.plain)
+
             Toggle(isOn: Binding(
                 get: { loadedState.showTokenUsage },
                 set: { viewModel.send(.showTokenUsageToggled($0)) }
