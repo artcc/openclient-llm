@@ -14,8 +14,13 @@ final class MockRecordAudioUseCase: RecordAudioUseCaseProtocol {
     // MARK: - Properties
 
     var recordingDuration: TimeInterval = 0
+    var isRecording = false
 
     var startRecordingCalled = false
+    var startRecordingCallCount = 0
+    var startRecordingHandler: (() async throws -> Void)?
+    var startRecordingError: Error?
+    var stopRecordingError: Error?
     var stopRecordingCalled = false
     var cancelRecordingCalled = false
 
@@ -23,16 +28,24 @@ final class MockRecordAudioUseCase: RecordAudioUseCaseProtocol {
 
     // MARK: - RecordAudioUseCaseProtocol
 
-    func startRecording() {
+    func startRecording() async throws {
         startRecordingCalled = true
+        startRecordingCallCount += 1
+        try await startRecordingHandler?()
+        try Task.checkCancellation()
+        if let startRecordingError { throw startRecordingError }
+        isRecording = true
     }
 
-    func stopRecording() -> (data: Data?, duration: TimeInterval) {
+    func stopRecording() throws -> (data: Data?, duration: TimeInterval) {
         stopRecordingCalled = true
+        isRecording = false
+        if let stopRecordingError { throw stopRecordingError }
         return stopRecordingResult
     }
 
     func cancelRecording() {
         cancelRecordingCalled = true
+        isRecording = false
     }
 }

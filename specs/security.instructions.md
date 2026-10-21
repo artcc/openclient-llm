@@ -18,6 +18,9 @@ Apply these rules to new or materially changed paths while keeping reviews and e
   server-side secrets. Keep local secret configuration and CI credentials out of source control.
 - Apply platform data protection and least-privilege entitlements to files, App Groups, extensions, and widgets according to
   the sensitivity and required background access.
+- Microphone capture requires explicit system authorization before recording. The macOS app enables Audio Input in both
+  Debug and Release, and both app targets provide a microphone usage description. Cancelling pending authorization must
+  not start capture when a late permission response arrives.
 
 ## Logging And Diagnostics
 

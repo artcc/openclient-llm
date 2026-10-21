@@ -110,6 +110,9 @@ final class ChatViewModel {
     var backgroundPersistenceFingerprint: Int?
     var errorDismissTask: Task<Void, Never>?
     var durationTrackingTask: Task<Void, Never>?
+    var recordingStartTask: Task<Void, Never>?
+    var transcriptionTask: Task<Void, Never>?
+    var audioGeneration = 0
     var mcpSettingsObservationTask: Task<Void, Never>?
     var builtInToolSettingsObservationTask: Task<Void, Never>?
     var mcpDiscoveryTask: Task<Void, Never>?
@@ -210,6 +213,10 @@ final class ChatViewModel {
     }
 
     isolated deinit {
+        recordingStartTask?.cancel()
+        transcriptionTask?.cancel()
+        durationTrackingTask?.cancel()
+        recordAudioUseCase.cancelRecording()
         attachmentPreparationTask?.cancel()
         streamingUpdateBuffer.flushTask?.cancel()
         backgroundPersistenceCheckpointTask?.cancel()
@@ -226,6 +233,7 @@ final class ChatViewModel {
     func send(_ event: Event) {
         guard !isPreparingAppHandoff else { return }
         if case .viewDisappeared = event {
+            cancelRecording()
             cancelAttachmentPreparation()
             stopStreaming()
             loadTask?.cancel()
@@ -306,6 +314,7 @@ final class ChatViewModel {
 private extension ChatViewModel {
 
     func loadInitialData() {
+        cancelRecording()
         cancelAttachmentPreparation()
         cancelActiveStreaming()
         loadTask?.cancel()
@@ -361,6 +370,7 @@ private extension ChatViewModel {
     }
 
     func loadConversation(_ conversation: Conversation) {
+        cancelRecording()
         cancelAttachmentPreparation()
         cancelActiveStreaming()
         guard case .loaded(var loadedState) = state else {

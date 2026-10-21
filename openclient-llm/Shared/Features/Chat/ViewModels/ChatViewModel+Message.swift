@@ -41,7 +41,8 @@ extension ChatViewModel {
 
     func sendMessage() {
         guard case .loaded(var loadedState) = state else { return }
-        guard !loadedState.isPreparingAttachment else { return }
+        guard !loadedState.isPreparingAttachment,
+              !loadedState.isStartingRecording, !loadedState.isRecording, !loadedState.isTranscribing else { return }
         let text = loadedState.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || !loadedState.pendingAttachments.isEmpty,
               let model = loadedState.selectedModel else { return }

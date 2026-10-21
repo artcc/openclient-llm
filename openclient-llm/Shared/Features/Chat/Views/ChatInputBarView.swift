@@ -68,7 +68,9 @@ struct ChatInputBarView: View {
                 }
 
                 ZStack {
-                    if state.isRecording {
+                    if state.isStartingRecording {
+                        startingRecordingBar
+                    } else if state.isRecording {
                         recordingBar
                             .transition(.asymmetric(
                                 insertion: .push(from: .trailing).combined(with: .opacity),
@@ -476,6 +478,7 @@ private extension ChatInputBarView {
         state.selectedModel != nil
             && !state.isStreaming
             && !state.isRecording
+            && !state.isStartingRecording
             && !state.isTranscribing
             && !state.isSearchingWeb
     }

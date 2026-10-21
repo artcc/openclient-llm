@@ -15,85 +15,123 @@ extension ChatViewModel {
     private static let minimumRecordingDuration: TimeInterval = 0.3
 
     func startRecording() {
-        guard case .loaded(var loadedState) = state else { return }
-        recordAudioUseCase.startRecording()
-        loadedState.isRecording = true
-        loadedState.recordingDuration = 0
+        guard case .loaded(var loadedState) = state,
+              !loadedState.isStartingRecording, !loadedState.isRecording,
+              !loadedState.isTranscribing, !loadedState.isStreaming,
+              !loadedState.isPreparingAttachment,
+              loadedState.selectedModel != nil, loadedState.transcriptionModelId != nil else { return }
+        loadedState.isStartingRecording = true
+        loadedState.errorMessage = nil
         state = .loaded(loadedState)
-        startDurationTracking()
+        let generation = audioGeneration
+        let useCase = recordAudioUseCase
+        recordingStartTask = Task { [weak self] in
+            do {
+                try await useCase.startRecording()
+                guard !Task.isCancelled, let self, audioGeneration == generation else { return }
+                recordingStartTask = nil
+                guard case .loaded(var currentState) = state else {
+                    cancelRecording()
+                    return
+                }
+                currentState.isStartingRecording = false
+                currentState.isRecording = true
+                currentState.recordingDuration = 0
+                state = .loaded(currentState)
+                startDurationTracking()
+            } catch {
+                guard !Task.isCancelled, let self, audioGeneration == generation else { return }
+                cancelRecording()
+                if !(error is CancellationError) { showAudioError(error) }
+            }
+        }
     }
 
     func stopRecording() {
+        guard case .loaded(var loadedState) = state else { return }
+        if loadedState.isStartingRecording {
+            cancelRecording()
+            return
+        }
+        guard loadedState.isRecording else { return }
         durationTrackingTask?.cancel()
         durationTrackingTask = nil
-        let result = recordAudioUseCase.stopRecording()
-        guard case .loaded(var loadedState) = state else { return }
         loadedState.isRecording = false
         loadedState.recordingDuration = 0
         state = .loaded(loadedState)
-        guard let data = result.data else { return }
-        transcribeAudio(data: data, duration: result.duration)
+        do {
+            let result = try recordAudioUseCase.stopRecording()
+            guard let data = result.data else { throw AudioRecordingError.readFailed }
+            transcribeAudio(data: data, duration: result.duration)
+        } catch {
+            recordAudioUseCase.cancelRecording()
+            showAudioError(error)
+        }
     }
 
+    /// Invalidates the entire audio operation, including permission and transcription completions.
     func cancelRecording() {
+        audioGeneration += 1
+        recordingStartTask?.cancel()
+        recordingStartTask = nil
+        transcriptionTask?.cancel()
+        transcriptionTask = nil
         durationTrackingTask?.cancel()
         durationTrackingTask = nil
         recordAudioUseCase.cancelRecording()
         guard case .loaded(var loadedState) = state else { return }
+        loadedState.isStartingRecording = false
         loadedState.isRecording = false
         loadedState.recordingDuration = 0
+        loadedState.isTranscribing = false
         state = .loaded(loadedState)
     }
 
     func transcribeAudio(data: Data, duration: TimeInterval) {
-        guard case .loaded(var loadedState) = state else { return }
-
-        guard duration >= Self.minimumRecordingDuration, !data.isEmpty else {
-            LogManager.warning("transcribeAudio: recording too short (\(String(format: "%.2f", duration))s), ignoring")
+        guard case .loaded(var loadedState) = state, !loadedState.isTranscribing else { return }
+        guard duration >= Self.minimumRecordingDuration, !data.isEmpty else { return }
+        guard let modelId = loadedState.transcriptionModelId else {
+            showAudioErrorMessage(String(localized: "No speech-to-text model is available."))
             return
         }
-
-        guard let transcriptionModelId = loadedState.transcriptionModelId else {
-            LogManager.warning("transcribeAudio: no audioTranscription model available")
-            loadedState.errorMessage = String(
-                localized: "No speech-to-text model available. Configure a Whisper model in LiteLLM."
-            )
-            state = .loaded(loadedState)
-            scheduleErrorDismiss()
-            return
-        }
-        let durationStr = String(format: "%.1f", duration)
-        LogManager.info(
-            "transcribeAudio model=\(transcriptionModelId) data=\(data.count) bytes duration=\(durationStr)s"
-        )
         loadedState.isTranscribing = true
         state = .loaded(loadedState)
-        Task { await performTranscription(data: data, duration: duration, modelId: transcriptionModelId) }
-    }
-
-    func performTranscription(data: Data, duration: TimeInterval, modelId: String) async {
-        do {
-            LogManager.debug("performTranscription model=\(modelId)")
-            let text = try await transcribeAudioUseCase.execute(
-                audioData: data,
-                model: modelId,
-                language: nil,
-                fileName: "recording.m4a"
-            )
-            guard case .loaded(var currentState) = state else { return }
-            currentState.inputText = text
-            currentState.inputRevision += 1
-            currentState.isTranscribing = false
-            state = .loaded(currentState)
-            triggerHapticFeedbackUseCase.lightImpact()
-            LogManager.success("performTranscription done chars=\(text.count)")
-        } catch {
-            LogManager.error("performTranscription failed: \(error)")
-            guard case .loaded(var currentState) = state else { return }
-            currentState.isTranscribing = false
-            currentState.errorMessage = error.localizedDescription
-            state = .loaded(currentState)
-            scheduleErrorDismiss()
+        let generation = audioGeneration
+        let inputText = loadedState.inputText
+        let inputRevision = loadedState.inputRevision
+        let useCase = transcribeAudioUseCase
+        transcriptionTask = Task { [weak self] in
+            do {
+                let text = try await useCase.execute(
+                    audioData: data, model: modelId, language: nil, fileName: "recording.m4a"
+                )
+                guard !Task.isCancelled, let self, audioGeneration == generation,
+                      case .loaded(var currentState) = state else { return }
+                transcriptionTask = nil
+                currentState.isTranscribing = false
+                guard currentState.inputText == inputText, currentState.inputRevision == inputRevision else {
+                    state = .loaded(currentState)
+                    showAudioErrorMessage(String(
+                        localized: "The draft changed during transcription. Please record again."
+                    ))
+                    return
+                }
+                currentState.inputText = text
+                currentState.inputRevision += 1
+                state = .loaded(currentState)
+                triggerHapticFeedbackUseCase.lightImpact()
+            } catch {
+                guard !Task.isCancelled, let self, audioGeneration == generation,
+                      case .loaded(var currentState) = state else { return }
+                transcriptionTask = nil
+                currentState.isTranscribing = false
+                state = .loaded(currentState)
+                if !(error is CancellationError) {
+                    let message = (error as? AppleSpeechError)?.localizedDescription
+                        ?? String(localized: "Audio transcription failed. Please try again.")
+                    showAudioErrorMessage(message)
+                }
+            }
         }
     }
 
@@ -105,19 +143,42 @@ extension ChatViewModel {
         default: break
         }
     }
+
+    func refreshRecordingState() {
+        guard case .loaded(var loadedState) = state, loadedState.isRecording else { return }
+        guard recordAudioUseCase.isRecording else {
+            cancelRecording()
+            showAudioError(AudioRecordingError.interrupted)
+            return
+        }
+        loadedState.recordingDuration = recordAudioUseCase.recordingDuration
+        state = .loaded(loadedState)
+    }
 }
 
 // MARK: - Private
 
 private extension ChatViewModel {
     func startDurationTracking() {
-        durationTrackingTask = Task {
+        durationTrackingTask?.cancel()
+        durationTrackingTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(500))
-                guard !Task.isCancelled, case .loaded(var loadedState) = state else { break }
-                loadedState.recordingDuration = recordAudioUseCase.recordingDuration
-                state = .loaded(loadedState)
+                do { try await Task.sleep(for: .milliseconds(500)) } catch { return }
+                guard !Task.isCancelled, let self else { return }
+                refreshRecordingState()
             }
         }
+    }
+
+    func showAudioError(_ error: Error) {
+        let recordingError = error as? AudioRecordingError ?? .startFailed
+        showAudioErrorMessage(recordingError.localizedDescription)
+    }
+
+    func showAudioErrorMessage(_ message: String) {
+        guard case .loaded(var loadedState) = state else { return }
+        loadedState.errorMessage = message
+        state = .loaded(loadedState)
+        scheduleErrorDismiss()
     }
 }

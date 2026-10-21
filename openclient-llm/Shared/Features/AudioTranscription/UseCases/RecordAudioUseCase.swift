@@ -10,10 +10,11 @@ import Foundation
 
 @MainActor
 protocol RecordAudioUseCaseProtocol: AnyObject {
+    var isRecording: Bool { get }
     var recordingDuration: TimeInterval { get }
 
-    func startRecording()
-    func stopRecording() -> (data: Data?, duration: TimeInterval)
+    func startRecording() async throws
+    func stopRecording() throws -> (data: Data?, duration: TimeInterval)
     func cancelRecording()
 }
 
@@ -23,6 +24,7 @@ final class RecordAudioUseCase: RecordAudioUseCaseProtocol {
 
     private let manager: AudioRecorderManagerProtocol
 
+    var isRecording: Bool { manager.isRecording }
     var recordingDuration: TimeInterval { manager.recordingDuration }
 
     // MARK: - Init
@@ -33,12 +35,12 @@ final class RecordAudioUseCase: RecordAudioUseCaseProtocol {
 
     // MARK: - Execute
 
-    func startRecording() {
-        manager.startRecording()
+    func startRecording() async throws {
+        try await manager.startRecording()
     }
 
-    func stopRecording() -> (data: Data?, duration: TimeInterval) {
-        manager.stopRecording()
+    func stopRecording() throws -> (data: Data?, duration: TimeInterval) {
+        try manager.stopRecording()
     }
 
     func cancelRecording() {
