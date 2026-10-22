@@ -51,6 +51,7 @@ extension ChatViewModel {
         }
         let previousAssistant = loadedState.messages.removeLast()
         guard !loadedState.messages.isEmpty else { return }
+        let configuration = captureModelConfiguration(for: loadedState)
         let retainedImages = regenerationAttachments(
             previousAssistant: previousAssistant, model: model, messages: &loadedState.messages
         )
@@ -77,13 +78,14 @@ extension ChatViewModel {
                 modelId: model.id,
                 assistantId: assistantMessageId,
                 systemPrompt: loadedState.systemPrompt,
-                parameters: loadedState.modelParameters,
+                parameters: configuration.parameters,
                 webSearchEnabled: loadedState.isWebSearchEnabled,
                 modelCapabilities: model.capabilities,
                 selectedModel: model,
-                contextWindowTokens: loadedState.contextWindowTokens,
+                contextWindowTokens: configuration.contextWindowTokens,
                 contextSummary: loadedState.conversation?.contextSummary,
-                contextSummaryCursorMessageId: loadedState.conversation?.contextSummaryCursorMessageId
+                contextSummaryCursorMessageId: loadedState.conversation?.contextSummaryCursorMessageId,
+                conversationConfiguration: loadedState.modelConfiguration
             ))
         }
     }
@@ -112,6 +114,8 @@ extension ChatViewModel {
         loadedState.messages = Array(loadedState.messages.prefix(messageIndex + 1))
         invalidateCompactionIfNeeded(in: &loadedState, changedAt: messageIndex)
 
+        let configuration = captureModelConfiguration(for: loadedState)
+
         loadedState.isStreaming = true
         loadedState.errorMessage = nil
 
@@ -123,8 +127,6 @@ extension ChatViewModel {
 
         let assistantMessageId = assistantMessage.id
         let currentMessages = loadedState.messages.filter { $0.id != assistantMessageId }
-        let systemPrompt = loadedState.systemPrompt
-        let parameters = loadedState.modelParameters
         let webSearchEnabled = loadedState.isWebSearchEnabled
         let modelCapabilities = model.capabilities
 
@@ -138,14 +140,15 @@ extension ChatViewModel {
                 messages: currentMessages,
                 modelId: model.id,
                 assistantId: assistantMessageId,
-                systemPrompt: systemPrompt,
-                parameters: parameters,
+                systemPrompt: loadedState.systemPrompt,
+                parameters: configuration.parameters,
                 webSearchEnabled: webSearchEnabled,
                 modelCapabilities: modelCapabilities,
                 selectedModel: model,
-                contextWindowTokens: loadedState.contextWindowTokens,
+                contextWindowTokens: configuration.contextWindowTokens,
                 contextSummary: loadedState.conversation?.contextSummary,
-                contextSummaryCursorMessageId: loadedState.conversation?.contextSummaryCursorMessageId
+                contextSummaryCursorMessageId: loadedState.conversation?.contextSummaryCursorMessageId,
+                conversationConfiguration: loadedState.modelConfiguration
             ))
         }
     }
@@ -189,6 +192,8 @@ extension ChatViewModel {
             clearExportedData()
         case .regenerateLastResponse:
             regenerateLastResponse()
+        case .retryInterruptedResponse(let messageId):
+            retryInterruptedResponse(messageId)
         case .editMessage(let id, let newContent):
             editAndResend(id: id, newContent: newContent)
         case .forkFromMessage(let messageId):

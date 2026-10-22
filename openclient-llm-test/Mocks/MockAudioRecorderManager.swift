@@ -24,12 +24,12 @@ final class MockAudioRecorderManager: AudioRecorderManagerProtocol {
 
     // MARK: - AudioRecorderManagerProtocol
 
-    func startRecording() {
+    func startRecording() async throws {
         startRecordingCalled = true
         isRecording = true
     }
 
-    func stopRecording() -> (data: Data?, duration: TimeInterval) {
+    func stopRecording() throws -> (data: Data?, duration: TimeInterval) {
         stopRecordingCalled = true
         isRecording = false
         recordingDuration = 0

@@ -18,7 +18,7 @@ body:
     id: app-version
     attributes:
       label: OpenClient version and build
-      placeholder: "For example: 1.7.25 (build 121)"
+      placeholder: "For example: 1.0.0 (build 1)"
     validations:
       required: true
   - type: dropdown

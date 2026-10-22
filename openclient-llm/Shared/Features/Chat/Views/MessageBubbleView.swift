@@ -23,6 +23,7 @@ struct MessageBubbleView: View {
     var hasTTS: Bool = false
     var showTokenUsage: Bool = true
     var isLastMessage: Bool = false
+    var isInterruptedRetryEnabled: Bool = true
     var isRunningTool: Bool = false
     var showsMessageActionsTip: Bool = false
     var onSpeakTapped: (() -> Void)?
@@ -116,6 +117,9 @@ private extension MessageBubbleView {
 
                 if !message.content.isEmpty || !message.attachments.isEmpty {
                     assistantMessageFooter
+                }
+                if message.isInterruptedResponse, !isStreaming {
+                    interruptionNotice
                 }
 
                 if let results = message.webSearchResults, !results.isEmpty, !isStreaming {
@@ -261,7 +265,8 @@ private extension MessageBubbleView {
             if !isStreaming && !message.content.isEmpty && message.role == .assistant && hasTTS {
                 speakButton
             }
-            if !isStreaming, !message.content.isEmpty, isLastMessage, let onRegenerateTapped {
+            if !isStreaming, !message.content.isEmpty, !message.isInterruptedResponse,
+               isLastMessage, let onRegenerateTapped {
                 Button(action: onRegenerateTapped) {
                     Label(String(localized: "Regenerate Response"), systemImage: "arrow.clockwise")
                         .labelStyle(.iconOnly)
@@ -323,7 +328,8 @@ private extension MessageBubbleView {
             }
         }
 
-        if message.role == .assistant, isLastMessage, !isStreaming, let onRegenerateTapped {
+        if message.role == .assistant, isLastMessage, !isStreaming, !message.isInterruptedResponse,
+           let onRegenerateTapped {
             Divider()
             Button {
                 AppTips.messageActions.invalidate(reason: .actionPerformed)
@@ -397,12 +403,6 @@ private extension MessageBubbleView {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
 #endif
-    }
-
-    var thinkingIndicator: some View {
-        Text(String(localized: "Thinking..."))
-            .font(.caption)
-            .foregroundStyle(.secondary)
     }
 
     func thinkingDisclosureView(_ reasoning: String) -> some View {

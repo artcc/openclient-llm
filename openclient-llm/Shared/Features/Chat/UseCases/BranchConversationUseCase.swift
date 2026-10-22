@@ -112,7 +112,8 @@ private extension BranchConversationUseCase {
                 toolName: message.toolName,
                 isFavourite: message.isFavourite,
                 imageGenerationAttempted: message.imageGenerationAttempted,
-                imageOperationAttempted: message.imageOperationAttempted
+                imageOperationAttempted: message.imageOperationAttempted,
+                responseInterruption: message.responseInterruption
             )
         }
     }

@@ -15,6 +15,7 @@ struct ChatInputBarState: Equatable {
     let contextUsage: ContextUsage?
     let isStreaming: Bool
     let isRecording: Bool
+    let isStartingRecording: Bool
     let recordingDuration: TimeInterval
     let isTranscribing: Bool
     let isSearchingWeb: Bool
@@ -46,6 +47,7 @@ struct ChatInputBarState: Equatable {
         contextUsage = loadedState.contextUsage
         isStreaming = loadedState.isStreaming
         isRecording = loadedState.isRecording
+        isStartingRecording = loadedState.isStartingRecording
         recordingDuration = loadedState.recordingDuration
         isTranscribing = loadedState.isTranscribing
         isSearchingWeb = loadedState.isSearchingWeb

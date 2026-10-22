@@ -28,4 +28,7 @@ extension Notification.Name {
     nonisolated static let builtInToolSettingsDidChange = Notification.Name(
         "openclient.builtInToolSettingsDidChange"
     )
+    nonisolated static let chatModelConfigurationDidChange = Notification.Name(
+        "openclient.chatModelConfigurationDidChange"
+    )
 }

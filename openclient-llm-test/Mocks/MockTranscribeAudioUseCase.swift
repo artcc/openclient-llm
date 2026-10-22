@@ -9,17 +9,21 @@
 import Foundation
 @testable import openclient_llm
 
-// Safety: Only used within serialized @MainActor test methods.
-final class MockTranscribeAudioUseCase: TranscribeAudioUseCaseProtocol, @unchecked Sendable {
+@MainActor
+final class MockTranscribeAudioUseCase: TranscribeAudioUseCaseProtocol {
     // MARK: - Properties
 
     var result: Result<String, Error> = .success("Transcribed text")
     var executeCalled = false
+    var executeCallCount = 0
+    var executeHandler: (() async throws -> String)?
 
     // MARK: - Execute
 
     func execute(audioData: Data, model: String, language: String?, fileName: String) async throws -> String {
         executeCalled = true
+        executeCallCount += 1
+        if let executeHandler { return try await executeHandler() }
         return try result.get()
     }
 }

@@ -70,6 +70,7 @@ extension ChatViewModelTests {
             ChatViewModel.LoadedState(pendingAttachments: [attachment]),
             ChatViewModel.LoadedState(isPreparingAttachment: true),
             ChatViewModel.LoadedState(isRecording: true),
+            ChatViewModel.LoadedState(isStartingRecording: true),
             ChatViewModel.LoadedState(isTranscribing: true)
         ]
 

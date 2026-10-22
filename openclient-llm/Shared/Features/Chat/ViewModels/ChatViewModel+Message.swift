@@ -24,6 +24,7 @@ extension ChatViewModel {
         let contextWindowTokens: Int?
         let contextSummary: String?
         let contextSummaryCursorMessageId: UUID?
+        let conversationConfiguration: ChatModelConfiguration
     }
 
     func streamWithWebSearch(_ context: SendMessageContext) async {
@@ -41,7 +42,8 @@ extension ChatViewModel {
 
     func sendMessage() {
         guard case .loaded(var loadedState) = state else { return }
-        guard !loadedState.isPreparingAttachment else { return }
+        guard !loadedState.isPreparingAttachment,
+              !loadedState.isStartingRecording, !loadedState.isRecording, !loadedState.isTranscribing else { return }
         let text = loadedState.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || !loadedState.pendingAttachments.isEmpty,
               let model = loadedState.selectedModel else { return }
@@ -94,13 +96,15 @@ extension ChatViewModel {
     private func performSend(text: String, model: LLMModel, loadedState: inout LoadedState) {
         LogManager.info("sendMessage model=\(model.id) attachments=\(loadedState.pendingAttachments.count)")
 
+        let configuration = captureModelConfiguration(for: loadedState)
         let assistantId = prepareMessageState(text: text, model: model, loadedState: &loadedState)
         let currentMessages = loadedState.messages.filter { $0.id != assistantId }
         let systemPrompt = loadedState.systemPrompt
-        let parameters = loadedState.modelParameters
+        let parameters = configuration.parameters
         let webSearchEnabled = loadedState.isWebSearchEnabled
         let modelCapabilities = model.capabilities
-        let contextWindowTokens = loadedState.contextWindowTokens
+        let contextWindowTokens = configuration.contextWindowTokens
+        let conversationConfiguration = loadedState.modelConfiguration
         let contextSummary = loadedState.conversation?.contextSummary
         let contextSummaryCursorMessageId = loadedState.conversation?.contextSummaryCursorMessageId
 
@@ -120,7 +124,8 @@ extension ChatViewModel {
                 selectedModel: model,
                 contextWindowTokens: contextWindowTokens,
                 contextSummary: contextSummary,
-                contextSummaryCursorMessageId: contextSummaryCursorMessageId
+                contextSummaryCursorMessageId: contextSummaryCursorMessageId,
+                conversationConfiguration: conversationConfiguration
             ))
         }
     }

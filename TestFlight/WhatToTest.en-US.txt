@@ -1,6 +1,9 @@
 Hi there! We've got some great new features for you in this update.
 
 • MCP tools now appear correctly when using LiteLLM virtual keys with route restrictions.
+• Fixed microphone recording on macOS and improved the reliability of audio recording and transcription.
+• Set global model parameters in Settings > Chat; chats with custom options continue to use their own settings.
+• Minor bug fixes and stability improvements.
 
 Thanks for your continued support and for helping us build the best possible LLM client together.
 

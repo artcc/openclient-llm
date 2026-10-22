@@ -50,7 +50,7 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         static let apiKey = "apiKey"
     }
 
-    private let defaults: UserDefaults
+    let defaults: UserDefaults
     private let keychainManager: KeychainManagerProtocol
 
     // MARK: - Init
@@ -66,7 +66,6 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     }
 
     // MARK: - Public
-
     func getIsOnboardingCompleted() -> Bool {
         defaults.bool(forKey: Keys.isOnboardingCompleted)
     }
@@ -310,6 +309,7 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         defaults.removeObject(forKey: LegacyKeys.serverBaseURL)
         defaults.removeObject(forKey: LegacyKeys.apiKey)
         keychainManager.deleteAll()
+        resetGlobalChatModelConfiguration()
         NotificationCenter.default.post(name: .builtInToolSettingsDidChange, object: nil)
         NotificationCenter.default.post(name: .serverConfigurationDidChange, object: nil)
         if wasCloudSyncEnabled {

@@ -42,6 +42,22 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
   If no user follows, append one context-only user message after the completed transcript. Never interrupt a tool-call/result
   block or mutate persisted history. Use the same projection for regular, agent, streaming, and buffered completions.
 
+## Chat Model Configuration
+
+- Settings > Chat stores an optional global block of temperature, max tokens, top P, and context window in local
+  `UserDefaults`. These defaults are installation-wide and are not part of conversation backups or iCloud synchronization.
+- A conversation with any custom model parameter or context window uses its entire own block. Otherwise it uses the global
+  block. Never merge individual fields or copy global values into persisted conversation overrides. Resetting all chat
+  options restores global inheritance; resetting global options restores the unconfigured defaults.
+- Sending, regenerating, and editing/resending capture the selected block for the whole turn, including agent rounds and
+  preflight compaction. Global changes affect subsequent turns, not an active turn. Private Chat uses the same selection
+  without persisting conversation overrides.
+- Omit unset generation parameters and retain the existing model output cap. An unset context window falls back to model
+  metadata. Context usage, request budgeting, and compaction use the same effective window; stale-conversation checks
+  compare the captured conversation overrides, independently of the global block.
+- Apply defaults at the chat orchestration boundary. Auxiliary summarization and delegated specialist requests retain their
+  own parameters; dedicated image generation retains its existing request contract.
+
 ## LiteLLM Enrichment And Fallback
 
 - `GET /model/info` is optional LiteLLM enrichment for capabilities, provider, mode, context/output limits, pricing, and

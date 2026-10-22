@@ -45,6 +45,18 @@ extension ChatView {
 // MARK: - Menu Builder
 
 extension ChatView {
+    @ViewBuilder
+    var modelParametersSheet: some View {
+        if case .loaded(let loadedState) = viewModel.state {
+            ChatModelParametersView(
+                configuration: loadedState.modelConfiguration,
+                estimatedCost: viewModel.estimatedConversationCost,
+                onSave: { viewModel.send(.modelConfigurationChanged($0)) },
+                isPresented: $showModelParametersSheet
+            )
+        }
+    }
+
     func menuActions(for loadedSt: ChatViewModel.LoadedState) -> [MenuAction] {
         guard !loadedSt.isStreaming else { return [] }
         var items: [MenuAction] = []

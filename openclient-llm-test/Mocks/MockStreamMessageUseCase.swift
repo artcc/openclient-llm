@@ -17,6 +17,7 @@ final class MockStreamMessageUseCase: StreamMessageUseCaseProtocol, @unchecked S
     var error: Error?
     var tokenDelay: Duration?
     var receivedMessages: [[ChatMessage]] = []
+    var receivedParameters: [ModelParameters] = []
     var onExecute: (() -> Void)?
 
     // MARK: - Execute
@@ -27,6 +28,7 @@ final class MockStreamMessageUseCase: StreamMessageUseCaseProtocol, @unchecked S
         parameters: ModelParameters
     ) -> AsyncThrowingStream<StreamChunk, Error> {
         receivedMessages.append(messages)
+        receivedParameters.append(parameters)
         onExecute?()
         let chunks = chunks
         let error = error

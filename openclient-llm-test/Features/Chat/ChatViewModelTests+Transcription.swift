@@ -9,205 +9,214 @@
 import XCTest
 @testable import openclient_llm
 
-// MARK: - Tests — Audio Recording
-
 @MainActor
 extension ChatViewModelTests {
-    func test_send_startRecordingTapped_setsIsRecording() async throws {
-        // Given
-        let mockRecordAudio = MockRecordAudioUseCase()
-        mockFetchModels.result = .success([LLMModel(id: "gpt-4")])
+    func test_send_startRecordingTapped_setsIsRecordingOnlyAfterSuccess() async throws {
+        let recorder = MockRecordAudioUseCase()
+        sut = makeAudioViewModel(recorder: recorder)
 
-        sut = ChatViewModel(
-            fetchModelsUseCase: mockFetchModels,
-            streamMessageUseCase: mockStreamMessage,
-            saveConversationUseCase: mockSaveConversation,
-            getChatPreferencesUseCase: mockGetChatPreferences,
-            getConversationStartersUseCase: mockGetConversationStarters,
-            recordAudioUseCase: mockRecordAudio
-        )
+        sut.send(.startRecordingTapped)
+        XCTAssertTrue(try audioState().isStartingRecording)
+        XCTAssertFalse(try audioState().isRecording)
+        await sut.recordingStartTask?.value
 
-        sut.send(.viewAppeared)
-        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertTrue(try audioState().isRecording)
+        XCTAssertFalse(try audioState().isStartingRecording)
+        XCTAssertEqual(recorder.startRecordingCallCount, 1)
+        sut.send(.cancelRecordingTapped)
+    }
 
-        // When
+    func test_send_startRecordingFails_keepsComposerIdleAndShowsError() async throws {
+        for error in [AudioRecordingError.permissionDenied, .startFailed] {
+            let recorder = MockRecordAudioUseCase()
+            recorder.startRecordingError = error
+            sut = makeAudioViewModel(recorder: recorder)
+
+            sut.send(.startRecordingTapped)
+            await sut.recordingStartTask?.value
+
+            let state = try audioState()
+            XCTAssertFalse(state.isRecording)
+            XCTAssertFalse(state.isStartingRecording)
+            XCTAssertEqual(state.recordingDuration, 0)
+            XCTAssertEqual(state.errorMessage, error.localizedDescription)
+            XCTAssertNil(sut.durationTrackingTask)
+            XCTAssertTrue(recorder.cancelRecordingCalled)
+        }
+    }
+
+    func test_send_duplicateStart_doesNotRestartRecorder() async throws {
+        let recorder = MockRecordAudioUseCase()
+        sut = makeAudioViewModel(recorder: recorder)
+
+        sut.send(.startRecordingTapped)
+        sut.send(.startRecordingTapped)
+        await sut.recordingStartTask?.value
         sut.send(.startRecordingTapped)
 
-        // Then
-        guard case .loaded(let loadedState) = sut.state else {
-            XCTFail("Expected loaded state")
-            return
-        }
-        XCTAssertTrue(loadedState.isRecording)
-        XCTAssertTrue(mockRecordAudio.startRecordingCalled)
+        XCTAssertEqual(recorder.startRecordingCallCount, 1)
+        XCTAssertTrue(try audioState().isRecording)
+        sut.send(.cancelRecordingTapped)
     }
 
     func test_send_cancelRecordingTapped_clearsRecording() async throws {
-        // Given
-        let mockRecordAudio = MockRecordAudioUseCase()
-        mockFetchModels.result = .success([LLMModel(id: "gpt-4")])
-
-        sut = ChatViewModel(
-            fetchModelsUseCase: mockFetchModels,
-            streamMessageUseCase: mockStreamMessage,
-            saveConversationUseCase: mockSaveConversation,
-            getChatPreferencesUseCase: mockGetChatPreferences,
-            getConversationStartersUseCase: mockGetConversationStarters,
-            recordAudioUseCase: mockRecordAudio
-        )
-
-        sut.send(.viewAppeared)
-        try await Task.sleep(for: .milliseconds(100))
-
+        let recorder = MockRecordAudioUseCase()
+        sut = makeAudioViewModel(recorder: recorder)
         sut.send(.startRecordingTapped)
+        await sut.recordingStartTask?.value
 
-        // When
         sut.send(.cancelRecordingTapped)
 
-        // Then
-        guard case .loaded(let loadedState) = sut.state else {
-            XCTFail("Expected loaded state")
-            return
-        }
-        XCTAssertFalse(loadedState.isRecording)
-        XCTAssertTrue(mockRecordAudio.cancelRecordingCalled)
+        XCTAssertFalse(try audioState().isRecording)
+        XCTAssertTrue(recorder.cancelRecordingCalled)
+        XCTAssertNil(sut.durationTrackingTask)
     }
 
-    func test_send_stopRecordingTapped_triggersTranscription() async throws {
-        // Given
-        let mockRecordAudio = MockRecordAudioUseCase()
-        mockRecordAudio.stopRecordingResult = (Data([1, 2, 3]), 2.0)
-
-        let mockTranscribe = MockTranscribeAudioUseCase()
-        mockTranscribe.result = .success("Hello world")
-        mockFetchModels.result = .success([
-            LLMModel(id: "gpt-4"),
-            LLMModel(id: "whisper-1", mode: .audioTranscription)
-        ])
-
-        sut = ChatViewModel(
-            fetchModelsUseCase: mockFetchModels,
-            streamMessageUseCase: mockStreamMessage,
-            saveConversationUseCase: mockSaveConversation,
-            transcribeAudioUseCase: mockTranscribe,
-            getChatPreferencesUseCase: mockGetChatPreferences,
-            getConversationStartersUseCase: mockGetConversationStarters,
-            recordAudioUseCase: mockRecordAudio
-        )
-
-        sut.send(.viewAppeared)
-        try await Task.sleep(for: .milliseconds(100))
-
+    func test_send_stopRecordingTapped_transcribesOnceAndUpdatesDraft() async throws {
+        let recorder = MockRecordAudioUseCase()
+        recorder.stopRecordingResult = (Data([1, 2, 3]), 2)
+        let transcriber = MockTranscribeAudioUseCase()
+        transcriber.result = .success("Hello world")
+        sut = makeAudioViewModel(recorder: recorder, transcriber: transcriber)
         sut.send(.startRecordingTapped)
+        await sut.recordingStartTask?.value
 
-        // When
         sut.send(.stopRecordingTapped)
-        try await Task.sleep(for: .milliseconds(200))
+        sut.send(.stopRecordingTapped)
+        await sut.transcriptionTask?.value
 
-        // Then
-        XCTAssertTrue(mockRecordAudio.stopRecordingCalled)
-        XCTAssertTrue(mockTranscribe.executeCalled)
-        guard case .loaded(let loadedState) = sut.state else {
-            XCTFail("Expected loaded state")
-            return
-        }
-        XCTAssertFalse(loadedState.isRecording)
-        XCTAssertEqual(loadedState.inputText, "Hello world")
-        XCTAssertEqual(loadedState.inputRevision, 1)
+        XCTAssertTrue(recorder.stopRecordingCalled)
+        XCTAssertEqual(transcriber.executeCallCount, 1)
+        let state = try audioState()
+        XCTAssertFalse(state.isRecording)
+        XCTAssertFalse(state.isTranscribing)
+        XCTAssertEqual(state.inputText, "Hello world")
+        XCTAssertEqual(state.inputRevision, 1)
     }
 
-    func test_send_stopRecordingTapped_withNoData_doesNotTranscribe() async throws {
-        // Given
-        let mockRecordAudio = MockRecordAudioUseCase()
-        mockRecordAudio.stopRecordingResult = (nil, 0)
+    func test_send_stopRecordingTapped_withoutRecording_doesNotTranscribe() {
+        let recorder = MockRecordAudioUseCase()
+        let transcriber = MockTranscribeAudioUseCase()
+        sut = makeAudioViewModel(recorder: recorder, transcriber: transcriber)
 
-        let mockTranscribe = MockTranscribeAudioUseCase()
-        mockTranscribe.result = .success("Hello world")
-        mockFetchModels.result = .success([LLMModel(id: "gpt-4")])
-
-        sut = ChatViewModel(
-            fetchModelsUseCase: mockFetchModels,
-            streamMessageUseCase: mockStreamMessage,
-            saveConversationUseCase: mockSaveConversation,
-            transcribeAudioUseCase: mockTranscribe,
-            getChatPreferencesUseCase: mockGetChatPreferences,
-            getConversationStartersUseCase: mockGetConversationStarters,
-            recordAudioUseCase: mockRecordAudio
-        )
-
-        sut.send(.viewAppeared)
-        try await Task.sleep(for: .milliseconds(100))
-
-        // When
         sut.send(.stopRecordingTapped)
-        try await Task.sleep(for: .milliseconds(100))
 
-        // Then
-        XCTAssertFalse(mockTranscribe.executeCalled)
+        XCTAssertFalse(recorder.stopRecordingCalled)
+        XCTAssertFalse(transcriber.executeCalled)
     }
 
-    func test_send_stopRecordingTapped_withError_setsErrorMessage() async throws {
-        // Given
-        let mockRecordAudio = MockRecordAudioUseCase()
-        mockRecordAudio.stopRecordingResult = (Data([1, 2, 3]), 2.0)
-
-        let mockTranscribe = MockTranscribeAudioUseCase()
-        mockTranscribe.result = .failure(APIError.serverUnreachable)
-        mockFetchModels.result = .success([
-            LLMModel(id: "gpt-4"),
-            LLMModel(id: "whisper-1", mode: .audioTranscription)
-        ])
-
-        sut = ChatViewModel(
-            fetchModelsUseCase: mockFetchModels,
-            streamMessageUseCase: mockStreamMessage,
-            saveConversationUseCase: mockSaveConversation,
-            transcribeAudioUseCase: mockTranscribe,
-            getChatPreferencesUseCase: mockGetChatPreferences,
-            getConversationStartersUseCase: mockGetConversationStarters,
-            recordAudioUseCase: mockRecordAudio
-        )
-
-        sut.send(.viewAppeared)
-        try await Task.sleep(for: .milliseconds(100))
-
+    func test_send_shortRecording_doesNotTranscribe() async throws {
+        let recorder = MockRecordAudioUseCase()
+        recorder.stopRecordingResult = (Data([1]), 0.2)
+        let transcriber = MockTranscribeAudioUseCase()
+        sut = makeAudioViewModel(recorder: recorder, transcriber: transcriber)
         sut.send(.startRecordingTapped)
+        await sut.recordingStartTask?.value
 
-        // When
         sut.send(.stopRecordingTapped)
-        try await Task.sleep(for: .milliseconds(200))
 
-        // Then
-        guard case .loaded(let loadedState) = sut.state else {
-            XCTFail("Expected loaded state")
-            return
-        }
-        XCTAssertFalse(loadedState.isTranscribing)
-        XCTAssertNotNil(loadedState.errorMessage)
-        XCTAssertEqual(loadedState.inputText, "")
+        XCTAssertFalse(transcriber.executeCalled)
+        XCTAssertFalse(try audioState().isTranscribing)
+        XCTAssertNil(try audioState().errorMessage)
     }
 
-    func test_noLiteLLMSTTModels_transcriptionModelIdIsApple() async throws {
-        // Given — solo modelos de chat, ningún Whisper de LiteLLM
-        mockFetchModels.result = .success([LLMModel(id: "gpt-4")])
+    func test_send_stopFailure_cleansUpAndShowsError() async throws {
+        let recorder = MockRecordAudioUseCase()
+        recorder.stopRecordingError = AudioRecordingError.readFailed
+        sut = makeAudioViewModel(recorder: recorder)
+        sut.send(.startRecordingTapped)
+        await sut.recordingStartTask?.value
 
-        sut = ChatViewModel(
+        sut.send(.stopRecordingTapped)
+
+        XCTAssertTrue(recorder.cancelRecordingCalled)
+        XCTAssertFalse(try audioState().isRecording)
+        XCTAssertEqual(try audioState().errorMessage, AudioRecordingError.readFailed.localizedDescription)
+        XCTAssertNil(sut.durationTrackingTask)
+    }
+
+    func test_send_recordingWithoutData_reportsFailureWithoutTranscription() async throws {
+        let recorder = MockRecordAudioUseCase()
+        let transcriber = MockTranscribeAudioUseCase()
+        sut = makeAudioViewModel(recorder: recorder, transcriber: transcriber)
+        sut.send(.startRecordingTapped)
+        await sut.recordingStartTask?.value
+
+        sut.send(.stopRecordingTapped)
+
+        XCTAssertFalse(transcriber.executeCalled)
+        XCTAssertFalse(try audioState().isRecording)
+        XCTAssertEqual(try audioState().errorMessage, AudioRecordingError.readFailed.localizedDescription)
+    }
+
+    func test_send_transcriptionFails_preservesDraftAndShowsError() async throws {
+        let recorder = MockRecordAudioUseCase()
+        recorder.stopRecordingResult = (Data([1]), 2)
+        let transcriber = MockTranscribeAudioUseCase()
+        transcriber.result = .failure(APIError.serverUnreachable)
+        sut = makeAudioViewModel(recorder: recorder, transcriber: transcriber)
+        sut.send(.startRecordingTapped)
+        await sut.recordingStartTask?.value
+
+        sut.send(.stopRecordingTapped)
+        await sut.transcriptionTask?.value
+
+        XCTAssertFalse(try audioState().isTranscribing)
+        XCTAssertNotNil(try audioState().errorMessage)
+        XCTAssertEqual(try audioState().inputText, "")
+    }
+
+    func test_refreshRecordingState_usesRecorderDurationAndDetectsInterruption() async throws {
+        let recorder = MockRecordAudioUseCase()
+        sut = makeAudioViewModel(recorder: recorder)
+        sut.send(.startRecordingTapped)
+        await sut.recordingStartTask?.value
+        recorder.recordingDuration = 1.25
+
+        sut.refreshRecordingState()
+        XCTAssertEqual(try audioState().recordingDuration, 1.25)
+        recorder.isRecording = false
+        sut.refreshRecordingState()
+
+        XCTAssertFalse(try audioState().isRecording)
+        XCTAssertEqual(try audioState().recordingDuration, 0)
+        XCTAssertEqual(try audioState().errorMessage, AudioRecordingError.interrupted.localizedDescription)
+        XCTAssertNil(sut.durationTrackingTask)
+    }
+
+    func test_makeLoadedState_noServerTranscriptionModels_usesAppleSpeech() {
+        sut = makeAudioViewModel()
+        let state = sut.makeLoadedState(models: [LLMModel(id: "gpt-4")], pending: nil)
+        XCTAssertEqual(state.transcriptionModelId, LLMModel.appleSpeechRecognition.id)
+    }
+
+    // MARK: - Helpers
+
+    func audioState() throws -> ChatViewModel.LoadedState {
+        try XCTUnwrap({
+            if case .loaded(let state) = sut.state { return state }
+            return nil
+        }(), "Expected loaded state")
+    }
+
+    func makeAudioViewModel(
+        recorder: MockRecordAudioUseCase = MockRecordAudioUseCase(),
+        transcriber: MockTranscribeAudioUseCase = MockTranscribeAudioUseCase()
+    ) -> ChatViewModel {
+        ChatViewModel(
+            isPrivateChat: true,
+            state: .loaded(.init(selectedModel: LLMModel(id: "gpt-4"), transcriptionModelId: "whisper-1")),
             fetchModelsUseCase: mockFetchModels,
             streamMessageUseCase: mockStreamMessage,
             saveConversationUseCase: mockSaveConversation,
+            transcribeAudioUseCase: transcriber,
             getChatPreferencesUseCase: mockGetChatPreferences,
-            getConversationStartersUseCase: mockGetConversationStarters
+            fetchMCPToolsUseCase: mockFetchMCPTools,
+            settingsManager: MockSettingsManager(),
+            resolveAudioModelIdsUseCase: ResolveAudioModelIdsUseCase(settingsManager: MockSettingsManager()),
+            getConversationStartersUseCase: mockGetConversationStarters,
+            recordAudioUseCase: recorder,
+            triggerHapticFeedbackUseCase: MockTriggerHapticFeedbackUseCase()
         )
-
-        // When
-        sut.send(.viewAppeared)
-        try await Task.sleep(for: .milliseconds(100))
-
-        // Then — el micrófono siempre aparece gracias a Apple STT
-        guard case .loaded(let loadedState) = sut.state else {
-            XCTFail("Expected loaded state")
-            return
-        }
-        XCTAssertEqual(loadedState.transcriptionModelId, LLMModel.appleSpeechRecognition.id)
     }
 }

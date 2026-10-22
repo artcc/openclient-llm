@@ -24,6 +24,7 @@ extension ChatViewModel {
             && loadedState.pendingAttachments.isEmpty
             && !loadedState.isPreparingAttachment
             && !loadedState.isRecording
+            && !loadedState.isStartingRecording
             && !loadedState.isTranscribing
     }
 

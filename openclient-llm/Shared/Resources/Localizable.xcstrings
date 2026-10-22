@@ -5960,6 +5960,198 @@
         }
       }
     },
+    "Audio recording could not start. Check your microphone and try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Audioaufnahme konnte nicht gestartet werden. Überprüfe dein Mikrofon und versuche es erneut."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Δεν ήταν δυνατή η έναρξη της ηχογράφησης. Ελέγξτε το μικρόφωνό σας και δοκιμάστε ξανά."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audio recording could not start. Check your microphone and try again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo iniciar la grabación de audio. Comprueba el micrófono e inténtalo de nuevo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’enregistrement audio n’a pas pu démarrer. Vérifiez votre microphone et réessayez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile avviare la registrazione audio. Controlla il microfono e riprova."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "録音を開始できませんでした。マイクを確認してもう一度お試しください。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De audio-opname kon niet starten. Controleer je microfoon en probeer het opnieuw."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível iniciar a gravação de áudio. Verifique o microfone e tente novamente."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ljudinspelningen kunde inte starta. Kontrollera mikrofonen och försök igen."
+          }
+        }
+      }
+    },
+    "Audio recording was interrupted. Please try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Audioaufnahme wurde unterbrochen. Bitte versuchen Sie es erneut."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Η ηχογράφηση διακόπηκε. Δοκιμάστε ξανά."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audio recording was interrupted. Please try again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La grabación de audio se interrumpió. Inténtalo de nuevo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’enregistrement audio a été interrompu. Veuillez réessayer."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La registrazione audio è stata interrotta. Riprova."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音声録音が中断されました。もう一度お試しください。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De audio-opname is onderbroken. Probeer het opnieuw."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A gravação de áudio foi interrompida. Tente novamente."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ljudinspelningen avbröts. Försök igen."
+          }
+        }
+      }
+    },
+    "Audio transcription failed. Please try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audiotranskription fehlgeschlagen. Bitte versuche es erneut."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Η απομαγνητοφώνηση ήχου απέτυχε. Δοκιμάστε ξανά."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audio transcription failed. Please try again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La transcripción de audio falló. Inténtalo de nuevo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La transcription audio a échoué. Veuillez réessayer."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trascrizione audio non riuscita. Riprova."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音声の文字起こしに失敗しました。もう一度お試しください。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audiotranscriptie mislukt. Probeer het opnieuw."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A transcrição do áudio falhou. Tente novamente."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ljudtranskriberingen misslyckades. Försök igen."
+          }
+        }
+      }
+    },
     "Aurora" : {
       "comment" : "Icon name for the aurora theme.",
       "localizations" : {
@@ -11834,6 +12026,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Anpassa den här konversationen"
+          }
+        }
+      }
+    },
+    "Customizing any option replaces the global settings for this chat. Reset all options to use global settings." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Anpassen einer Option ersetzt die globalen Einstellungen für diesen Chat. Setze alle Optionen zurück, um die globalen Einstellungen zu verwenden."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Η προσαρμογή οποιασδήποτε επιλογής αντικαθιστά τις καθολικές ρυθμίσεις για αυτήν τη συνομιλία. Επαναφέρετε όλες τις επιλογές για να χρησιμοποιήσετε τις καθολικές ρυθμίσεις."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Customizing any option replaces the global settings for this chat. Reset all options to use global settings."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personalizar cualquier opción reemplaza los ajustes globales de este chat. Restablece todas las opciones para usar los ajustes globales."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La personnalisation d’une option remplace les réglages globaux pour cette conversation. Réinitialisez toutes les options pour utiliser les réglages globaux."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La personalizzazione di qualsiasi opzione sostituisce le impostazioni globali per questa chat. Reimposta tutte le opzioni per utilizzare le impostazioni globali."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オプションをカスタマイズすると、このチャットのグローバル設定が置き換えられます。すべてのオプションをリセットしてグローバル設定を使用します。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het aanpassen van een optie overschrijft de algemene instellingen voor deze chat. Stel alle opties opnieuw in om de algemene instellingen te gebruiken."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personalizar qualquer opção substitui as definições globais deste chat. Reponha todas as opções para utilizar as definições globais."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Om du anpassar något alternativ ersätter det de globala inställningarna för den här chatten. Återställ alla alternativ för att använda de globala inställningarna."
           }
         }
       }
@@ -26836,6 +27092,70 @@
         }
       }
     },
+    "Microphone access is denied. Allow OpenClient to use the microphone in Settings." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Mikrofonzugriff wurde verweigert. Erlaube OpenClient in den Einstellungen die Verwendung des Mikrofons."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Η πρόσβαση στο μικρόφωνο δεν επιτρέπεται. Επιτρέψτε στο OpenClient να χρησιμοποιεί το μικρόφωνο στις Ρυθμίσεις."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Microphone access is denied. Allow OpenClient to use the microphone in Settings."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se ha denegado el acceso al micrófono. Permite que OpenClient use el micrófono en Ajustes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’accès au microphone est refusé. Autorisez OpenClient à utiliser le microphone dans Réglages."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’accesso al microfono è negato. Consenti a OpenClient di usare il microfono nelle Impostazioni."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マイクへのアクセスが拒否されました。設定でOpenClientによるマイクの使用を許可してください。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Microfoontoegang is geweigerd. Sta OpenClient toe de microfoon te gebruiken in Instellingen."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso ao microfone foi negado. Permita que o OpenClient utilize o microfone nas Definições."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åtkomst till mikrofonen nekas. Tillåt OpenClient att använda mikrofonen i Inställningar."
+          }
+        }
+      }
+    },
     "Midnight" : {
       "comment" : "Name of the icon with a midnight theme.",
       "localizations" : {
@@ -29425,67 +29745,66 @@
         }
       }
     },
-    "No speech-to-text model available. Configure a Whisper model in LiteLLM." : {
-      "comment" : "Error message displayed when no speech-to-text model is configured.",
+    "No speech-to-text model is available." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kein Speech-to-Text-Modell verfügbar. Konfigurieren Sie ein Whisper-Modell in LiteLLM."
+            "value" : "Kein Sprache-zu-Text-Modell verfügbar."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Δεν υπάρχει διαθέσιμο μοντέλο ομιλίας σε κείμενο. Διαμορφώστε ένα μοντέλο Whisper στο LiteLLM."
+            "value" : "Δεν είναι διαθέσιμο κανένα μοντέλο μετατροπής ομιλίας σε κείμενο."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No speech-to-text model available. Configure a Whisper model in LiteLLM."
+            "value" : "No speech-to-text model is available."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No hay modelo de reconocimiento de voz disponible. Configure un modelo Whisper en LiteLLM."
+            "value" : "No hay ningún modelo de conversión de voz a texto disponible."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aucun modèle de reconnaissance vocale disponible. Configurez un modèle Whisper dans LiteLLM."
+            "value" : "Aucun modèle de reconnaissance vocale n’est disponible."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nessun modello di riconoscimento vocale disponibile. Configura un modello Whisper in LiteLLM."
+            "value" : "Nessun modello di riconoscimento vocale è disponibile."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "音声認識モデルが利用できません。LiteLLMでWhisperモデルを設定してください。"
+            "value" : "音声認識モデルを利用できません"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Geen spraak-naar-tekstmodel beschikbaar. Stel een Whisper-model in LiteLLM in."
+            "value" : "Er is geen spraak-naar-tekstmodel beschikbaar."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nenhum modelo de reconhecimento de voz disponível. Configure um modelo Whisper no LiteLLM."
+            "value" : "Não está disponível nenhum modelo de conversão de voz em texto."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ingen tal-till-text-modell tillgänglig. Konfigurera en Whisper-modell i LiteLLM."
+            "value" : "Ingen tal-till-text-modell är tillgänglig."
           }
         }
       }
@@ -37907,6 +38226,70 @@
         }
       }
     },
+    "Retry Response" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antwort erneut versuchen"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Επανάληψη απάντησης"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry Response"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reintentar respuesta"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réessayer la réponse"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riprova risposta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "応答を再試行"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antwoord opnieuw proberen"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tentar novamente a resposta"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Försök igen med svaret"
+          }
+        }
+      }
+    },
     "Review and delete data stored in iCloud." : {
       "localizations" : {
         "de" : {
@@ -43654,6 +44037,134 @@
         }
       }
     },
+    "Starting recording..." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufnahme wird gestartet …"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Έναρξη εγγραφής..."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starting recording..."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Iniciando la grabación..."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Démarrage de l’enregistrement…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avvio della registrazione..."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "録音を開始しています…"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opname starten..."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A iniciar a gravação..."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Startar inspelning..."
+          }
+        }
+      }
+    },
+    "Starts a new response for this message." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Startet eine neue Antwort für diese Nachricht."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ξεκινά μια νέα απάντηση για αυτό το μήνυμα."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts a new response for this message."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicia una nueva respuesta para este mensaje."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Démarre une nouvelle réponse pour ce message."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avvia una nuova risposta per questo messaggio."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このメッセージに対する新しい応答を開始します。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start een nieuw antwoord voor dit bericht."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicia uma nova resposta para esta mensagem."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Startar ett nytt svar för det här meddelandet."
+          }
+        }
+      }
+    },
     "Step %lld of 3" : {
       "localizations" : {
         "de" : {
@@ -47978,6 +48489,70 @@
         }
       }
     },
+    "The audio recording could not be read. Please try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Audioaufnahme konnte nicht gelesen werden. Bitte versuchen Sie es erneut."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Δεν ήταν δυνατή η ανάγνωση της ηχογράφησης. Δοκιμάστε ξανά."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The audio recording could not be read. Please try again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo leer la grabación de audio. Inténtalo de nuevo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire l’enregistrement audio. Veuillez réessayer."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile leggere la registrazione audio. Riprova."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音声録音を読み込めませんでした。もう一度お試しください。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De audio-opname kon niet worden gelezen. Probeer het opnieuw."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível ler a gravação de áudio. Tente novamente."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ljudinspelningen kunde inte läsas. Försök igen."
+          }
+        }
+      }
+    },
     "The backup contains an invalid attachment reference." : {
       "localizations" : {
         "de" : {
@@ -48812,6 +49387,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Det gick inte att slutföra borttagningen."
+          }
+        }
+      }
+    },
+    "The draft changed during transcription. Please record again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Entwurf hat sich während der Transkription geändert. Bitte nehmen Sie die Aufnahme erneut auf."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το προσχέδιο άλλαξε κατά την απομαγνητοφώνηση. Παρακαλούμε καταγράψτε το ξανά."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The draft changed during transcription. Please record again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El borrador cambió durante la transcripción. Vuelve a grabarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le brouillon a changé pendant la transcription. Veuillez enregistrer à nouveau."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La bozza è cambiata durante la trascrizione. Registra di nuovo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文字起こし中に下書きが変更されました。もう一度録音してください。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het concept is tijdens de transcriptie gewijzigd. Neem het opnieuw op."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O rascunho foi alterado durante a transcrição. Grave novamente."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utkastet ändrades under transkriberingen. Spela in igen."
           }
         }
       }
@@ -55992,6 +56631,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Använd detta när en OpenAI-kompatibel server inte tillhandahåller kontextmetadata."
+          }
+        }
+      }
+    },
+    "Used by chats without custom model parameters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für Chats ohne benutzerdefinierte Modellparameter verwendet."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Χρησιμοποιείται από συνομιλίες χωρίς προσαρμοσμένες παραμέτρους μοντέλου."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Used by chats without custom model parameters."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usado por chats sin parámetros de modelo personalizados."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisé par les discussions sans paramètres de modèle personnalisés."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilizzato dalle chat senza parametri del modello personalizzati."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カスタムモデルパラメータを使用しないチャットで使用されます。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebruikt door chats zonder aangepaste modelparameters."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilizado por chats sem parâmetros de modelo personalizados."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Används av chattar utan anpassade modellparametrar."
           }
         }
       }

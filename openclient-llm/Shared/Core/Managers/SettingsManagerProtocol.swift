@@ -27,6 +27,8 @@ protocol SettingsManagerProtocol: Sendable {
     func setAcceptedCloudAccountFingerprint(_ value: String)
     func getShowTokenUsage() -> Bool
     func setShowTokenUsage(_ value: Bool)
+    func getGlobalChatModelConfiguration() -> ChatModelConfiguration
+    func setGlobalChatModelConfiguration(_ configuration: ChatModelConfiguration)
     func getIsWebSearchEnabled() -> Bool
     func setIsWebSearchEnabled(_ value: Bool)
     func getSelectedTTSModelId() -> String?

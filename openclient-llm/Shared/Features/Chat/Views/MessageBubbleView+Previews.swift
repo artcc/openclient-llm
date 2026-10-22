@@ -8,6 +8,21 @@
 
 import SwiftUI
 
+#Preview("Interrupted responses") {
+    VStack(alignment: .leading, spacing: 24) {
+        MessageBubbleView(message: ChatMessage(
+            role: .assistant, content: "Partial answer", responseInterruption: .backgroundTaskEnded
+        ))
+        MessageBubbleView(
+            message: ChatMessage(role: .assistant, content: "", responseInterruption: .backgroundTaskEnded),
+            isLastMessage: true,
+            onRegenerateTapped: {}
+        )
+    }
+    .padding(16)
+    .frame(width: 390)
+}
+
 #Preview("User message") {
     MessageBubbleView(
         message: ChatMessage(role: .user, content: "Hello, how are you?")

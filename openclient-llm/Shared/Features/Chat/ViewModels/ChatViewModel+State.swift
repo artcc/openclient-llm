@@ -33,10 +33,14 @@ extension ChatViewModel {
         var pendingSessionId: UUID = UUID()
         var modelParameters: ModelParameters = .default
         var contextWindowTokens: Int?
+        var modelConfiguration: ChatModelConfiguration {
+            ChatModelConfiguration(parameters: modelParameters, contextWindowTokens: contextWindowTokens)
+        }
         var contextUsage: ContextUsage?
         var isSpeaking: Bool = false
         var speakingMessageId: UUID?
         var isRecording: Bool = false
+        var isStartingRecording: Bool = false
         var recordingDuration: TimeInterval = 0
         var isTranscribing: Bool = false
         var showTokenUsage: Bool = true
@@ -61,5 +65,10 @@ extension ChatViewModel {
         var mcpDiscoveryRevision: Int = 0
         var isLoadingMCPTools: Bool = false
         var mcpToolsError: String?
+
+        var canRetryInterruptedResponse: Bool {
+            selectedModel != nil && !isStreaming && !isPreparingAttachment
+                && !isStartingRecording && !isRecording && !isTranscribing
+        }
     }
 }

@@ -10,6 +10,7 @@ import SwiftUI
 
 private struct ChatInputBarPreview: View {
     var model = LLMModel(id: "Preview", capabilities: [.functionCalling])
+    var isStartingRecording = false
     @State private var showActions = true
 
     var body: some View {
@@ -19,7 +20,8 @@ private struct ChatInputBarPreview: View {
             showCameraPicker: .constant(false),
             state: ChatInputBarState(loadedState: .init(
                 inputText: "Help me review this layout.",
-                selectedModel: model
+                selectedModel: model,
+                isStartingRecording: isStartingRecording
             )),
             onSend: { _ in },
             onStopStreaming: {},
@@ -38,6 +40,11 @@ private struct ChatInputBarPreview: View {
 #Preview("Compact composer") {
     ChatInputBarPreview()
         .frame(width: 320)
+}
+
+#Preview("Microphone permission pending") {
+    ChatInputBarPreview(isStartingRecording: true)
+        .frame(width: 390)
 }
 
 #Preview("Wide composer") {

@@ -16,6 +16,8 @@ final class MockAgentStreamUseCase: AgentStreamUseCaseProtocol, @unchecked Senda
     var events: [AgentEvent] = []
     var error: Error?
     var receivedMessages: [[ChatMessage]] = []
+    var receivedParameters: [ModelParameters] = []
+    var receivedContextWindows: [Int?] = []
     var receivedToolNames: [String] = []
     private(set) var receivedToolContext: AgentToolContext?
     var onExecute: (() -> Void)?
@@ -36,6 +38,8 @@ final class MockAgentStreamUseCase: AgentStreamUseCaseProtocol, @unchecked Senda
         receivedToolContext = toolContext
         executeCallCount += 1
         receivedMessages.append(messages)
+        receivedParameters.append(parameters)
+        receivedContextWindows.append(contextWindowTokens)
         receivedToolNames = toolContext.toolRegistry.definitions.map(\.function.name)
         onExecute?()
         let events = events
