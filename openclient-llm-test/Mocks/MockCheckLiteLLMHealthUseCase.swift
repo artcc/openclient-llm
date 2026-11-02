@@ -17,7 +17,7 @@ final class MockCheckLiteLLMHealthUseCase: CheckLiteLLMHealthUseCaseProtocol, @u
 
     // MARK: - Execute
 
-    func execute(serverURL: String) async -> Bool {
+    func execute(serverURL: String, customHeaders: [ServerHTTPHeader]) async -> Bool {
         result
     }
 }

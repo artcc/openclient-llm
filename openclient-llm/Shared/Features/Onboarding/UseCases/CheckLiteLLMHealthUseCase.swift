@@ -9,7 +9,13 @@
 import Foundation
 
 protocol CheckLiteLLMHealthUseCaseProtocol: Sendable {
-    func execute(serverURL: String) async -> Bool
+    func execute(serverURL: String, customHeaders: [ServerHTTPHeader]) async -> Bool
+}
+
+extension CheckLiteLLMHealthUseCaseProtocol {
+    func execute(serverURL: String) async -> Bool {
+        await execute(serverURL: serverURL, customHeaders: [])
+    }
 }
 
 struct CheckLiteLLMHealthUseCase: CheckLiteLLMHealthUseCaseProtocol {
@@ -25,7 +31,7 @@ struct CheckLiteLLMHealthUseCase: CheckLiteLLMHealthUseCaseProtocol {
 
     // MARK: - Execute
 
-    func execute(serverURL: String) async -> Bool {
-        await repository.checkLiteLLMHealth(serverURL: serverURL)
+    func execute(serverURL: String, customHeaders: [ServerHTTPHeader]) async -> Bool {
+        await repository.checkLiteLLMHealth(serverURL: serverURL, customHeaders: customHeaders)
     }
 }

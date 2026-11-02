@@ -147,22 +147,18 @@ extension ChatViewModelTests {
     func test_persistence_queuedRevision_rebasesOntoDurableResult() async throws {
         // Given
         let gate = TestAsyncGate()
-        let initialMessage = ChatMessage(role: .user, content: "Initial")
+        let firstSaveStarted = expectation(description: "First save started")
         let remoteMessage = ChatMessage(role: .assistant, content: "Remote")
         let attachment = ChatMessage.Attachment(
-            type: .image,
-            fileName: "generated.png",
-            mimeType: "image/png",
-            fileRelativePath: "",
-            transientData: Data([0x01, 0x02])
+            type: .image, fileName: "generated.png", mimeType: "image/png",
+            fileRelativePath: "", transientData: Data([0x01, 0x02])
         )
         let assistantId = UUID()
-        let conversation = Conversation(modelId: "gpt-4", messages: [initialMessage])
-        configureQueuedPersistence(gate: gate, remoteMessage: remoteMessage, assistantId: assistantId)
-        sut.state = .loaded(sut.makeLoadedState(models: [LLMModel(id: "gpt-4")], pending: conversation))
-        guard case .loaded(var firstState) = sut.state else {
-            return XCTFail("Expected loaded state")
-        }
+        let conversation = Conversation(modelId: "gpt-4", messages: [ChatMessage(role: .user, content: "Initial")])
+        configureQueuedPersistence(
+            gate: gate, firstSaveStarted: firstSaveStarted, remoteMessage: remoteMessage, assistantId: assistantId
+        )
+        var firstState = sut.makeLoadedState(models: [LLMModel(id: "gpt-4")], pending: conversation)
         firstState.messages.append(ChatMessage(
             id: assistantId,
             role: .assistant,
@@ -171,20 +167,32 @@ extension ChatViewModelTests {
         ))
         sut.state = .loaded(firstState)
         sut.scheduleConversationPersistence()
-        await waitUntil { self.mockSaveConversation.executeCallCount == 1 }
+        await fulfillment(of: [firstSaveStarted], timeout: 2)
+        guard mockSaveConversation.executeCallCount == 1 else {
+            await gate.open()
+            return XCTFail("Expected first save to be waiting")
+        }
         guard case .loaded(var finalState) = sut.state,
               let assistantIndex = finalState.messages.firstIndex(where: { $0.id == assistantId }) else {
+            await gate.open()
             return XCTFail("Expected assistant message")
         }
         finalState.messages[assistantIndex].content = "Final"
         sut.state = .loaded(finalState)
 
         // When
-        sut.scheduleConversationPersistence()
+        let queuedPersistence = sut.scheduleConversationPersistence()
         await gate.open()
-        await waitUntil { self.mockSaveConversation.executeCallCount == 2 }
+        let persistenceTask = try XCTUnwrap(queuedPersistence)
+        let result = await persistenceTask.value
 
         // Then
+        XCTAssertTrue(result.didPersist)
+        XCTAssertEqual(mockSaveConversation.executeCallCount, 2)
+        guard mockSaveConversation.expectedBases.count == 2,
+              mockSaveConversation.savedConversations.count == 2 else {
+            return XCTFail("Expected both persistence submissions")
+        }
         let durableBase = try XCTUnwrap(mockSaveConversation.expectedBases[1])
         let finalSubmission = mockSaveConversation.savedConversations[1]
         XCTAssertTrue(durableBase.messages.contains(where: { $0.id == remoteMessage.id }))
@@ -227,11 +235,13 @@ extension ChatViewModelTests {
 private extension ChatViewModelTests {
     func configureQueuedPersistence(
         gate: TestAsyncGate,
+        firstSaveStarted: XCTestExpectation,
         remoteMessage: ChatMessage,
         assistantId: UUID
     ) {
         mockSaveConversation.asyncExecuteHandler = { submitted, _, call in
             guard call == 1 else { return submitted }
+            firstSaveStarted.fulfill()
             await gate.wait()
             var persisted = submitted
             persisted.messages.insert(remoteMessage, at: 1)

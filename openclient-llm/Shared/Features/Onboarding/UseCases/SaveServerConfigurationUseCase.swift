@@ -9,7 +9,16 @@
 import Foundation
 
 protocol SaveServerConfigurationUseCaseProtocol: Sendable {
-    @discardableResult func execute(serverURL: String, apiKey: String) -> Bool
+    @discardableResult func execute(
+        serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]?
+    ) -> Bool
+}
+
+extension SaveServerConfigurationUseCaseProtocol {
+    @discardableResult
+    func execute(serverURL: String, apiKey: String) -> Bool {
+        execute(serverURL: serverURL, apiKey: apiKey, customHeaders: nil)
+    }
 }
 
 struct SaveServerConfigurationUseCase: SaveServerConfigurationUseCaseProtocol {
@@ -26,7 +35,10 @@ struct SaveServerConfigurationUseCase: SaveServerConfigurationUseCaseProtocol {
     // MARK: - Execute
 
     @discardableResult
-    func execute(serverURL: String, apiKey: String) -> Bool {
-        settingsManager.setServerConfiguration(serverBaseURL: serverURL, apiKey: apiKey)
+    func execute(serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]?) -> Bool {
+        settingsManager.setServerConfiguration(
+            serverBaseURL: serverURL, apiKey: apiKey,
+            customHeaders: customHeaders ?? settingsManager.getCustomHeaders()
+        )
     }
 }

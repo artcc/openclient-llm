@@ -9,7 +9,13 @@
 import Foundation
 
 protocol TestServerConnectionUseCaseProtocol: Sendable {
-    func execute(serverURL: String, apiKey: String) async throws
+    func execute(serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]) async throws
+}
+
+extension TestServerConnectionUseCaseProtocol {
+    func execute(serverURL: String, apiKey: String) async throws {
+        try await execute(serverURL: serverURL, apiKey: apiKey, customHeaders: [])
+    }
 }
 
 struct TestServerConnectionUseCase: TestServerConnectionUseCaseProtocol {
@@ -25,7 +31,7 @@ struct TestServerConnectionUseCase: TestServerConnectionUseCaseProtocol {
 
     // MARK: - Execute
 
-    func execute(serverURL: String, apiKey: String) async throws {
-        try await repository.testConnection(serverURL: serverURL, apiKey: apiKey)
+    func execute(serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]) async throws {
+        try await repository.testConnection(serverURL: serverURL, apiKey: apiKey, customHeaders: customHeaders)
     }
 }
