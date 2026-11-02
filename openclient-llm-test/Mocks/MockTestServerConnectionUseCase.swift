@@ -14,10 +14,14 @@ final class MockTestServerConnectionUseCase: TestServerConnectionUseCaseProtocol
     // MARK: - Properties
 
     var result: Result<Void, Error> = .success(())
+    var testedCustomHeaders: [ServerHTTPHeader]?
+    var onExecute: (() -> Void)?
 
     // MARK: - Execute
 
-    func execute(serverURL: String, apiKey: String) async throws {
+    func execute(serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]) async throws {
+        testedCustomHeaders = customHeaders
+        onExecute?()
         try result.get()
     }
 }

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## [1.7.40-build-131] - 2026-11-02
+
+### Added
+
+- Advanced Server Settings on iOS and macOS allow adding, editing, and removing custom HTTP headers, stored securely with the server configuration and included in API requests and connection checks.
+
+### Changed
+
+- Server configuration and captured API clients now include custom headers, with header changes invalidating the existing tool authorization scope.
+
+### Security
+
+- Custom headers are validated before saving or sending, and configured-server requests reject redirects to another origin to prevent credential forwarding.
+
 ## [1.7.35-build-129] - 2026-10-30
 
 ### Added

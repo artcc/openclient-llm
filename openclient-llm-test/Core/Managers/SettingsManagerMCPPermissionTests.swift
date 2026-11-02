@@ -214,6 +214,43 @@ final class SettingsManagerMCPPermissionTests: XCTestCase {
         XCTAssertNotEqual(sut.getMCPAuthorizationScope(), "old-scope")
     }
 
+    func test_setServerConfiguration_headersChanged_invalidatesPreviousAuthorization() {
+        // Given
+        sut.setServerConfiguration(serverBaseURL: "https://example.invalid", apiKey: "key")
+        sut.setMCPToolConfigurationKey("old-tool-key", for: "tool")
+        let originalScope = sut.getMCPAuthorizationScope()
+        let headers = [ServerHTTPHeader(name: "X-Token", value: "new-token")]
+
+        // When
+        let saved = sut.setServerConfiguration(
+            serverBaseURL: "https://example.invalid", apiKey: "key", customHeaders: headers
+        )
+
+        // Then
+        XCTAssertTrue(saved)
+        XCTAssertNotEqual(sut.getMCPAuthorizationScope(), originalScope)
+        XCTAssertNil(sut.getMCPToolConfigurationKey(for: "tool"))
+        XCTAssertEqual(sut.getCustomHeaders(), headers)
+        let newScope = sut.getMCPAuthorizationScope()
+        sut.setServerConfiguration(
+            serverBaseURL: "https://example.invalid", apiKey: "key",
+            customHeaders: [.init(name: "x-token", value: "new-token")]
+        )
+        XCTAssertEqual(sut.getMCPAuthorizationScope(), newScope)
+    }
+
+    func test_setServerConfiguration_failedHeaderWrite_preservesPreviousHeaderValues() {
+        let previous = [ServerHTTPHeader(name: "X-Token", value: "old-token")]
+        keychain.customHeaders = previous
+        keychain.persistsServerConfiguration = false
+        let saved = sut.setServerConfiguration(
+            serverBaseURL: "https://example.invalid", apiKey: "new-key",
+            customHeaders: [.init(name: "X-Token", value: "new-token")]
+        )
+        XCTAssertFalse(saved)
+        XCTAssertEqual(sut.getCustomHeaders(), previous)
+    }
+
     func test_publishMCPToolDiscovery_olderCompletionDoesNotReplaceNewerCompletion() {
         // Given
         let toolId = MCPToolInfo.identifier(serverId: "server", name: "tool")

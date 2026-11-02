@@ -15,6 +15,14 @@ extension SettingsView {
         Section {
             serverURLField()
             apiKeyField()
+            Button {
+                focusedField = nil
+                viewModel.send(.advancedServerSettingsOpened)
+                isShowingAdvancedServerSettings = true
+            } label: {
+                settingsDestinationLabel("Advanced", systemImage: "slider.horizontal.3")
+            }
+            .buttonStyle(.plain)
             connectionStatusView(loadedState.connectionStatus)
             if let error = loadedState.serverPersistenceError {
                 SettingsPersistenceErrorView(message: error, attempt: loadedState.serverPersistenceFailureCount)

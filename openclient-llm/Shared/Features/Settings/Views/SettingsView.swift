@@ -23,6 +23,7 @@ struct SettingsView: View {
     @State var serverURL: String = ""
     @State var apiKey: String = ""
     @State var isAPIKeyVisible = false
+    @State var isShowingAdvancedServerSettings = false
     @State var isShowingVotice = false
     @State private var isShowingUserProfile = false
     @State private var isShowingMemory = false
@@ -128,6 +129,17 @@ private extension SettingsView {
                 )
             }
         }
+        .sheet(isPresented: $isShowingAdvancedServerSettings, onDismiss: {
+            viewModel.send(.advancedServerSettingsCancelled)
+        }, content: {
+            if let headers = currentLoadedState?.customHeaderDraft {
+                ServerAdvancedSettingsView(
+                    headers: headers,
+                    onEvent: { viewModel.send($0) },
+                    isPresented: $isShowingAdvancedServerSettings
+                )
+            }
+        })
         .sheet(isPresented: $isShowingHelp) {
             HelpView()
 #if os(macOS)

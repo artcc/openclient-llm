@@ -13,10 +13,20 @@ protocol KeychainManagerProtocol: Sendable {
     func setServerBaseURL(_ value: String)
     func getAPIKey() -> String
     func setAPIKey(_ value: String)
-    @discardableResult func setServerConfiguration(serverBaseURL: String, apiKey: String) -> Bool
+    func getCustomHeaders() -> [ServerHTTPHeader]
+    @discardableResult func setServerConfiguration(
+        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]
+    ) -> Bool
     func getMCPAuthorizationScope() -> String?
     @discardableResult func setMCPAuthorizationScope(_ value: String) -> Bool
     func deleteAll()
+}
+
+extension KeychainManagerProtocol {
+    @discardableResult
+    func setServerConfiguration(serverBaseURL: String, apiKey: String) -> Bool {
+        setServerConfiguration(serverBaseURL: serverBaseURL, apiKey: apiKey, customHeaders: getCustomHeaders())
+    }
 }
 
 // Safety: All Keychain operations use thread-safe Security framework APIs.
@@ -58,13 +68,22 @@ final class KeychainManager: KeychainManagerProtocol, @unchecked Sendable {
     }
 
     @discardableResult
-    func setServerConfiguration(serverBaseURL: String, apiKey: String) -> Bool {
-        let configuration = StoredServerConfiguration(serverBaseURL: serverBaseURL, apiKey: apiKey)
+    func setServerConfiguration(
+        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]
+    ) -> Bool {
+        guard ServerHTTPHeader.validationError(in: customHeaders) == nil else { return false }
+        let configuration = StoredServerConfiguration(
+            serverBaseURL: serverBaseURL, apiKey: apiKey, customHeaders: customHeaders
+        )
         guard let data = try? JSONEncoder().encode(configuration),
               setData(data, forKey: Keys.serverConfiguration) else { return false }
         deleteItem(forKey: Keys.serverBaseURL)
         deleteItem(forKey: Keys.apiKey)
         return true
+    }
+
+    func getCustomHeaders() -> [ServerHTTPHeader] {
+        getServerConfiguration().customHeaders ?? []
     }
 
     func getMCPAuthorizationScope() -> String? {
@@ -90,6 +109,7 @@ private extension KeychainManager {
     struct StoredServerConfiguration: Codable {
         let serverBaseURL: String
         let apiKey: String
+        var customHeaders: [ServerHTTPHeader]?
     }
 
     func getServerConfiguration() -> StoredServerConfiguration {
@@ -104,7 +124,8 @@ private extension KeychainManager {
         if !legacyConfiguration.serverBaseURL.isEmpty || !legacyConfiguration.apiKey.isEmpty {
             _ = setServerConfiguration(
                 serverBaseURL: legacyConfiguration.serverBaseURL,
-                apiKey: legacyConfiguration.apiKey
+                apiKey: legacyConfiguration.apiKey,
+                customHeaders: []
             )
         }
         return legacyConfiguration

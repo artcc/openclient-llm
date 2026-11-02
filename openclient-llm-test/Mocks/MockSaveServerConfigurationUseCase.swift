@@ -15,14 +15,16 @@ final class MockSaveServerConfigurationUseCase: SaveServerConfigurationUseCasePr
 
     var savedServerURL: String?
     var savedAPIKey: String?
+    var savedCustomHeaders: [ServerHTTPHeader]?
     var result = true
 
     // MARK: - Execute
 
     @discardableResult
-    func execute(serverURL: String, apiKey: String) -> Bool {
+    func execute(serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]?) -> Bool {
         savedServerURL = serverURL
         savedAPIKey = apiKey
+        savedCustomHeaders = customHeaders
         return result
     }
 }

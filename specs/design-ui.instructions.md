@@ -60,6 +60,16 @@ description: "Use when changing OpenClient SwiftUI visuals, interaction feedback
   clears the draft and takes effect on Done. Dismissing without Done discards edits. Explain whole-block precedence in the
   editor, and show conversation cost only when opened from a chat with available pricing and usage.
 
+## Advanced Server Settings
+
+- Settings > Server opens Advanced Server Settings as a native shared sheet, with Custom Headers as its initial section.
+- Each row edits a name and an initially concealed, revealable value, and supports explicit deletion. Add Header creates
+  a draft row. Show validation errors beside the affected fields and disable Done while the draft is invalid.
+- Cancel or dismiss discards modal edits. Done copies valid edits into the Server draft; the existing Server Save action
+  persists URL, API key, and headers together. Explain this two-step behavior in the sheet. Test Connection uses that draft.
+- Applying changed headers clears the saved/connection status. A failed save retains the draft and the existing persistence
+  error/retry presentation. Editing server configuration cancels checks and rejects their stale completions.
+
 ## Visible States
 
 - New or materially changed primary surfaces must distinguish loading, unavailable, empty, and failed states rather than

@@ -14,6 +14,7 @@ struct APIClient: APIClientProtocol, Sendable {
     private let session: URLSession
     private let serverBaseURLProvider: @MainActor @Sendable () -> String
     private let apiKeyProvider: @MainActor @Sendable () -> String
+    private let customHeadersProvider: @MainActor @Sendable () -> [ServerHTTPHeader]
     private let streamTimeoutInterval: TimeInterval
 
     // MARK: - Init
@@ -26,6 +27,7 @@ struct APIClient: APIClientProtocol, Sendable {
         self.session = session
         self.serverBaseURLProvider = { settingsManager.getServerBaseURL() }
         self.apiKeyProvider = { settingsManager.getAPIKey() }
+        self.customHeadersProvider = { settingsManager.getCustomHeaders() }
         self.streamTimeoutInterval = streamTimeoutInterval
     }
 
@@ -33,11 +35,13 @@ struct APIClient: APIClientProtocol, Sendable {
         session: URLSession = .shared,
         serverBaseURL: String,
         apiKey: String,
+        customHeaders: [ServerHTTPHeader] = [],
         streamTimeoutInterval: TimeInterval = 60
     ) {
         self.session = session
         self.serverBaseURLProvider = { serverBaseURL }
         self.apiKeyProvider = { apiKey }
+        self.customHeadersProvider = { customHeaders }
         self.streamTimeoutInterval = streamTimeoutInterval
     }
 
@@ -96,7 +100,9 @@ struct APIClient: APIClientProtocol, Sendable {
                     )
                     LogManager.network("→ STREAM POST /\(endpoint)")
 
-                    let (bytes, response) = try await session.bytes(for: urlRequest)
+                    let (bytes, response) = try await session.bytes(
+                        for: urlRequest, delegate: ServerRequestRedirectDelegate.shared
+                    )
                     try validateResponse(response)
                     let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
                     LogManager.network("← STREAM /\(endpoint) [\(statusCode)] opened")
@@ -330,6 +336,7 @@ private extension APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
         request.timeoutInterval = timeoutInterval
+        try ServerHTTPHeader.apply(customHeadersProvider(), to: &request)
 
         let apiKey = apiKeyProvider()
         if !apiKey.isEmpty {
@@ -387,7 +394,7 @@ private extension APIClient {
 
     func performRequest(_ request: URLRequest) async throws -> (Data, URLResponse) {
         do {
-            return try await session.data(for: request)
+            return try await session.data(for: request, delegate: ServerRequestRedirectDelegate.shared)
         } catch let error as URLError {
             throw mapURLError(error)
         }

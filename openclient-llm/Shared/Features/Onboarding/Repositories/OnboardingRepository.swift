@@ -9,8 +9,18 @@
 import Foundation
 
 protocol OnboardingRepositoryProtocol: Sendable {
-    func testConnection(serverURL: String, apiKey: String) async throws
-    func checkLiteLLMHealth(serverURL: String) async -> Bool
+    func testConnection(serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]) async throws
+    func checkLiteLLMHealth(serverURL: String, customHeaders: [ServerHTTPHeader]) async -> Bool
+}
+
+extension OnboardingRepositoryProtocol {
+    func testConnection(serverURL: String, apiKey: String) async throws {
+        try await testConnection(serverURL: serverURL, apiKey: apiKey, customHeaders: [])
+    }
+
+    func checkLiteLLMHealth(serverURL: String) async -> Bool {
+        await checkLiteLLMHealth(serverURL: serverURL, customHeaders: [])
+    }
 }
 
 struct OnboardingRepository: OnboardingRepositoryProtocol {
@@ -26,7 +36,7 @@ struct OnboardingRepository: OnboardingRepositoryProtocol {
 
     // MARK: - Public
 
-    func testConnection(serverURL: String, apiKey: String) async throws {
+    func testConnection(serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]) async throws {
         guard let url = URL(string: serverURL)?.appendingPathComponent("models") else {
             throw OnboardingRepositoryError.invalidURL
         }
@@ -34,12 +44,13 @@ struct OnboardingRepository: OnboardingRepositoryProtocol {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.timeoutInterval = 30
+        try ServerHTTPHeader.apply(customHeaders, to: &request)
 
         if !apiKey.isEmpty {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
 
-        let (_, response) = try await session.data(for: request)
+        let (_, response) = try await session.data(for: request, delegate: ServerRequestRedirectDelegate.shared)
 
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
@@ -47,7 +58,7 @@ struct OnboardingRepository: OnboardingRepositoryProtocol {
         }
     }
 
-    func checkLiteLLMHealth(serverURL: String) async -> Bool {
+    func checkLiteLLMHealth(serverURL: String, customHeaders: [ServerHTTPHeader]) async -> Bool {
         guard !serverURL.isEmpty,
               let url = URL(string: serverURL)?.appendingPathComponent("health/readiness") else {
             return false
@@ -58,7 +69,8 @@ struct OnboardingRepository: OnboardingRepositoryProtocol {
         request.timeoutInterval = 10
 
         do {
-            let (data, response) = try await session.data(for: request)
+            try ServerHTTPHeader.apply(customHeaders, to: &request)
+            let (data, response) = try await session.data(for: request, delegate: ServerRequestRedirectDelegate.shared)
 
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {

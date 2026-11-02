@@ -14,7 +14,25 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
   Repositories map endpoint DTOs, UseCases apply business rules, and ViewModels coordinate them.
 - Use `.convertFromSnakeCase` for API response decoding. Keep request models `Encodable` and transport values `Sendable`.
 - Use a captured endpoint/key pair for operations whose authorization scope must not change in flight, including MCP and
-  delegated image work. Ordinary clients may read current settings per request.
+  delegated image work. Capture the custom headers with that pair. Ordinary clients may read current settings per request.
+
+## Custom Server Headers
+
+- Settings > Server > Advanced edits an ordered list of custom HTTP header names and values. Store it with the endpoint
+  and API key in the existing Keychain configuration record. Older records without headers decode as an empty list.
+- Apply headers centrally to configured-server JSON, SSE, multipart, and raw-data requests, and explicitly to connection
+  and LiteLLM health checks. Test Connection uses the unsaved server draft. Captured clients retain captured header values.
+- Header names are ASCII HTTP tokens, unique case-insensitively, and at most 256 UTF-8 bytes. Values may be empty but must
+  contain no control characters or line breaks and at most 8,192 UTF-8 bytes. Allow at most 32 headers and 65,536 combined
+  name/value bytes.
+- Reserve Authorization, Proxy-Authorization, Host, Content-Type, Content-Length, Connection, Transfer-Encoding, Trailer,
+  TE, and Upgrade for the app or transport. User-Agent and provider-specific headers remain configurable.
+- Validate at editing, persistence, and request construction boundaries; surface localized errors without header values.
+- Custom headers are literal values shared by the configured server's requests. No automatic conversation-session values
+  are generated. Changes to effective header names/values invalidate the existing authorization scope, like API-key changes;
+  row identities, order, and name capitalization alone do not invalidate it.
+- Configured-server requests and connection/health checks follow same-origin redirects only, including matching scheme and
+  effective port. External downloads, browsing, and separate provider-enrichment URLs do not inherit server headers.
 
 ## OpenAI-Compatible Endpoints
 

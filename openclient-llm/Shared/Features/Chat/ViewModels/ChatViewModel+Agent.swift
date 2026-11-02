@@ -264,7 +264,8 @@ private extension ChatViewModel {
         let sharedFailedServerIds = settingsManager.getFailedMCPServerIds()
         let repository = MCPRepository(apiClient: APIClient(
             serverBaseURL: settingsManager.getServerBaseURL(),
-            apiKey: settingsManager.getAPIKey()
+            apiKey: settingsManager.getAPIKey(),
+            customHeaders: settingsManager.getCustomHeaders()
         ))
         for tool in loadedState.availableMCPTools
             where loadedState.enabledMCPToolIds.contains(tool.id)

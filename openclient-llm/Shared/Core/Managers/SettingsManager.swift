@@ -51,7 +51,7 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     }
 
     let defaults: UserDefaults
-    private let keychainManager: KeychainManagerProtocol
+    let keychainManager: KeychainManagerProtocol
 
     // MARK: - Init
 
@@ -72,56 +72,6 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
 
     func setIsOnboardingCompleted(_ value: Bool) {
         defaults.set(value, forKey: Keys.isOnboardingCompleted)
-    }
-
-    func getServerBaseURL() -> String {
-        keychainManager.getServerBaseURL()
-    }
-
-    func setServerBaseURL(_ value: String) {
-        _ = setServerConfiguration(serverBaseURL: value, apiKey: keychainManager.getAPIKey())
-    }
-
-    func getAPIKey() -> String {
-        keychainManager.getAPIKey()
-    }
-
-    func setAPIKey(_ value: String) {
-        _ = setServerConfiguration(serverBaseURL: keychainManager.getServerBaseURL(), apiKey: value)
-    }
-
-    @discardableResult
-    func setServerConfiguration(serverBaseURL: String, apiKey: String) -> Bool {
-        let previousURL = keychainManager.getServerBaseURL()
-        let previousAPIKey = keychainManager.getAPIKey()
-        let endpointChanged = MCPToolInfo.normalizedServerURL(previousURL)
-            != MCPToolInfo.normalizedServerURL(serverBaseURL)
-        let credentialsChanged = previousAPIKey != apiKey
-
-        guard endpointChanged || credentialsChanged else {
-            guard previousURL != serverBaseURL else { return true }
-            let didSave = keychainManager.setServerConfiguration(serverBaseURL: serverBaseURL, apiKey: apiKey)
-            if didSave {
-                NotificationCenter.default.post(name: .serverConfigurationDidChange, object: nil)
-            }
-            return didSave
-        }
-        guard rotateMCPAuthorizationScope() else { return false }
-        _ = updateMCPToolConfigurationKeys([:])
-        let didSave = keychainManager.setServerConfiguration(serverBaseURL: serverBaseURL, apiKey: apiKey)
-        NotificationCenter.default.post(name: .mcpToolSettingsDidChange, object: nil)
-        if didSave {
-            NotificationCenter.default.post(name: .serverConfigurationDidChange, object: nil)
-        }
-        return didSave
-    }
-
-    func getMCPAuthorizationScope() -> String {
-        if let scope = keychainManager.getMCPAuthorizationScope() { return scope }
-        let scope = UUID().uuidString
-        guard keychainManager.setMCPAuthorizationScope(scope),
-              keychainManager.getMCPAuthorizationScope() == scope else { return "" }
-        return scope
     }
 
     func getSelectedModelId() -> String? {
@@ -441,10 +391,10 @@ extension SettingsManager {
     }
 }
 
-// MARK: - Private
+// MARK: - Helpers
 
-private extension SettingsManager {
-    func currentMCPToolConfigurationKeys() -> [String: String] {
+extension SettingsManager {
+    private func currentMCPToolConfigurationKeys() -> [String: String] {
         defaults.dictionaryRepresentation().reduce(into: [String: String]()) { result, entry in
             guard entry.key.hasPrefix(Keys.mcpToolConfigurationPrefix),
                   let value = entry.value as? String else { return }
@@ -453,7 +403,7 @@ private extension SettingsManager {
         }
     }
 
-    func updateEnabledMCPToolIds(_ ids: [String]) -> Bool {
+    private func updateEnabledMCPToolIds(_ ids: [String]) -> Bool {
         guard Set(getEnabledMCPToolIds()) != Set(ids) else { return false }
         defaults.set(ids.sorted(), forKey: Keys.enabledMCPToolIds)
         return true
@@ -479,13 +429,7 @@ private extension SettingsManager {
         return didChange
     }
 
-    func rotateMCPAuthorizationScope() -> Bool {
-        let scope = UUID().uuidString
-        return keychainManager.setMCPAuthorizationScope(scope)
-            && keychainManager.getMCPAuthorizationScope() == scope
-    }
-
-    func migrateToKeychain() {
+    private func migrateToKeychain() {
         let legacyURL = defaults.string(forKey: LegacyKeys.serverBaseURL)
         let legacyKey = defaults.string(forKey: LegacyKeys.apiKey)
         guard legacyURL != nil || legacyKey != nil else { return }

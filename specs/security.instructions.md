@@ -56,6 +56,9 @@ Apply these rules to new or materially changed paths while keeping reviews and e
 - Set finite, reasonable timeouts and cancellation behavior.
 - Apply authentication only to the intended origin. Avoid forwarding credentials across redirects or derived URLs without
   explicit validation.
+- Custom server headers are potentially sensitive and belong in the server's Keychain record. Do not log their values or
+  include them in conversation backups or iCloud data. Configured-server requests refuse cross-origin redirects; external
+  downloads and separate provider-enrichment requests do not inherit these headers.
 
 ## Authorization And External Actions
 
