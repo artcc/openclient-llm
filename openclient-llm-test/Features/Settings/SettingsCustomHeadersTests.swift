@@ -47,6 +47,41 @@ final class SettingsCustomHeadersTests: XCTestCase {
         XCTAssertTrue(try loadedState(sut).isSaved)
     }
 
+    func test_send_equivalentHeaderEdits_preservesDraftAndPassesItToSave() throws {
+        let first = ServerHTTPHeader(name: "X-One", value: "one")
+        let second = ServerHTTPHeader(name: "X-Two", value: "two")
+        var renamed = first
+        renamed.name = "x-one"
+        let drafts = [[renamed, second], [second, first]]
+
+        for draft in drafts {
+            let save = MockSaveServerConfigurationUseCase()
+            let sut = makeViewModel(headers: [first, second], save: save)
+            sut.send(.saveTapped)
+            XCTAssertTrue(try loadedState(sut).isSaved)
+            sut.send(.advancedServerSettingsOpened)
+            sut.send(.customHeaderRemoved(first.id))
+            sut.send(.customHeaderRemoved(second.id))
+            var expected: [ServerHTTPHeader] = []
+            for header in draft {
+                sut.send(.customHeaderAdded)
+                var added = try XCTUnwrap(try loadedState(sut).customHeaderDraft?.last)
+                added.name = header.name
+                added.value = header.value
+                sut.send(.customHeaderChanged(added))
+                expected.append(added)
+            }
+
+            sut.send(.advancedServerSettingsApplied)
+
+            XCTAssertEqual(try loadedState(sut).customHeaders, expected)
+            XCTAssertNil(try loadedState(sut).customHeaderDraft)
+            XCTAssertFalse(try loadedState(sut).isSaved)
+            sut.send(.saveTapped)
+            XCTAssertEqual(save.savedCustomHeaders, expected)
+        }
+    }
+
     func test_send_invalidHeader_keepsModalDraftAndOriginalConfiguration() throws {
         let original = ServerHTTPHeader(name: "X-Test", value: "original")
         let sut = makeViewModel(headers: [original])

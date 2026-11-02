@@ -36,13 +36,14 @@ extension SettingsManager {
         guard ServerHTTPHeader.validationError(in: customHeaders) == nil else { return false }
         let previousURL = keychainManager.getServerBaseURL()
         let previousAPIKey = keychainManager.getAPIKey()
+        let previousHeaders = keychainManager.getCustomHeaders()
         let endpointChanged = MCPToolInfo.normalizedServerURL(previousURL)
             != MCPToolInfo.normalizedServerURL(serverBaseURL)
         let credentialsChanged = previousAPIKey != apiKey
-            || !ServerHTTPHeader.hasSameValues(keychainManager.getCustomHeaders(), customHeaders)
+            || !ServerHTTPHeader.hasSameValues(previousHeaders, customHeaders)
 
         guard endpointChanged || credentialsChanged else {
-            guard previousURL != serverBaseURL else { return true }
+            guard previousURL != serverBaseURL || previousHeaders != customHeaders else { return true }
             let didSave = keychainManager.setServerConfiguration(
                 serverBaseURL: serverBaseURL, apiKey: apiKey, customHeaders: customHeaders
             )

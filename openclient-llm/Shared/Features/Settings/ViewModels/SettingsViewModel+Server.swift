@@ -133,7 +133,7 @@ extension SettingsViewModel {
     private func applyCustomHeaderDraft(_ loadedState: inout LoadedState) {
         guard let draft = loadedState.customHeaderDraft,
               ServerHTTPHeader.validationError(in: draft) == nil else { return }
-        if !ServerHTTPHeader.hasSameValues(draft, loadedState.customHeaders) {
+        if draft != loadedState.customHeaders {
             loadedState.customHeaders = draft
             markServerConfigurationEdited(&loadedState)
         }

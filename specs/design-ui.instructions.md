@@ -66,7 +66,8 @@ description: "Use when changing OpenClient SwiftUI visuals, interaction feedback
 - Each row edits a name and an initially concealed, revealable value, and supports explicit deletion. Add Header creates
   a draft row. Show validation errors beside the affected fields and disable Done while the draft is invalid.
 - Cancel or dismiss discards modal edits. Done copies valid edits into the Server draft; the existing Server Save action
-  persists URL, API key, and headers together. Explain this two-step behavior in the sheet. Test Connection uses that draft.
+  persists URL, API key, and headers together, preserving header name capitalization and row order even when effective
+  values are unchanged. Explain this two-step behavior in the sheet. Test Connection uses that draft.
 - Applying changed headers clears the saved/connection status. A failed save retains the draft and the existing persistence
   error/retry presentation. Editing server configuration cancels checks and rejects their stale completions.
 
