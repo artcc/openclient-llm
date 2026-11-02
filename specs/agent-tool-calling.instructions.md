@@ -55,8 +55,8 @@ description: "Use when changing automatic agent routing, tool registration, tool
 - A presentable response may contain text, reasoning, or native images. Emit `.completed` only after such a final response.
 - The agent has a bounded active-time budget, extended only for image generation or editing. Pause it while MCP approval is
   pending. Cancellation must terminate model requests, authorization, tool work, and stale event publication.
-- Capture the endpoint/credential authorization scope for a run. Revalidate it around every model or tool request and
-  cancel the run when server configuration changes.
+- Capture the endpoint/credential authorization scope, including custom server headers, for a run. Revalidate it around
+  every model or tool request and cancel the run when server configuration changes.
 
 ## Registry
 
@@ -72,7 +72,7 @@ description: "Use when changing automatic agent routing, tool registration, tool
 ## MCP Tools
 
 - Discover servers and tools through the LiteLLM endpoints defined in `litellm-api.instructions.md`, using one captured
-  endpoint/credential pair. Discovery failure must not affect ordinary chat.
+  endpoint/credential/header configuration. Discovery failure must not affect ordinary chat.
 - Advertise only enabled tools from a successful, current discovery scope whose decoded input schema has an object root.
   Preserve the raw schema in the definition and validate the constraints represented by the local schema model before
   authorization and again before execution. Unsupported JSON Schema keywords are not enforced locally.

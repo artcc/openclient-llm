@@ -214,6 +214,89 @@ final class SettingsManagerMCPPermissionTests: XCTestCase {
         XCTAssertNotEqual(sut.getMCPAuthorizationScope(), "old-scope")
     }
 
+    func test_setServerConfiguration_headersChanged_invalidatesPreviousAuthorization() {
+        // Given
+        sut.setServerConfiguration(serverBaseURL: "https://example.invalid", apiKey: "key")
+        sut.setMCPToolConfigurationKey("old-tool-key", for: "tool")
+        let originalScope = sut.getMCPAuthorizationScope()
+        let headers = [ServerHTTPHeader(name: "X-Token", value: "new-token")]
+
+        // When
+        let saved = sut.setServerConfiguration(
+            serverBaseURL: "https://example.invalid", apiKey: "key", customHeaders: headers
+        )
+
+        // Then
+        XCTAssertTrue(saved)
+        XCTAssertNotEqual(sut.getMCPAuthorizationScope(), originalScope)
+        XCTAssertNil(sut.getMCPToolConfigurationKey(for: "tool"))
+        XCTAssertEqual(sut.getCustomHeaders(), headers)
+        let newScope = sut.getMCPAuthorizationScope()
+        sut.setServerConfiguration(
+            serverBaseURL: "https://example.invalid", apiKey: "key",
+            customHeaders: [.init(name: "x-token", value: "new-token")]
+        )
+        XCTAssertEqual(sut.getMCPAuthorizationScope(), newScope)
+    }
+
+    func test_setServerConfiguration_equivalentHeaderEdits_persistsWithoutInvalidatingAuthorization() {
+        let first = ServerHTTPHeader(name: "X-One", value: "one")
+        let second = ServerHTTPHeader(name: "X-Two", value: "two")
+        var renamed = first
+        renamed.name = "x-one"
+        let drafts = [[renamed, second], [second, first]]
+
+        for draft in drafts {
+            XCTAssertTrue(sut.setServerConfiguration(
+                serverBaseURL: "https://example.invalid", apiKey: "key", customHeaders: [first, second]
+            ))
+            sut.setMCPToolConfigurationKey("tool-key", for: "tool")
+            sut.setMCPToolPermission(.alwaysAllow, for: "tool-key")
+            let scope = sut.getMCPAuthorizationScope()
+
+            let saved = sut.setServerConfiguration(
+                serverBaseURL: "https://example.invalid", apiKey: "key", customHeaders: draft
+            )
+
+            XCTAssertTrue(saved)
+            XCTAssertEqual(sut.getCustomHeaders(), draft)
+            XCTAssertEqual(sut.getMCPAuthorizationScope(), scope)
+            XCTAssertEqual(sut.getMCPToolConfigurationKey(for: "tool"), "tool-key")
+            XCTAssertEqual(sut.getMCPToolPermission(for: "tool-key"), .alwaysAllow)
+        }
+    }
+
+    func test_setServerConfiguration_equivalentHeaderWriteFails_reportsFailureWithoutChangingAuthorization() {
+        let original = ServerHTTPHeader(name: "X-Token", value: "token")
+        XCTAssertTrue(sut.setServerConfiguration(
+            serverBaseURL: "https://example.invalid", apiKey: "key", customHeaders: [original]
+        ))
+        let scope = sut.getMCPAuthorizationScope()
+        keychain.persistsServerConfiguration = false
+        var renamed = original
+        renamed.name = "x-token"
+
+        let saved = sut.setServerConfiguration(
+            serverBaseURL: "https://example.invalid", apiKey: "key", customHeaders: [renamed]
+        )
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(sut.getCustomHeaders(), [original])
+        XCTAssertEqual(sut.getMCPAuthorizationScope(), scope)
+    }
+
+    func test_setServerConfiguration_failedHeaderWrite_preservesPreviousHeaderValues() {
+        let previous = [ServerHTTPHeader(name: "X-Token", value: "old-token")]
+        keychain.customHeaders = previous
+        keychain.persistsServerConfiguration = false
+        let saved = sut.setServerConfiguration(
+            serverBaseURL: "https://example.invalid", apiKey: "new-key",
+            customHeaders: [.init(name: "X-Token", value: "new-token")]
+        )
+        XCTAssertFalse(saved)
+        XCTAssertEqual(sut.getCustomHeaders(), previous)
+    }
+
     func test_publishMCPToolDiscovery_olderCompletionDoesNotReplaceNewerCompletion() {
         // Given
         let toolId = MCPToolInfo.identifier(serverId: "server", name: "tool")

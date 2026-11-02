@@ -14,6 +14,7 @@ extension ChatViewModel {
             apiClient: APIClient(
                 serverBaseURL: settingsManager.getServerBaseURL(),
                 apiKey: settingsManager.getAPIKey(),
+                customHeaders: settingsManager.getCustomHeaders(),
                 streamTimeoutInterval: generatesImages ? 600 : 60
             ),
             attachmentRepository: attachmentRepository,
@@ -46,7 +47,7 @@ extension ChatViewModel {
         guard let principal = loadedState.selectedModel,
               principal.capabilities.contains(.functionCalling),
               loadedState.modelCatalogScope == settingsManager.getMCPAuthorizationScope() else { return }
-        let client = APIClient(serverBaseURL: settingsManager.getServerBaseURL(), apiKey: settingsManager.getAPIKey())
+        let client = makeImageToolAPIClient()
         let repository = imageToolChatRepository ?? ChatRepository(
             apiClient: client,
             attachmentRepository: attachmentRepository
@@ -92,6 +93,13 @@ extension ChatViewModel {
                 checks.contains { $0() }
             }))
         }
+    }
+
+    private func makeImageToolAPIClient() -> APIClient {
+        APIClient(
+            serverBaseURL: settingsManager.getServerBaseURL(), apiKey: settingsManager.getAPIKey(),
+            customHeaders: settingsManager.getCustomHeaders()
+        )
     }
 
     private func editingTool(

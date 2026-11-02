@@ -15,6 +15,7 @@ final class MockKeychainManager: KeychainManagerProtocol, @unchecked Sendable {
 
     var serverBaseURL: String = ""
     var apiKey: String = ""
+    var customHeaders: [ServerHTTPHeader] = []
     var mcpAuthorizationScope: String?
     var persistsMCPAuthorizationScope = true
     var persistsServerConfiguration = true
@@ -39,11 +40,16 @@ final class MockKeychainManager: KeychainManagerProtocol, @unchecked Sendable {
         apiKey = value
     }
 
+    func getCustomHeaders() -> [ServerHTTPHeader] { customHeaders }
+
     @discardableResult
-    func setServerConfiguration(serverBaseURL: String, apiKey: String) -> Bool {
+    func setServerConfiguration(
+        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]
+    ) -> Bool {
         guard persistsServerConfiguration else { return false }
         self.serverBaseURL = serverBaseURL
         self.apiKey = apiKey
+        self.customHeaders = customHeaders
         return true
     }
 
@@ -62,6 +68,7 @@ final class MockKeychainManager: KeychainManagerProtocol, @unchecked Sendable {
     func deleteAll() {
         serverBaseURL = ""
         apiKey = ""
+        customHeaders = []
         mcpAuthorizationScope = nil
         mcpAuthorizationScopeWriteCount = 0
         deleteAllCalled = true

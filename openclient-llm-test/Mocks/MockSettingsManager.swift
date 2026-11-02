@@ -16,6 +16,7 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     var isOnboardingCompleted: Bool = false
     var serverBaseURL: String = ""
     var apiKey: String = ""
+    var customHeaders: [ServerHTTPHeader] = []
     var mcpAuthorizationScope: String = "test-scope"
     var selectedModelId: String?
     var selectedTTSModelId: String?
@@ -83,15 +84,21 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         apiKey = value
     }
 
+    func getCustomHeaders() -> [ServerHTTPHeader] { customHeaders }
+
     @discardableResult
-    func setServerConfiguration(serverBaseURL: String, apiKey: String) -> Bool {
+    func setServerConfiguration(
+        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]
+    ) -> Bool {
         let endpointChanged = MCPToolInfo.normalizedServerURL(self.serverBaseURL)
             != MCPToolInfo.normalizedServerURL(serverBaseURL)
-        if endpointChanged || self.apiKey != apiKey {
+        let headersChanged = !ServerHTTPHeader.hasSameValues(self.customHeaders, customHeaders)
+        if endpointChanged || self.apiKey != apiKey || headersChanged {
             mcpAuthorizationScope = UUID().uuidString
         }
         self.serverBaseURL = serverBaseURL
         self.apiKey = apiKey
+        self.customHeaders = customHeaders
         return true
     }
 
@@ -355,5 +362,6 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         disabledBuiltInTools = []
         dismissedRemoteBannerKey = nil
         deleteAllCalled = true
+        customHeaders = []
     }
 }

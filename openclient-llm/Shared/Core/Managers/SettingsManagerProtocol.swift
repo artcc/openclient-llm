@@ -15,7 +15,10 @@ protocol SettingsManagerProtocol: Sendable {
     func setServerBaseURL(_ value: String)
     func getAPIKey() -> String
     func setAPIKey(_ value: String)
-    @discardableResult func setServerConfiguration(serverBaseURL: String, apiKey: String) -> Bool
+    func getCustomHeaders() -> [ServerHTTPHeader]
+    @discardableResult func setServerConfiguration(
+        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]
+    ) -> Bool
     func getMCPAuthorizationScope() -> String
     func getSelectedModelId() -> String?
     func setSelectedModelId(_ value: String?)
@@ -79,6 +82,11 @@ protocol SettingsManagerProtocol: Sendable {
 }
 
 extension SettingsManagerProtocol {
+    @discardableResult
+    func setServerConfiguration(serverBaseURL: String, apiKey: String) -> Bool {
+        setServerConfiguration(serverBaseURL: serverBaseURL, apiKey: apiKey, customHeaders: getCustomHeaders())
+    }
+
     func hasValidServerConfiguration() -> Bool {
         let serverURL = getServerBaseURL().trimmingCharacters(in: .whitespacesAndNewlines)
         guard let components = URLComponents(string: serverURL),

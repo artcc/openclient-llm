@@ -49,6 +49,9 @@ extension SettingsViewModel {
             testConnection()
         case .saveTapped:
             saveSettings()
+        case .advancedServerSettingsOpened, .advancedServerSettingsCancelled, .advancedServerSettingsApplied,
+             .customHeaderAdded, .customHeaderRemoved, .customHeaderChanged:
+            handleAdvancedServerEvent(event)
         case .cloudAvailabilityRefresh:
             refreshCloudAvailability()
         case .resetConfirmed:

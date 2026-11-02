@@ -18,11 +18,11 @@ final class MockOnboardingRepository: OnboardingRepositoryProtocol, @unchecked S
 
     // MARK: - Public
 
-    func testConnection(serverURL: String, apiKey: String) async throws {
+    func testConnection(serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]) async throws {
         try testConnectionResult.get()
     }
 
-    func checkLiteLLMHealth(serverURL: String) async -> Bool {
+    func checkLiteLLMHealth(serverURL: String, customHeaders: [ServerHTTPHeader]) async -> Bool {
         checkLiteLLMHealthResult
     }
 }

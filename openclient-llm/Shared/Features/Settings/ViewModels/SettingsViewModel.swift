@@ -19,6 +19,12 @@ final class SettingsViewModel {
         case apiKeyChanged(String)
         case testConnectionTapped
         case saveTapped
+        case advancedServerSettingsOpened
+        case advancedServerSettingsCancelled
+        case advancedServerSettingsApplied
+        case customHeaderAdded
+        case customHeaderRemoved(UUID)
+        case customHeaderChanged(ServerHTTPHeader)
         case cloudSyncToggled(Bool)
         case cloudSyncConflictResolved(keepLocal: Bool)
         case cloudSyncConflictCancelled
@@ -53,6 +59,8 @@ final class SettingsViewModel {
     struct LoadedState: Equatable {
         var serverURL: String = ""
         var apiKey: String = ""
+        var customHeaders: [ServerHTTPHeader] = []
+        var customHeaderDraft: [ServerHTTPHeader]?
         var connectionStatus: ConnectionStatus = .idle
         var isSaved: Bool = false
         var serverPersistenceError: String?
@@ -106,9 +114,9 @@ final class SettingsViewModel {
         settingsManager.getLastSuccessfulCloudSyncDate()
     }
 
-    private let saveServerConfigurationUseCase: SaveServerConfigurationUseCaseProtocol
-    private let testServerConnectionUseCase: TestServerConnectionUseCaseProtocol
-    private let checkLiteLLMHealthUseCase: CheckLiteLLMHealthUseCaseProtocol
+    let saveServerConfigurationUseCase: SaveServerConfigurationUseCaseProtocol
+    let testServerConnectionUseCase: TestServerConnectionUseCaseProtocol
+    let checkLiteLLMHealthUseCase: CheckLiteLLMHealthUseCaseProtocol
     private let fetchSearchToolsUseCase: FetchSearchToolsUseCaseProtocol
     let fetchMCPToolsUseCase: FetchMCPToolsUseCaseProtocol
     let settingsManager: SettingsManagerProtocol
@@ -130,6 +138,9 @@ final class SettingsViewModel {
     var mcpDiscoveryTask: Task<Void, Never>?
     var mcpDiscoveryGeneration = 0
     var observedMCPAuthorizationScope: String
+    var serverConnectionTask: Task<Void, Never>?
+    var serverHealthTask: Task<Void, Never>?
+    var serverConfigurationRevision = 0
 
     // MARK: - Init
 
@@ -178,6 +189,8 @@ final class SettingsViewModel {
     isolated deinit {
         mcpSettingsObservationTask?.cancel()
         mcpDiscoveryTask?.cancel()
+        serverConnectionTask?.cancel()
+        serverHealthTask?.cancel()
     }
 }
 
@@ -185,6 +198,7 @@ final class SettingsViewModel {
 
 extension SettingsViewModel {
     func loadSettings() {
+        cancelServerChecks()
 #if DEBUG
         let savedServerURL = settingsManager.getServerBaseURL()
         let getServerBaseURL = savedServerURL.isEmpty ? Constants.URLs.serverUrl : savedServerURL
@@ -194,6 +208,7 @@ extension SettingsViewModel {
         let loadedState = LoadedState(
             serverURL: getServerBaseURL,
             apiKey: settingsManager.getAPIKey(),
+            customHeaders: settingsManager.getCustomHeaders(),
             isCloudSyncEnabled: settingsManager.getIsCloudSyncEnabled(),
             showTokenUsage: settingsManager.getShowTokenUsage(),
             modelConfiguration: settingsManager.getGlobalChatModelConfiguration(),
@@ -227,86 +242,10 @@ extension SettingsViewModel {
         }
         let serverURL = loadedState.serverURL
         if !serverURL.isEmpty {
-            Task {
-                await updateLiteLLMHint(serverURL: serverURL)
-            }
+            refreshLiteLLMHint(serverURL: serverURL, customHeaders: loadedState.customHeaders)
         }
         refreshNotificationStatus()
         fetchMCPTools()
-    }
-
-    func updateServerURL(_ url: String) {
-        guard case .loaded(var loadedState) = state else { return }
-        loadedState.serverURL = url
-        loadedState.connectionStatus = .idle
-        loadedState.isSaved = false
-        loadedState.serverPersistenceError = nil
-        state = .loaded(loadedState)
-    }
-
-    func updateAPIKey(_ key: String) {
-        guard case .loaded(var loadedState) = state else { return }
-        loadedState.apiKey = key
-        loadedState.connectionStatus = .idle
-        loadedState.isSaved = false
-        loadedState.serverPersistenceError = nil
-        state = .loaded(loadedState)
-    }
-
-    func testConnection() {
-        guard case .loaded(var loadedState) = state else { return }
-        let serverURL = loadedState.serverURL
-        let apiKey = loadedState.apiKey
-        LogManager.info("testConnection url=\(serverURL)")
-        loadedState.connectionStatus = .testing
-        state = .loaded(loadedState)
-
-        Task {
-            do {
-                try await testServerConnectionUseCase.execute(serverURL: serverURL, apiKey: apiKey)
-                guard case .loaded(var currentState) = state else { return }
-                currentState.connectionStatus = .success
-                state = .loaded(currentState)
-                LogManager.success("testConnection success url=\(serverURL)")
-            } catch {
-                guard case .loaded(var currentState) = state else { return }
-                currentState.connectionStatus = .failure(error.localizedDescription)
-                state = .loaded(currentState)
-                LogManager.error("testConnection failed url=\(serverURL): \(error)")
-            }
-            await updateLiteLLMHint(serverURL: serverURL)
-        }
-    }
-
-    func saveSettings() {
-        guard case .loaded(var loadedState) = state else { return }
-        let serverURL = loadedState.serverURL
-        let apiKey = loadedState.apiKey
-        let configurationChanged = serverURL != settingsManager.getServerBaseURL()
-            || apiKey != settingsManager.getAPIKey()
-        LogManager.info("saveSettings url=\(serverURL)")
-        guard saveServerConfigurationUseCase.execute(serverURL: serverURL, apiKey: apiKey) else {
-            loadedState.isSaved = false
-            loadedState.serverPersistenceFailureCount += 1
-            loadedState.serverPersistenceError = String(localized: "The server configuration could not be saved.")
-            state = .loaded(loadedState)
-            return
-        }
-        loadedState.isSaved = true
-        loadedState.serverPersistenceError = nil
-        state = .loaded(loadedState)
-        LogManager.success("saveSettings done")
-        Task {
-            await updateLiteLLMHint(serverURL: serverURL)
-        }
-        if configurationChanged { fetchMCPTools(replacingCurrent: true) }
-    }
-
-    func updateLiteLLMHint(serverURL: String) async {
-        let isLiteLLM = await checkLiteLLMHealthUseCase.execute(serverURL: serverURL)
-        guard case .loaded(var currentState) = state else { return }
-        currentState.showLiteLLMHint = !isLiteLLM
-        state = .loaded(currentState)
     }
 
     func toggleShowTokenUsage(_ show: Bool) {

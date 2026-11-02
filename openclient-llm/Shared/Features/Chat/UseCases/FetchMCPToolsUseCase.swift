@@ -75,11 +75,13 @@ struct FetchMCPToolsUseCase: FetchMCPToolsUseCaseProtocol {
         let empty = MCPDiscoveryResult(servers: [], tools: [])
         let serverBaseURL = settingsManager.getServerBaseURL()
         let apiKey = settingsManager.getAPIKey()
+        let customHeaders = settingsManager.getCustomHeaders()
         let authorizationScope = settingsManager.getMCPAuthorizationScope()
         guard !serverBaseURL.isEmpty, !authorizationScope.isEmpty else { return empty }
         let repository = repository ?? MCPRepository(apiClient: APIClient(
             serverBaseURL: serverBaseURL,
-            apiKey: apiKey
+            apiKey: apiKey,
+            customHeaders: customHeaders
         ))
         do {
             let servers = try await repository.fetchServers()
