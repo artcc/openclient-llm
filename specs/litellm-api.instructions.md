@@ -31,8 +31,10 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
 - Custom headers are literal values shared by the configured server's requests. No automatic conversation-session values
   are generated. Changes to effective header names/values invalidate the existing authorization scope, like API-key changes;
   row identities, order, and name capitalization alone do not invalidate it.
-- Configured-server requests and connection/health checks follow same-origin redirects only, including matching scheme and
-  effective port. External downloads, browsing, and separate provider-enrichment URLs do not inherit server headers.
+- Requests carrying custom server headers, including connection/health checks, follow same-origin redirects only, including
+  matching scheme and effective port. Requests without custom headers retain the session's existing redirect behavior.
+  Capture the redirect policy with the request's header values so later settings changes cannot alter an in-flight policy.
+  External downloads, browsing, and separate provider-enrichment URLs do not inherit server headers.
 
 ## OpenAI-Compatible Endpoints
 

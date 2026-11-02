@@ -50,7 +50,8 @@ struct OnboardingRepository: OnboardingRepositoryProtocol {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
 
-        let (_, response) = try await session.data(for: request, delegate: ServerRequestRedirectDelegate.shared)
+        let delegate = customHeaders.isEmpty ? nil : ServerRequestRedirectDelegate.shared
+        let (_, response) = try await session.data(for: request, delegate: delegate)
 
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
@@ -70,7 +71,8 @@ struct OnboardingRepository: OnboardingRepositoryProtocol {
 
         do {
             try ServerHTTPHeader.apply(customHeaders, to: &request)
-            let (data, response) = try await session.data(for: request, delegate: ServerRequestRedirectDelegate.shared)
+            let delegate = customHeaders.isEmpty ? nil : ServerRequestRedirectDelegate.shared
+            let (data, response) = try await session.data(for: request, delegate: delegate)
 
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {

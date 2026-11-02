@@ -53,7 +53,7 @@ struct APIClient: APIClientProtocol, Sendable {
         body: (any Encodable & Sendable)?,
         timeoutInterval: TimeInterval
     ) async throws -> T {
-        let urlRequest = try buildRequest(
+        let prepared = try buildRequest(
             endpoint: endpoint,
             method: method,
             body: body,
@@ -62,7 +62,7 @@ struct APIClient: APIClientProtocol, Sendable {
         LogManager.network("→ \(method.rawValue) /\(endpoint)")
 
         do {
-            let (data, response) = try await performRequest(urlRequest)
+            let (data, response) = try await performRequest(prepared)
             if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
                 LogManager.error("HTTP \(http.statusCode) /\(endpoint) (\(data.count) bytes)")
             }
@@ -92,7 +92,7 @@ struct APIClient: APIClientProtocol, Sendable {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let urlRequest = try buildRequest(
+                    let prepared = try buildRequest(
                         endpoint: endpoint,
                         method: .post,
                         body: body,
@@ -101,7 +101,7 @@ struct APIClient: APIClientProtocol, Sendable {
                     LogManager.network("→ STREAM POST /\(endpoint)")
 
                     let (bytes, response) = try await session.bytes(
-                        for: urlRequest, delegate: ServerRequestRedirectDelegate.shared
+                        for: prepared.request, delegate: prepared.redirectDelegate
                     )
                     try validateResponse(response)
                     let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -146,14 +146,14 @@ struct APIClient: APIClientProtocol, Sendable {
         timeoutInterval: TimeInterval
     ) async throws -> T {
         LogManager.network("→ MULTIPART POST /\(endpoint) files=\(files.count)")
-        var request = try buildRequest(
+        var prepared = try buildRequest(
             endpoint: endpoint,
             method: .post,
             body: nil,
             timeoutInterval: timeoutInterval
         )
         let boundary = UUID().uuidString
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        prepared.request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
         var body = Data()
 
@@ -174,10 +174,10 @@ struct APIClient: APIClientProtocol, Sendable {
         }
         body.append(Data("--\(boundary)--\r\n".utf8))
 
-        request.httpBody = body
+        prepared.request.httpBody = body
 
         do {
-            let (data, response) = try await performRequest(request)
+            let (data, response) = try await performRequest(prepared)
             if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
                 LogManager.error("HTTP \(http.statusCode) /\(endpoint) (\(data.count) bytes)")
             }
@@ -269,11 +269,11 @@ struct APIClient: APIClientProtocol, Sendable {
         endpoint: String,
         body: any Encodable & Sendable
     ) async throws -> Data {
-        let urlRequest = try buildRequest(endpoint: endpoint, method: .post, body: body)
+        let prepared = try buildRequest(endpoint: endpoint, method: .post, body: body)
         LogManager.network("→ POST /\(endpoint) (raw data)")
 
         do {
-            let (data, response) = try await performRequest(urlRequest)
+            let (data, response) = try await performRequest(prepared)
             if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
                 LogManager.error("HTTP \(http.statusCode) /\(endpoint) (\(data.count) bytes)")
             }
@@ -309,8 +309,9 @@ private extension APIClient {
         body: (any Encodable & Sendable)?,
         queryItems: [URLQueryItem]? = nil,
         timeoutInterval: TimeInterval = 60
-    ) throws -> URLRequest {
+    ) throws -> (request: URLRequest, redirectDelegate: ServerRequestRedirectDelegate?) {
         let baseURL = serverBaseURLProvider()
+        let customHeaders = customHeadersProvider()
 
         let url: URL
         if let queryItems, !queryItems.isEmpty {
@@ -336,7 +337,7 @@ private extension APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
         request.timeoutInterval = timeoutInterval
-        try ServerHTTPHeader.apply(customHeadersProvider(), to: &request)
+        try ServerHTTPHeader.apply(customHeaders, to: &request)
 
         let apiKey = apiKeyProvider()
         if !apiKey.isEmpty {
@@ -348,7 +349,7 @@ private extension APIClient {
             request.httpBody = try JSONEncoder().encode(body)
         }
 
-        return request
+        return (request, customHeaders.isEmpty ? nil : ServerRequestRedirectDelegate.shared)
     }
 
     func request<T: Decodable & Sendable>(
@@ -357,11 +358,11 @@ private extension APIClient {
         body: (any Encodable & Sendable)?,
         queryItems: [URLQueryItem]?
     ) async throws -> T {
-        let urlRequest = try buildRequest(endpoint: endpoint, method: method, body: body, queryItems: queryItems)
+        let prepared = try buildRequest(endpoint: endpoint, method: method, body: body, queryItems: queryItems)
         LogManager.network("→ \(method.rawValue) /\(endpoint)")
 
         do {
-            let (data, response) = try await performRequest(urlRequest)
+            let (data, response) = try await performRequest(prepared)
             if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
                 LogManager.error("HTTP \(http.statusCode) /\(endpoint) (\(data.count) bytes)")
             }
@@ -392,9 +393,11 @@ private extension APIClient {
         return dict
     }
 
-    func performRequest(_ request: URLRequest) async throws -> (Data, URLResponse) {
+    func performRequest(
+        _ prepared: (request: URLRequest, redirectDelegate: ServerRequestRedirectDelegate?)
+    ) async throws -> (Data, URLResponse) {
         do {
-            return try await session.data(for: request, delegate: ServerRequestRedirectDelegate.shared)
+            return try await session.data(for: prepared.request, delegate: prepared.redirectDelegate)
         } catch let error as URLError {
             throw mapURLError(error)
         }

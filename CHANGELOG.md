@@ -19,7 +19,7 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 
 ### Security
 
-- Custom headers are validated before saving or sending, and configured-server requests reject redirects to another origin to prevent credential forwarding.
+- Custom headers are validated before saving or sending, and requests carrying them reject redirects to another origin to prevent credential forwarding while preserving existing redirect behavior for requests without custom headers.
 
 ## [1.7.35-build-129] - 2026-10-30
 
