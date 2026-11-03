@@ -92,6 +92,23 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
   `ollama/<model>` uses legacy generate/JSON emulation; remove `.functionCalling` and
   `.parallelFunctionCalling` from that route even when metadata advertises them.
 
+## Manual Model Capabilities
+
+- Model details can replace automatic capabilities with a complete manual selection, including an empty selection.
+  `LLMModel` retains detected capabilities separately; its effective capabilities use the override when present.
+- Apply overrides after all catalog enrichment, including LiteLLM and Ollama. Automatic detection and its route filters
+  remain the default; an explicit manual selection takes precedence over their detected capability set.
+- Store overrides locally through `SettingsManager` in `UserDefaults`, keyed by normalized server base URL (including its
+  path) and exact model ID. Hash the compound storage key rather than persisting the endpoint in preference keys. A missing
+  entry means automatic detection; an empty array means a manual selection with no optional capabilities.
+- Overrides survive catalog refreshes and server switches. Restoring automatic detection removes that model's override;
+  deleting all app data removes every override. They are not conversation data, backups, or iCloud-synchronized settings.
+- Saving updates only the Models screen's in-memory catalog and specialist selectors. Open chats keep their loaded models;
+  subsequent catalog loads apply the saved override. Do not broadcast changes or refresh open chats.
+- Manual capabilities do not change model mode, provider, limits, prices, or transports. Vision, function calling, and image
+  generation reuse their existing capability-dependent behavior. Other capability flags retain their informational role.
+  Dedicated image models remain generators by mode even without an image-generation capability flag.
+
 ## Native And Dedicated Images
 
 - A chat or completion model with `.imageGeneration` remains on `POST /chat/completions` and requests image/text output

@@ -16,6 +16,7 @@ final class AppTipsTests: XCTestCase {
         // Given
         let expectedIdentifiers = Set([
             AppTips.modelSelector.id,
+            AppTips.modelCapabilities.id,
             AppTips.chatAttachments.id,
             AppTips.messageActions.id,
             AppTips.webSearch.id,

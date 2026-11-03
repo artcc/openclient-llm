@@ -60,6 +60,20 @@ description: "Use when changing OpenClient SwiftUI visuals, interaction feedback
   clears the draft and takes effect on Done. Dismissing without Done discards edits. Explain whole-block precedence in the
   editor, and show conversation cost only when opened from a chat with available pricing and usage.
 
+## Model Capability Editor
+
+- Model Info includes an Automatic Capabilities toggle, enabled when no manual override exists. Automatic mode displays
+  detected capabilities; manual mode starts from the effective selection and offers the existing capability flags except
+  Text, which remains the fallback label rather than an editable switch.
+- Edit a local draft in the detail sheet. Done saves the complete selection or removes the override in automatic mode;
+  Cancel or dismiss discards edits. Explain server-specific precedence and that open chats keep their loaded capabilities.
+- Update the Models list and its image/vision selectors after saving without refetching the catalog or notifying chats.
+  Keep the server identity captured when the detail was opened so edits cannot be saved against a different server.
+- The Automatic Capabilities toggle hosts a shared TipKit tip explaining manual selection. Show it only in automatic mode,
+  invalidate it when the user switches to manual, and include it in the existing feature-tip eligibility reset.
+- Sort capability labels in the Models list and detail (including manual toggles) using localized comparison of their
+  translated labels.
+
 ## Advanced Server Settings
 
 - Settings > Server opens Advanced Server Settings as a native shared sheet, with Custom Headers as its initial section.

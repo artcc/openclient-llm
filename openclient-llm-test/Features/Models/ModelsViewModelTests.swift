@@ -45,6 +45,67 @@ final class ModelsViewModelTests: XCTestCase {
         XCTAssertEqual(sut.state, .loading)
     }
 
+    // MARK: - Tests — capabilities
+
+    func test_send_manualCapabilities_updatesSpecialistListsAndPersistsSelection() {
+        let model = LLMModel(id: "model", capabilities: [.functionCalling])
+        let server = "https://example.com/v1"
+        sut = ModelsViewModel(
+            state: .loaded(.init(models: [model], serverBaseURL: server)),
+            fetchModelsUseCase: mockFetchModels,
+            settingsManager: mockSettingsManager
+        )
+
+        sut.send(.modelCapabilitiesChanged("model", [.vision, .imageGeneration], serverBaseURL: server))
+
+        guard case .loaded(let state) = sut.state else { return XCTFail("Expected loaded state") }
+        XCTAssertEqual(state.visionModels.map(\.id), ["model"])
+        XCTAssertEqual(state.imageGenerationModels.map(\.id), ["model"])
+        XCTAssertEqual(mockSettingsManager.getModelCapabilityOverride(for: "model", serverBaseURL: server), [
+            .vision, .imageGeneration
+        ])
+    }
+
+    func test_send_automaticCapabilities_restoresDetectionAndRemovesSpecialistEligibility() {
+        var model = LLMModel(id: "model", capabilities: [.functionCalling])
+        model.capabilityOverride = [.vision, .imageGeneration]
+        let server = "https://example.com/v1"
+        mockSettingsManager.setModelCapabilityOverride(model.capabilityOverride, for: model.id, serverBaseURL: server)
+        sut = ModelsViewModel(
+            state: .loaded(.init(models: [model], serverBaseURL: server)),
+            fetchModelsUseCase: mockFetchModels,
+            settingsManager: mockSettingsManager
+        )
+
+        sut.send(.modelCapabilitiesChanged("model", nil, serverBaseURL: server))
+
+        guard case .loaded(let state) = sut.state else { return XCTFail("Expected loaded state") }
+        XCTAssertEqual(state.models.first?.capabilities, [.functionCalling])
+        XCTAssertTrue(state.visionModels.isEmpty)
+        XCTAssertTrue(state.imageGenerationModels.isEmpty)
+        XCTAssertNil(mockSettingsManager.getModelCapabilityOverride(for: "model", serverBaseURL: server))
+    }
+
+    func test_send_savedDetailFromAnotherServer_preservesCurrentCatalog() {
+        let model = LLMModel(id: "model")
+        let originalServer = "https://first.example/v1"
+        let currentServer = "https://second.example/v1"
+        sut = ModelsViewModel(
+            state: .loaded(.init(models: [model], serverBaseURL: currentServer)),
+            fetchModelsUseCase: mockFetchModels,
+            settingsManager: mockSettingsManager
+        )
+
+        sut.send(.modelCapabilitiesChanged("model", [.vision], serverBaseURL: originalServer))
+
+        guard case .loaded(let state) = sut.state else { return XCTFail("Expected loaded state") }
+        XCTAssertEqual(state.models, [model])
+        XCTAssertEqual(
+            mockSettingsManager.getModelCapabilityOverride(for: "model", serverBaseURL: originalServer), [.vision]
+        )
+        XCTAssertNil(mockSettingsManager.getModelCapabilityOverride(for: "model", serverBaseURL: currentServer))
+    }
+
     // MARK: - Tests — viewAppeared
 
     func test_send_viewAppeared_withModels_setsLoadedState() async throws {

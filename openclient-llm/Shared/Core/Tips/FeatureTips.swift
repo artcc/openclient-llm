@@ -17,6 +17,17 @@ struct ModelSelectorTip: Tip {
     }
 }
 
+struct ModelCapabilitiesTip: Tip {
+    var title: Text { Text(String(localized: "Choose model capabilities")) }
+
+    var message: Text? {
+        Text(String(localized: """
+            If your server does not detect capabilities correctly, turn off automatic detection \
+            to choose vision, tools, or image generation manually. Save your choices with Done.
+            """))
+    }
+}
+
 struct ChatAttachmentsTip: Tip {
     var title: Text { Text(String(localized: "Add images and documents")) }
 

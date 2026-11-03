@@ -22,6 +22,7 @@ final class ModelsViewModel {
         case visionModelSelected(String?)
         case imageGenerationModelSelected(String?)
         case voiceSelected(String, forModelId: String)
+        case modelCapabilitiesChanged(String, [LLMModel.Capability]?, serverBaseURL: String)
     }
 
     enum State: Equatable {
@@ -31,6 +32,7 @@ final class ModelsViewModel {
 
     struct LoadedState: Equatable {
         var models: [LLMModel] = []
+        var serverBaseURL: String = ""
         var selectedModelId: String?
         var selectedTTSModelId: String?
         var selectedSTTModelId: String?
@@ -110,6 +112,8 @@ final class ModelsViewModel {
             selectImageGenerationModel(modelId)
         case .voiceSelected(let voice, let modelId):
             selectVoice(voice, forModelId: modelId)
+        case .modelCapabilitiesChanged(let modelId, let capabilities, let serverBaseURL):
+            updateModelCapabilities(capabilities, for: modelId, serverBaseURL: serverBaseURL)
         }
     }
 
@@ -132,6 +136,7 @@ private extension ModelsViewModel {
 
         Task {
             do {
+                let serverBaseURL = settingsManager.getServerBaseURL()
                 let models = try await fetchModelsUseCase.execute()
                 let allModels = [LLMModel.appleSpeechRecognition] + models
                 let selectedModelId = settingsManager.getSelectedModelId()
@@ -140,6 +145,7 @@ private extension ModelsViewModel {
                 let ttsVoices = buildTTSVoices(from: allModels)
                 state = .loaded(LoadedState(
                     models: allModels,
+                    serverBaseURL: serverBaseURL,
                     selectedModelId: selectedModelId,
                     selectedTTSModelId: selectedTTSModelId,
                     selectedSTTModelId: selectedSTTModelId,
@@ -174,6 +180,16 @@ private extension ModelsViewModel {
         loadedState.selectedModelId = model.id
         state = .loaded(loadedState)
         settingsManager.setSelectedModelId(model.id)
+    }
+
+    func updateModelCapabilities(_ capabilities: [LLMModel.Capability]?, for modelId: String, serverBaseURL: String) {
+        settingsManager.setModelCapabilityOverride(capabilities, for: modelId, serverBaseURL: serverBaseURL)
+        guard case .loaded(var loadedState) = state,
+              MCPToolInfo.normalizedServerURL(loadedState.serverBaseURL)
+                == MCPToolInfo.normalizedServerURL(serverBaseURL),
+              let index = loadedState.models.firstIndex(where: { $0.id == modelId }) else { return }
+        loadedState.models[index].capabilityOverride = capabilities
+        state = .loaded(loadedState)
     }
 
     func selectTTSModel(_ model: LLMModel) {
@@ -219,6 +235,7 @@ private extension ModelsViewModel {
 
     func performRefresh() async {
         do {
+            let serverBaseURL = settingsManager.getServerBaseURL()
             let models = try await fetchModelsUseCase.execute()
             let allModels = [LLMModel.appleSpeechRecognition] + models
             let selectedModelId = settingsManager.getSelectedModelId()
@@ -227,6 +244,7 @@ private extension ModelsViewModel {
             let ttsVoices = buildTTSVoices(from: allModels)
             state = .loaded(LoadedState(
                 models: allModels,
+                serverBaseURL: serverBaseURL,
                 selectedModelId: selectedModelId,
                 selectedTTSModelId: selectedTTSModelId,
                 selectedSTTModelId: selectedSTTModelId,

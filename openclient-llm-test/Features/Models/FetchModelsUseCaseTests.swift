@@ -22,7 +22,7 @@ final class FetchModelsUseCaseTests: XCTestCase {
         try await super.setUp()
 
         mockRepository = MockModelsRepository()
-        sut = FetchModelsUseCase(repository: mockRepository)
+        sut = FetchModelsUseCase(repository: mockRepository, settingsManager: MockSettingsManager())
     }
 
     override func tearDown() async throws {
