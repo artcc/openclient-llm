@@ -1,5 +1,7 @@
 Hi there! We've got some great new features for you in this update.
 
+• Edit a model's capabilities from its info screen: turn off Automatic Capabilities to select vision, tools, image generation, and other supported capabilities when your server does not report them correctly.
+• Your choices are saved locally for each server and model and survive catalog refreshes. Turn automatic detection back on to restore the detected capabilities. The Models list updates when you save; open chats keep their loaded capabilities.
 • Add custom HTTP headers in Settings > Server > Advanced to connect to servers that require extra headers.
 • Minor bug fixes and stability improvements.
 

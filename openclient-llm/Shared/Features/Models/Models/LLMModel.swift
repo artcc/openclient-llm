@@ -13,7 +13,8 @@ struct LLMModel: Identifiable, Equatable, Sendable {
 
     let id: String
     let ownedBy: String
-    var capabilities: [Capability]
+    var detectedCapabilities: [Capability]
+    var capabilityOverride: [Capability]?
     var provider: Provider
     var mode: Mode
     var providerName: String
@@ -38,7 +39,7 @@ struct LLMModel: Identifiable, Equatable, Sendable {
     ) {
         self.id = id
         self.ownedBy = ownedBy
-        self.capabilities = capabilities
+        self.detectedCapabilities = capabilities
         self.provider = provider
         self.mode = mode
         self.providerName = providerName
@@ -46,6 +47,10 @@ struct LLMModel: Identifiable, Equatable, Sendable {
         self.maxOutputTokens = maxOutputTokens
         self.inputCostPerToken = inputCostPerToken
         self.outputCostPerToken = outputCostPerToken
+    }
+
+    nonisolated var capabilities: [Capability] {
+        capabilityOverride ?? detectedCapabilities
     }
 
     var logoImageName: String? {

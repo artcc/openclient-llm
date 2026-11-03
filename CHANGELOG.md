@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## [1.7.40-build-133] - 2026-11-03
+
+### Added
+
+- Model details on iOS and macOS now allow manually selecting capabilities such as vision, tools, and image generation, with local per-server/model overrides that survive catalog refreshes and can be reset to automatic detection.
+- A contextual tip in model details explains how to switch from automatic detection to manual capabilities.
+
+### Changed
+
+- Saved capability selections update the Models list and vision/image-generation selectors while open chats keep their previously loaded capabilities.
+- Capability labels in the Models list and detail are sorted alphabetically using localized comparison of their translated names.
+
 ## [1.7.40-build-131] - 2026-11-02
 
 ### Added

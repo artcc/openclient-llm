@@ -1,5 +1,7 @@
 ¡Hola! Esta actualización viene cargada de novedades.
 
+• Edita las capacidades de un modelo desde su pantalla de información: desactiva Capacidades automáticas para seleccionar visión, herramientas, generación de imágenes y otras capacidades compatibles cuando tu servidor no las comunique correctamente.
+• Tus preferencias se guardan localmente por servidor y modelo y se mantienen al actualizar el catálogo. Reactiva la detección automática para recuperar las capacidades detectadas. La lista de modelos se actualiza al guardar; los chats abiertos conservan las capacidades que ya tenían cargadas.
 • Añade cabeceras HTTP personalizadas en Ajustes > Servidor > Avanzado para conectar con servidores que requieren cabeceras adicionales.
 • Correcciones de errores menores y mejoras de estabilidad.
 

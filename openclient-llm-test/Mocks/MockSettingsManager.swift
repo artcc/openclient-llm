@@ -19,6 +19,7 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     var customHeaders: [ServerHTTPHeader] = []
     var mcpAuthorizationScope: String = "test-scope"
     var selectedModelId: String?
+    var modelCapabilityOverrides: [String: [String: [LLMModel.Capability]]] = [:]
     var selectedTTSModelId: String?
     var selectedSTTModelId: String?
     var selectedVisionModelId: String?
@@ -49,6 +50,17 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     var deleteAllCalled: Bool = false
 
     // MARK: - Public
+
+    func getModelCapabilityOverride(for modelId: String, serverBaseURL: String) -> [LLMModel.Capability]? {
+        modelCapabilityOverrides[MCPToolInfo.normalizedServerURL(serverBaseURL)]?[modelId]
+    }
+
+    func setModelCapabilityOverride(
+        _ capabilities: [LLMModel.Capability]?, for modelId: String, serverBaseURL: String
+    ) {
+        let server = MCPToolInfo.normalizedServerURL(serverBaseURL)
+        modelCapabilityOverrides[server, default: [:]][modelId] = capabilities
+    }
 
     func getGlobalChatModelConfiguration() -> ChatModelConfiguration {
         globalChatModelConfiguration
@@ -338,6 +350,7 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     }
 
     func deleteAll() {
+        modelCapabilityOverrides = [:]
         globalChatModelConfiguration = .default
         isOnboardingCompleted = false
         serverBaseURL = ""

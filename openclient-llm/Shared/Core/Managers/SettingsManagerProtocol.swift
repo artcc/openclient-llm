@@ -22,6 +22,8 @@ protocol SettingsManagerProtocol: Sendable {
     func getMCPAuthorizationScope() -> String
     func getSelectedModelId() -> String?
     func setSelectedModelId(_ value: String?)
+    func getModelCapabilityOverride(for modelId: String, serverBaseURL: String) -> [LLMModel.Capability]?
+    func setModelCapabilityOverride(_ capabilities: [LLMModel.Capability]?, for modelId: String, serverBaseURL: String)
     func getIsCloudSyncEnabled() -> Bool
     func setIsCloudSyncEnabled(_ value: Bool)
     func getLastSuccessfulCloudSyncDate() -> Date?

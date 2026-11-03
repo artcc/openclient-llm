@@ -201,7 +201,7 @@ private extension ModelsRepository {
             guard let extra = supplementalCaps[model.id] else { return model }
             var updated = model
             let existing = Set(updated.capabilities.map(\.rawValue))
-            updated.capabilities += extra.filter { !existing.contains($0.rawValue) }
+            updated.detectedCapabilities += extra.filter { !existing.contains($0.rawValue) }
             return updated
         }
     }
