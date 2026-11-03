@@ -31,6 +31,7 @@ struct FetchModelsUseCase: FetchModelsUseCaseProtocol {
     // MARK: - Execute
 
     func execute() async throws -> [LLMModel] {
+        let serverBaseURL = settingsManager.getServerBaseURL()
         var models = try await repository.fetchModels()
 
         if let modelInfoList = try? await repository.fetchModelInfo(), !modelInfoList.isEmpty {
@@ -42,7 +43,7 @@ struct FetchModelsUseCase: FetchModelsUseCaseProtocol {
             models = models.map { model in
                 var updated = model
                 if let info = infoByName[model.id] {
-                    updated.capabilities = info.capabilities
+                    updated.detectedCapabilities = info.capabilities
                     updated.provider = info.provider
                     updated.mode = info.mode
                     updated.providerName = info.providerName
@@ -57,13 +58,13 @@ struct FetchModelsUseCase: FetchModelsUseCaseProtocol {
             }
         } else {
             // LiteLLM /model/info not available — try Ollama /api/show enrichment
-            let rootURL = ollamaRootURL(from: settingsManager.getServerBaseURL())
+            let rootURL = ollamaRootURL(from: serverBaseURL)
             let ollamaDetails = await fetchOllamaDetails(for: models, rootURL: rootURL)
 
             models = models.map { model in
                 var updated = model
                 if let detail = ollamaDetails[model.id] {
-                    updated.capabilities = mapOllamaCapabilities(detail.capabilities ?? [])
+                    updated.detectedCapabilities = mapOllamaCapabilities(detail.capabilities ?? [])
                     updated.provider = .local
                     updated.providerName = "Ollama"
                     updated.mode = mapOllamaMode(detail.capabilities ?? [])
@@ -74,7 +75,13 @@ struct FetchModelsUseCase: FetchModelsUseCaseProtocol {
             }
         }
 
-        return models
+        return models.map { model in
+            var updated = model
+            updated.capabilityOverride = settingsManager.getModelCapabilityOverride(
+                for: model.id, serverBaseURL: serverBaseURL
+            )
+            return updated
+        }
     }
 }
 

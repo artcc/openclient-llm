@@ -7,13 +7,33 @@
 //
 
 import SwiftUI
+import TipKit
+
+struct ModelDetailSelection: Identifiable {
+    let model: LLMModel
+    let serverBaseURL: String
+
+    var id: String { model.id }
+}
 
 struct ModelDetailView: View {
     // MARK: - Properties
 
     let model: LLMModel
+    let onSave: ([LLMModel.Capability]?) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @State private var usesAutomaticCapabilities: Bool
+    @State private var selectedCapabilities: [LLMModel.Capability]
+
+    // MARK: - Init
+
+    init(model: LLMModel, onSave: @escaping ([LLMModel.Capability]?) -> Void) {
+        self.model = model
+        self.onSave = onSave
+        _usesAutomaticCapabilities = State(initialValue: model.capabilityOverride == nil)
+        _selectedCapabilities = State(initialValue: model.capabilities)
+    }
 
     // MARK: - View
 
@@ -27,9 +47,14 @@ struct ModelDetailView: View {
                     .navigationTitle(String(localized: "Model Info"))
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button(String(localized: "Cancel")) {
+                                dismiss()
+                            }
+                        }
                         ToolbarItem(placement: .confirmationAction) {
                             Button(String(localized: "Done")) {
-                                dismiss()
+                                save()
                             }
                         }
                     }
@@ -37,7 +62,7 @@ struct ModelDetailView: View {
             #endif
         }
         #if os(macOS)
-        .frame(width: 500, height: 460)
+        .frame(width: 700, height: 500)
         #endif
     }
 }
@@ -54,11 +79,18 @@ private extension ModelDetailView {
 
                 Spacer()
 
-                Button(String(localized: "Done")) {
+                Button(String(localized: "Cancel")) {
                     dismiss()
+                }
+                .controlSize(.small)
+                .keyboardShortcut(.cancelAction)
+
+                Button(String(localized: "Done")) {
+                    save()
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
+                .keyboardShortcut(.defaultAction)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -171,18 +203,65 @@ private extension ModelDetailView {
     }
 
     var capabilitiesSection: some View {
-        let capabilities = model.capabilities.isEmpty ? [LLMModel.Capability.text] : model.capabilities
-        return Section(String(localized: "Capabilities")) {
-            ForEach(capabilities.sorted { $0.label < $1.label }, id: \.self) { capability in
-                Label {
-                    Text(capability.label)
-                } icon: {
-                    Image(systemName: capability.icon)
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(capability.color)
+        Section {
+            Toggle(String(localized: "Automatic capabilities"), isOn: $usesAutomaticCapabilities)
+                .popoverTip(usesAutomaticCapabilities ? AppTips.modelCapabilities : nil)
+                .onChange(of: usesAutomaticCapabilities) { _, isAutomatic in
+                    if !isAutomatic {
+                        AppTips.modelCapabilities.invalidate(reason: .actionPerformed)
+                    }
+                }
+            if usesAutomaticCapabilities {
+                let detected = model.detectedCapabilities
+                let capabilities = detected.isEmpty ? [LLMModel.Capability.text] : detected
+                ForEach(capabilities.sorted {
+                    $0.label.localizedStandardCompare($1.label) == .orderedAscending
+                }, id: \.self) { capability in
+                    capabilityLabel(capability)
+                }
+            } else {
+                ForEach(LLMModel.Capability.allCases.filter { $0 != .text }.sorted {
+                    $0.label.localizedStandardCompare($1.label) == .orderedAscending
+                }, id: \.self) { capability in
+                    Toggle(isOn: capabilityBinding(for: capability)) {
+                        capabilityLabel(capability)
+                    }
                 }
             }
+        } header: {
+            Text(String(localized: "Capabilities"))
+        } footer: {
+            Text(String(localized: """
+            Turn off automatic detection to choose this model's capabilities. Manual choices override detection \
+            for this server. Open chats keep their loaded capabilities.
+            """))
         }
+    }
+
+    func capabilityLabel(_ capability: LLMModel.Capability) -> some View {
+        Label {
+            Text(capability.label)
+        } icon: {
+            Image(systemName: capability.icon)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(capability.color)
+        }
+    }
+
+    func capabilityBinding(for capability: LLMModel.Capability) -> Binding<Bool> {
+        Binding(
+            get: { selectedCapabilities.contains(capability) },
+            set: { enabled in
+                selectedCapabilities.removeAll { $0 == capability }
+                if enabled { selectedCapabilities.append(capability) }
+            }
+        )
+    }
+
+    func save() {
+        let capabilities = LLMModel.Capability.allCases.filter { $0 != .text && selectedCapabilities.contains($0) }
+        onSave(usesAutomaticCapabilities ? nil : capabilities)
+        dismiss()
     }
 
     var providerLogo: some View {
@@ -238,5 +317,11 @@ private extension LLMModel.Mode {
             inputCostPerToken: 0.0000025,
             outputCostPerToken: 0.00001
         )
-    )
+    ) { _ in }
+}
+
+#Preview("Manual capabilities") {
+    var model = LLMModel(id: "Custom model")
+    model.capabilityOverride = [.vision, .imageGeneration]
+    return ModelDetailView(model: model) { _ in }
 }

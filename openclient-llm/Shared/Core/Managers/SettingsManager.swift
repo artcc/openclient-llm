@@ -260,6 +260,7 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         defaults.removeObject(forKey: LegacyKeys.apiKey)
         keychainManager.deleteAll()
         resetGlobalChatModelConfiguration()
+        resetModelCapabilityOverrides()
         NotificationCenter.default.post(name: .builtInToolSettingsDidChange, object: nil)
         NotificationCenter.default.post(name: .serverConfigurationDidChange, object: nil)
         if wasCloudSyncEnabled {

@@ -17,7 +17,7 @@ struct ModelsView: View {
     @State private var viewModel = ModelsViewModel()
     @State private var ttsCustomVoiceTexts: [String: String] = [:]
     @State private var ttsCustomModeActive: Set<String> = []
-    @State private var modelForDetail: LLMModel?
+    @State private var modelForDetail: ModelDetailSelection?
 
     // MARK: - View
 
@@ -69,8 +69,12 @@ private extension ModelsView {
         .task {
             viewModel.send(.viewAppeared)
         }
-        .sheet(item: $modelForDetail) { model in
-            ModelDetailView(model: model)
+        .sheet(item: $modelForDetail) { selection in
+            ModelDetailView(model: selection.model) { capabilities in
+                viewModel.send(.modelCapabilitiesChanged(
+                    selection.model.id, capabilities, serverBaseURL: selection.serverBaseURL
+                ))
+            }
         }
     }
 
@@ -253,13 +257,13 @@ private extension ModelsView {
                     .accessibilityHidden(true)
             }
 
-            modelInfoButton(model)
+            modelInfoButton(model, serverBaseURL: loadedState.serverBaseURL)
         }
     }
 
-    func modelInfoButton(_ model: LLMModel) -> some View {
+    func modelInfoButton(_ model: LLMModel, serverBaseURL: String) -> some View {
         Button {
-            modelForDetail = model
+            modelForDetail = ModelDetailSelection(model: model, serverBaseURL: serverBaseURL)
         } label: {
             Image(systemName: "info.circle")
                 .foregroundStyle(.secondary)
@@ -299,7 +303,9 @@ private extension ModelsView {
 
     func capabilityTags(_ capabilities: [LLMModel.Capability]) -> some View {
         FlowLayout(spacing: 4) {
-            ForEach(capabilities.sorted { $0.label < $1.label }, id: \.self) { capability in
+            ForEach(capabilities.sorted {
+                $0.label.localizedStandardCompare($1.label) == .orderedAscending
+            }, id: \.self) { capability in
                 HStack(spacing: 4) {
                     Image(systemName: capability.icon)
                         .font(.caption2)

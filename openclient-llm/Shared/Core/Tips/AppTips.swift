@@ -14,6 +14,7 @@ enum AppTips {
     // MARK: - Tips
 
     static let modelSelector = ModelSelectorTip()
+    static let modelCapabilities = ModelCapabilitiesTip()
     static let chatAttachments = ChatAttachmentsTip()
     static let messageActions = MessageActionsTip()
     static let webSearch = WebSearchTip()
@@ -27,6 +28,7 @@ enum AppTips {
 
     static let allTips: [any Tip] = [
         modelSelector,
+        modelCapabilities,
         chatAttachments,
         messageActions,
         webSearch,
