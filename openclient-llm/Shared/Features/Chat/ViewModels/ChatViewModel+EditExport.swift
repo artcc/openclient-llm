@@ -73,7 +73,7 @@ extension ChatViewModel {
         beginStreamingBackground(for: assistantMessageId)
         streamTask = Task {
             await streamWithWebSearch(SendMessageContext(
-                text: "",
+                chatID: loadedState.chatID, text: "",
                 messages: currentMessages,
                 modelId: model.id,
                 assistantId: assistantMessageId,
@@ -136,7 +136,7 @@ extension ChatViewModel {
         beginStreamingBackground(for: assistantMessageId)
         streamTask = Task {
             await streamWithWebSearch(SendMessageContext(
-                text: trimmed,
+                chatID: loadedState.chatID, text: trimmed,
                 messages: currentMessages,
                 modelId: model.id,
                 assistantId: assistantMessageId,

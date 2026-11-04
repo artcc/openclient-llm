@@ -149,6 +149,7 @@ final class ChatViewModelImageCompactionTests: XCTestCase {
         )
         sut.activeAssistantMessageId = assistant.id
         let context = ChatViewModel.SendMessageContext(
+            chatID: conversation.id,
             text: "Latest question", messages: messages, modelId: model.id, assistantId: assistant.id,
             systemPrompt: "", parameters: ModelParameters(), webSearchEnabled: false,
             modelCapabilities: model.capabilities, selectedModel: model, contextWindowTokens: nil,

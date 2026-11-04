@@ -99,7 +99,9 @@ extension ChatViewModel {
         let generation = audioGeneration
         let inputText = loadedState.inputText
         let inputRevision = loadedState.inputRevision
-        let useCase = transcribeAudioUseCase
+        let useCase = transcribeAudioUseCase ?? TranscribeAudioUseCase(repository: AudioTranscriptionRepository(
+            apiClient: makeChatAPIClient(chatID: loadedState.chatID)
+        ))
         transcriptionTask = Task { [weak self] in
             do {
                 let text = try await useCase.execute(

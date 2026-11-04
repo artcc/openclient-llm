@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## [1.7.45-build-135] - 2026-11-04
+
+### Added
+
+- Advanced Server Settings now offers an optional Send Chat ID header with a configurable name and an automatically supplied, stable conversation identifier, omitted from model listing, discovery, and connection checks.
+
+### Changed
+
+- Chat-scoped requests capture the existing conversation ID across messages, tools, images, compaction, and audio, while new chats and forks retain independent identifiers.
+
+### Security
+
+- Automatic chat-ID headers share static-header validation and cross-origin redirect protection, with configuration changes invalidating tool authorization independently of per-chat IDs.
+
 ## [1.7.40-build-133] - 2026-11-03
 
 ### Added

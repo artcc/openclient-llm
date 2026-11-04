@@ -17,6 +17,7 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     var serverBaseURL: String = ""
     var apiKey: String = ""
     var customHeaders: [ServerHTTPHeader] = []
+    var chatIDHeaderName: String?
     var mcpAuthorizationScope: String = "test-scope"
     var selectedModelId: String?
     var modelCapabilityOverrides: [String: [String: [LLMModel.Capability]]] = [:]
@@ -94,24 +95,6 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     func setAPIKey(_ value: String) {
         if apiKey != value { mcpAuthorizationScope = UUID().uuidString }
         apiKey = value
-    }
-
-    func getCustomHeaders() -> [ServerHTTPHeader] { customHeaders }
-
-    @discardableResult
-    func setServerConfiguration(
-        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]
-    ) -> Bool {
-        let endpointChanged = MCPToolInfo.normalizedServerURL(self.serverBaseURL)
-            != MCPToolInfo.normalizedServerURL(serverBaseURL)
-        let headersChanged = !ServerHTTPHeader.hasSameValues(self.customHeaders, customHeaders)
-        if endpointChanged || self.apiKey != apiKey || headersChanged {
-            mcpAuthorizationScope = UUID().uuidString
-        }
-        self.serverBaseURL = serverBaseURL
-        self.apiKey = apiKey
-        self.customHeaders = customHeaders
-        return true
     }
 
     func getMCPAuthorizationScope() -> String {
@@ -376,5 +359,29 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         dismissedRemoteBannerKey = nil
         deleteAllCalled = true
         customHeaders = []
+        chatIDHeaderName = nil
+    }
+}
+
+extension MockSettingsManager {
+    func getCustomHeaders() -> [ServerHTTPHeader] { customHeaders }
+    func getChatIDHeaderName() -> String? { chatIDHeaderName }
+
+    @discardableResult
+    func setServerConfiguration(
+        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader], chatIDHeaderName: String?
+    ) -> Bool {
+        let endpointChanged = MCPToolInfo.normalizedServerURL(self.serverBaseURL)
+            != MCPToolInfo.normalizedServerURL(serverBaseURL)
+        let headersChanged = !ServerHTTPHeader.hasSameValues(self.customHeaders, customHeaders)
+        if endpointChanged || self.apiKey != apiKey || headersChanged
+            || self.chatIDHeaderName?.lowercased() != chatIDHeaderName?.lowercased() {
+            mcpAuthorizationScope = UUID().uuidString
+        }
+        self.serverBaseURL = serverBaseURL
+        self.apiKey = apiKey
+        self.customHeaders = customHeaders
+        self.chatIDHeaderName = chatIDHeaderName
+        return true
     }
 }

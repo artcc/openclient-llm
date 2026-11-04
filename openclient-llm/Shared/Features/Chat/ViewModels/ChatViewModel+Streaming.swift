@@ -14,7 +14,9 @@ extension ChatViewModel {
     func performStreaming(_ sendContext: SendMessageContext) async {
         let assistantMessageId = sendContext.assistantId
         let useCase = streamMessageUseCase ?? StreamMessageUseCase(
-            repository: makeChatRepository(generatesImages: sendContext.selectedModel.supportsNativeImageGeneration)
+            repository: makeChatRepository(
+                chatID: sendContext.chatID, generatesImages: sendContext.selectedModel.supportsNativeImageGeneration
+            )
         )
         streamingBackgroundUseCase.update(.thinking)
         LogManager.debug("performStreaming model=\(sendContext.modelId) messages=\(sendContext.messages.count)")

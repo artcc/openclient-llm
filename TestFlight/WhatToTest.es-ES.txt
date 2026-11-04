@@ -1,8 +1,7 @@
 ¡Hola! Esta actualización viene cargada de novedades.
 
-• Edita las capacidades de un modelo desde su pantalla de información: desactiva Capacidades automáticas para seleccionar visión, herramientas, generación de imágenes y otras capacidades compatibles cuando tu servidor no las comunique correctamente.
-• Tus preferencias se guardan localmente por servidor y modelo y se mantienen al actualizar el catálogo. Reactiva la detección automática para recuperar las capacidades detectadas. La lista de modelos se actualiza al guardar; los chats abiertos conservan las capacidades que ya tenían cargadas.
-• Añade cabeceras HTTP personalizadas en Ajustes > Servidor > Avanzado para conectar con servidores que requieren cabeceras adicionales.
+• Activa Enviar ID del chat en Ajustes > Servidor > Avanzado si tu servidor requiere un identificador de conversación en una cabecera HTTP. Elige el nombre de la cabecera y OpenClient enviará el valor automáticamente.
+• Cada chat conserva su identificador al reabrirlo o reintentar una respuesta; los chats nuevos y las bifurcaciones usan uno distinto. Esta cabecera no se envía al listar modelos ni al comprobar la conexión.
 • Correcciones de errores menores y mejoras de estabilidad.
 
 Gracias por seguir apoyándonos y por ayudarnos a crear juntos el mejor cliente posible para modelos de lenguaje.

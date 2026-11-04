@@ -85,7 +85,7 @@ extension ChatViewModel {
         guard let userMessage = context.messages.last(where: { $0.role == .user }) else {
             throw ImageGenerationInputError.promptRequired
         }
-        return try await generateImageUseCase.execute(
+        return try await makeImageGenerationUseCase(chatID: context.chatID).execute(
             prompt: userMessage.content,
             model: context.modelId,
             attachments: userMessage.attachments

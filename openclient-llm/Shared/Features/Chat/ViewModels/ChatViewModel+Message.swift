@@ -12,6 +12,7 @@ import Foundation
 
 extension ChatViewModel {
     struct SendMessageContext {
+        let chatID: UUID
         let text: String
         let messages: [ChatMessage]
         let modelId: String
@@ -28,6 +29,8 @@ extension ChatViewModel {
     }
 
     func streamWithWebSearch(_ context: SendMessageContext) async {
+        guard !Task.isCancelled, isActiveStream(context.assistantId),
+              case .loaded(let loadedState) = state, loadedState.chatID == context.chatID else { return }
         if context.selectedModel.mode == .imageGeneration {
             await performImageGeneration(context)
             return
@@ -107,12 +110,14 @@ extension ChatViewModel {
         let conversationConfiguration = loadedState.modelConfiguration
         let contextSummary = loadedState.conversation?.contextSummary
         let contextSummaryCursorMessageId = loadedState.conversation?.contextSummaryCursorMessageId
+        let chatID = loadedState.chatID
 
         streamTask?.cancel()
         activeAssistantMessageId = assistantId
         beginStreamingBackground(for: assistantId)
         streamTask = Task {
             await streamWithWebSearch(SendMessageContext(
+                chatID: chatID,
                 text: text,
                 messages: currentMessages,
                 modelId: model.id,

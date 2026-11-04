@@ -135,6 +135,7 @@ private extension SettingsView {
             if let headers = currentLoadedState?.customHeaderDraft {
                 ServerAdvancedSettingsView(
                     headers: headers,
+                    chatIDHeaderName: currentLoadedState?.chatIDHeaderNameDraft,
                     onEvent: { viewModel.send($0) },
                     isPresented: $isShowingAdvancedServerSettings
                 )
