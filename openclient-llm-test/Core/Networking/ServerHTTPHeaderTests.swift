@@ -51,4 +51,25 @@ final class ServerHTTPHeaderTests: XCTestCase {
         XCTAssertTrue(ServerHTTPHeader.hasSameValues(original, reordered))
         XCTAssertFalse(ServerHTTPHeader.hasSameValues(original, [.init(name: "X-One", value: "ONE")]))
     }
+
+    func test_validationError_automaticNameInvalidOrConflicting_rejectsConfiguration() {
+        let headers = [ServerHTTPHeader(name: "X-Chat-ID", value: "static")]
+        for name in ["", "Bad Name", "Authorization", "x-chat-id", String(repeating: "x", count: 257)] {
+            XCTAssertNotNil(ServerHTTPHeader.validationError(in: headers, chatIDHeaderName: name))
+        }
+        XCTAssertNil(ServerHTTPHeader.validationError(in: headers, chatIDHeaderName: "X-Conversation-ID"))
+        XCTAssertNil(ServerHTTPHeader.validationError(in: headers))
+    }
+
+    func test_validationError_automaticHeader_countsTowardCombinedLimits() {
+        let headers = (0..<ServerHTTPHeader.maximumCount).map { ServerHTTPHeader(name: "X-\($0)") }
+        XCTAssertNil(ServerHTTPHeader.validationError(in: headers))
+        XCTAssertNotNil(ServerHTTPHeader.validationError(in: headers, chatIDHeaderName: "X-Chat-ID"))
+        XCTAssertNil(ServerHTTPHeader.validationError(in: Array(headers.dropLast()), chatIDHeaderName: "X-Chat-ID"))
+
+        // Eight names and values total exactly 65,536 bytes before the automatic header.
+        let full = (0..<8).map { ServerHTTPHeader(name: "X-\($0)", value: String(repeating: "a", count: 8_189)) }
+        XCTAssertNil(ServerHTTPHeader.validationError(in: full))
+        XCTAssertNotNil(ServerHTTPHeader.validationError(in: full, chatIDHeaderName: "X-Chat-ID"))
+    }
 }

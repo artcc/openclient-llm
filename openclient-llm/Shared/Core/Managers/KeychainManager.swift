@@ -14,8 +14,9 @@ protocol KeychainManagerProtocol: Sendable {
     func getAPIKey() -> String
     func setAPIKey(_ value: String)
     func getCustomHeaders() -> [ServerHTTPHeader]
+    func getChatIDHeaderName() -> String?
     @discardableResult func setServerConfiguration(
-        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]
+        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader], chatIDHeaderName: String?
     ) -> Bool
     func getMCPAuthorizationScope() -> String?
     @discardableResult func setMCPAuthorizationScope(_ value: String) -> Bool
@@ -23,6 +24,14 @@ protocol KeychainManagerProtocol: Sendable {
 }
 
 extension KeychainManagerProtocol {
+    @discardableResult
+    func setServerConfiguration(serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]) -> Bool {
+        setServerConfiguration(
+            serverBaseURL: serverBaseURL, apiKey: apiKey,
+            customHeaders: customHeaders, chatIDHeaderName: getChatIDHeaderName()
+        )
+    }
+
     @discardableResult
     func setServerConfiguration(serverBaseURL: String, apiKey: String) -> Bool {
         setServerConfiguration(serverBaseURL: serverBaseURL, apiKey: apiKey, customHeaders: getCustomHeaders())
@@ -69,11 +78,14 @@ final class KeychainManager: KeychainManagerProtocol, @unchecked Sendable {
 
     @discardableResult
     func setServerConfiguration(
-        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]
+        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader], chatIDHeaderName: String?
     ) -> Bool {
-        guard ServerHTTPHeader.validationError(in: customHeaders) == nil else { return false }
+        guard ServerHTTPHeader.validationError(in: customHeaders, chatIDHeaderName: chatIDHeaderName) == nil else {
+            return false
+        }
         let configuration = StoredServerConfiguration(
-            serverBaseURL: serverBaseURL, apiKey: apiKey, customHeaders: customHeaders
+            serverBaseURL: serverBaseURL, apiKey: apiKey,
+            customHeaders: customHeaders, chatIDHeaderName: chatIDHeaderName
         )
         guard let data = try? JSONEncoder().encode(configuration),
               setData(data, forKey: Keys.serverConfiguration) else { return false }
@@ -84,6 +96,10 @@ final class KeychainManager: KeychainManagerProtocol, @unchecked Sendable {
 
     func getCustomHeaders() -> [ServerHTTPHeader] {
         getServerConfiguration().customHeaders ?? []
+    }
+
+    func getChatIDHeaderName() -> String? {
+        getServerConfiguration().chatIDHeaderName
     }
 
     func getMCPAuthorizationScope() -> String? {
@@ -110,6 +126,7 @@ private extension KeychainManager {
         let serverBaseURL: String
         let apiKey: String
         var customHeaders: [ServerHTTPHeader]?
+        var chatIDHeaderName: String?
     }
 
     func getServerConfiguration() -> StoredServerConfiguration {
@@ -125,7 +142,7 @@ private extension KeychainManager {
             _ = setServerConfiguration(
                 serverBaseURL: legacyConfiguration.serverBaseURL,
                 apiKey: legacyConfiguration.apiKey,
-                customHeaders: []
+                customHeaders: [], chatIDHeaderName: nil
             )
         }
         return legacyConfiguration

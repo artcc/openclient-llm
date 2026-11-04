@@ -51,9 +51,13 @@ final class ChatViewModelNativeImageTransportTests: XCTestCase {
     func test_makeChatRepository_nativeImage_capturesSettingsForStreamAndAgent() async throws {
         // Given
         let sut = makeViewModel(model: LLMModel(id: "native", capabilities: [.imageGeneration]))
-        let repository = sut.makeChatRepository(generatesImages: true)
+        let chatID = UUID()
+        settings.chatIDHeaderName = "X-Chat-ID"
+        let repository = sut.makeChatRepository(chatID: chatID, generatesImages: true)
         settings.serverBaseURL = "native-image-transport-test://replacement/v2"
         settings.apiKey = "replacement-test-key"
+        settings.chatIDHeaderName = nil
+        sut.send(.conversationLoaded(Conversation(modelId: "native")))
 
         // When
         for usesAgent in [false, true] {
@@ -62,6 +66,7 @@ final class ChatViewModelNativeImageTransportTests: XCTestCase {
             // Then
             XCTAssertEqual(request.url.absoluteString, "native-image-transport-test://original/v1/chat/completions")
             XCTAssertEqual(request.authorization, "Bearer original-test-key")
+            XCTAssertEqual(request.chatId, chatID.uuidString)
             XCTAssertEqual(request.method, "POST")
             XCTAssertEqual(request.timeoutInterval, 600)
             XCTAssertEqual(request.body.modalities, ["image", "text"])
@@ -74,7 +79,7 @@ final class ChatViewModelNativeImageTransportTests: XCTestCase {
     func test_makeChatRepository_textOnly_preservesDefaultTimeoutAndOmitsModalities() async throws {
         // Given
         let sut = makeViewModel(model: LLMModel(id: "native"))
-        let repository = sut.makeChatRepository(generatesImages: false)
+        let repository = sut.makeChatRepository(chatID: UUID(), generatesImages: false)
 
         // When
         for usesAgent in [false, true] {
@@ -92,6 +97,7 @@ final class ChatViewModelNativeImageTransportTests: XCTestCase {
             // Given
             settings.serverBaseURL = "native-image-transport-test://original/v1"
             settings.apiKey = "original-test-key"
+            settings.chatIDHeaderName = "X-Chat-ID"
             let capabilities: [LLMModel.Capability] = usesAgent
                 ? [.imageGeneration, .functionCalling] : [.imageGeneration]
             let sut = makeViewModel(model: LLMModel(id: "native", capabilities: capabilities))
@@ -110,6 +116,7 @@ final class ChatViewModelNativeImageTransportTests: XCTestCase {
             let request = try JSONDecoder().decode(NativeImageCapturedRequest.self, from: Data(content.utf8))
             XCTAssertEqual(request.url.absoluteString, "native-image-transport-test://current/v3/chat/completions")
             XCTAssertEqual(request.authorization, "Bearer current-test-key")
+            XCTAssertEqual(request.chatId, state.pendingSessionId.uuidString)
             XCTAssertEqual(request.timeoutInterval, 600)
             XCTAssertEqual(request.body.modalities, ["image", "text"])
             XCTAssertEqual(request.body.stream, !usesAgent)
@@ -193,11 +200,12 @@ final class ChatViewModelNativeImageTransportTests: XCTestCase {
 
     private func makeViewModel(
         model: LLMModel,
+        isPrivateChat: Bool = true,
         stream: StreamMessageUseCaseProtocol? = nil,
         agent: AgentStreamUseCaseProtocol? = nil
     ) -> ChatViewModel {
         let sut = ChatViewModel(
-            isPrivateChat: true,
+            isPrivateChat: isPrivateChat,
             state: .loaded(.init(
                 selectedModel: model, availableModels: [model], modelCatalogScope: settings.getMCPAuthorizationScope()
             )),
@@ -265,6 +273,64 @@ final class ChatViewModelNativeImageTransportTests: XCTestCase {
     }
 }
 
+extension ChatViewModelNativeImageTransportTests {
+    func test_send_newPrivateChats_reuseTheirOwnIDAcrossTurns() async throws {
+        settings.chatIDHeaderName = "X-Chat-ID"
+        let first = makeViewModel(model: LLMModel(id: "native"))
+        let second = makeViewModel(model: LLMModel(id: "native", capabilities: [.functionCalling]))
+        let firstID = try loadedState(first).pendingSessionId
+        let secondID = try loadedState(second).pendingSessionId
+        XCTAssertNotEqual(firstID, secondID)
+        for (sut, chatID) in [(first, firstID), (second, secondID), (first, firstID)] {
+            sut.send(.inputChanged("Hello"))
+            sut.send(.sendTapped)
+            await sut.streamTask?.value
+            XCTAssertEqual(try lastCapturedRequest(sut).chatId, chatID.uuidString)
+            XCTAssertNil(try loadedState(sut).conversation)
+        }
+        XCTAssertEqual(save.executeCallCount, 0)
+    }
+
+    func test_send_savedConversation_reusesIDAfterReopenRegenerationAndEdit() async throws {
+        settings.chatIDHeaderName = "X-Chat-ID"
+        let sut = makeViewModel(model: LLMModel(id: "native"), isPrivateChat: false)
+        let pendingID = try loadedState(sut).pendingSessionId
+        sut.send(.inputChanged("Hello"))
+        sut.send(.sendTapped)
+        await sut.streamTask?.value
+        XCTAssertEqual(try lastCapturedRequest(sut).chatId, pendingID.uuidString)
+        let saved = try XCTUnwrap(save.savedConversations.last)
+        XCTAssertEqual(saved.id, pendingID)
+
+        let reopened = makeViewModel(model: LLMModel(id: "native"), isPrivateChat: false)
+        reopened.send(.conversationLoaded(saved))
+        reopened.send(.regenerateLastResponse)
+        await reopened.streamTask?.value
+        XCTAssertEqual(try lastCapturedRequest(reopened).chatId, saved.id.uuidString)
+        let userID = try XCTUnwrap(saved.messages.first(where: { $0.role == .user })?.id)
+        reopened.send(.editMessage(id: userID, newContent: "Edited question"))
+        await reopened.streamTask?.value
+        XCTAssertEqual(try lastCapturedRequest(reopened).chatId, saved.id.uuidString)
+
+        let fork = try await BranchConversationUseCase(
+            saveConversationUseCase: save, attachmentRepository: MockAttachmentRepository()
+        ).execute(conversation: saved, fromMessageId: userID)
+        XCTAssertNotEqual(fork.id, saved.id)
+        reopened.send(.conversationLoaded(fork))
+        reopened.send(.inputChanged("Continue the fork"))
+        reopened.send(.sendTapped)
+        await reopened.streamTask?.value
+        XCTAssertEqual(try lastCapturedRequest(reopened).chatId, fork.id.uuidString)
+    }
+
+    private func lastCapturedRequest(_ sut: ChatViewModel) throws -> NativeImageCapturedRequest {
+        let state = try loadedState(sut)
+        XCTAssertNil(state.errorMessage)
+        let content = try XCTUnwrap(state.messages.last?.content)
+        return try JSONDecoder().decode(NativeImageCapturedRequest.self, from: Data(content.utf8))
+    }
+}
+
 private struct ControlledNativeImageStream: StreamMessageUseCaseProtocol {
     let stream: AsyncThrowingStream<StreamChunk, Error>
 
@@ -279,6 +345,7 @@ private struct NativeImageCapturedRequest: Codable, Sendable {
     let url: URL
     let method: String?
     let authorization: String?
+    let chatId: String?
     let timeoutInterval: TimeInterval
     let body: Body
 
@@ -305,6 +372,7 @@ private final class NativeImageTransportURLProtocol: URLProtocol {
             let captured = NativeImageCapturedRequest(
                 url: url, method: request.httpMethod,
                 authorization: request.value(forHTTPHeaderField: "Authorization"),
+                chatId: request.value(forHTTPHeaderField: "X-Chat-ID"),
                 timeoutInterval: request.timeoutInterval, body: body
             )
             // Echo the request through content instead of sharing mutable callback state.

@@ -50,7 +50,8 @@ extension SettingsViewModel {
         case .saveTapped:
             saveSettings()
         case .advancedServerSettingsOpened, .advancedServerSettingsCancelled, .advancedServerSettingsApplied,
-             .customHeaderAdded, .customHeaderRemoved, .customHeaderChanged:
+             .customHeaderAdded, .customHeaderRemoved, .customHeaderChanged,
+             .chatIDHeaderToggled, .chatIDHeaderNameChanged:
             handleAdvancedServerEvent(event)
         case .cloudAvailabilityRefresh:
             refreshCloudAvailability()

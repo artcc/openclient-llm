@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ServerAdvancedSettingsView: View {
     let headers: [ServerHTTPHeader]
+    var chatIDHeaderName: String?
     let onEvent: (SettingsViewModel.Event) -> Void
     @Binding var isPresented: Bool
 
@@ -50,6 +51,11 @@ struct ServerAdvancedSettingsView: View {
 private extension ServerAdvancedSettingsView {
     var form: some View {
         Form {
+            ServerChatIDHeaderSection(
+                headerName: chatIDHeaderName,
+                error: ServerHTTPHeader.chatIDHeaderNameError(chatIDHeaderName, in: headers),
+                onEvent: onEvent
+            )
             Section {
                 if headers.isEmpty {
                     Text("No custom headers configured.")
@@ -61,7 +67,8 @@ private extension ServerAdvancedSettingsView {
                             get: { headers.first(where: { $0.id == header.id }) ?? header },
                             set: { onEvent(.customHeaderChanged($0)) }
                         ),
-                        isDuplicate: headers.filter { $0.name.lowercased() == header.name.lowercased() }.count > 1,
+                        isDuplicate: headers.filter { $0.name.lowercased() == header.name.lowercased() }.count > 1
+                            || header.name.lowercased() == chatIDHeaderName?.lowercased(),
                         onDelete: { onEvent(.customHeaderRemoved(header.id)) }
                     )
                 }
@@ -70,8 +77,8 @@ private extension ServerAdvancedSettingsView {
                 } label: {
                     Label("Add Header", systemImage: "plus")
                 }
-                .disabled(headers.count >= ServerHTTPHeader.maximumCount)
-                if let error = ServerHTTPHeader.validationError(in: headers) {
+                .disabled(headers.count + (chatIDHeaderName == nil ? 0 : 1) >= ServerHTTPHeader.maximumCount)
+                if let error = ServerHTTPHeader.validationError(in: headers, chatIDHeaderName: chatIDHeaderName) {
                     Text(error)
                         .font(.caption)
                         .foregroundStyle(.red)
@@ -102,7 +109,7 @@ private extension ServerAdvancedSettingsView {
             onEvent(.advancedServerSettingsApplied)
             isPresented = false
         }
-        .disabled(ServerHTTPHeader.validationError(in: headers) != nil)
+        .disabled(ServerHTTPHeader.validationError(in: headers, chatIDHeaderName: chatIDHeaderName) != nil)
         .keyboardShortcut(.defaultAction)
     }
 }
@@ -121,6 +128,15 @@ private extension ServerAdvancedSettingsView {
             ServerHTTPHeader(name: "x-opencode-session", value: "example-session"),
             ServerHTTPHeader(name: "User-Agent", value: "OpenClient")
         ],
+        onEvent: { _ in },
+        isPresented: .constant(true)
+    )
+}
+
+#Preview("Chat ID") {
+    ServerAdvancedSettingsView(
+        headers: [],
+        chatIDHeaderName: "X-Conversation-ID",
         onEvent: { _ in },
         isPresented: .constant(true)
     )

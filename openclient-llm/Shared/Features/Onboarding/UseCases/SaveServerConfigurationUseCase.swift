@@ -12,6 +12,9 @@ protocol SaveServerConfigurationUseCaseProtocol: Sendable {
     @discardableResult func execute(
         serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]?
     ) -> Bool
+    @discardableResult func execute(
+        serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]?, chatIDHeaderName: String?
+    ) -> Bool
 }
 
 extension SaveServerConfigurationUseCaseProtocol {
@@ -36,9 +39,19 @@ struct SaveServerConfigurationUseCase: SaveServerConfigurationUseCaseProtocol {
 
     @discardableResult
     func execute(serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]?) -> Bool {
+        execute(
+            serverURL: serverURL, apiKey: apiKey,
+            customHeaders: customHeaders, chatIDHeaderName: settingsManager.getChatIDHeaderName()
+        )
+    }
+
+    @discardableResult
+    func execute(
+        serverURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]?, chatIDHeaderName: String?
+    ) -> Bool {
         settingsManager.setServerConfiguration(
             serverBaseURL: serverURL, apiKey: apiKey,
-            customHeaders: customHeaders ?? settingsManager.getCustomHeaders()
+            customHeaders: customHeaders ?? settingsManager.getCustomHeaders(), chatIDHeaderName: chatIDHeaderName
         )
     }
 }

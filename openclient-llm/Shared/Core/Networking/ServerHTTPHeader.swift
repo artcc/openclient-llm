@@ -46,9 +46,10 @@ nonisolated struct ServerHTTPHeader: Codable, Equatable, Identifiable, Sendable 
         return nil
     }
 
-    static func validationError(in headers: [Self]) -> String? {
-        guard headers.count <= maximumCount,
-              headers.reduce(0, { $0 + $1.name.utf8.count + $1.value.utf8.count }) <= 65_536 else {
+    static func validationError(in headers: [Self], chatIDHeaderName: String? = nil) -> String? {
+        let automaticHeaderBytes = chatIDHeaderName.map { $0.utf8.count + 36 } ?? 0
+        guard headers.count + (chatIDHeaderName == nil ? 0 : 1) <= maximumCount,
+              headers.reduce(automaticHeaderBytes, { $0 + $1.name.utf8.count + $1.value.utf8.count }) <= 65_536 else {
             return String(localized: "The custom headers exceed the allowed size or number.")
         }
         var names = Set<String>()
@@ -57,6 +58,15 @@ nonisolated struct ServerHTTPHeader: Codable, Equatable, Identifiable, Sendable 
             guard names.insert(header.name.lowercased()).inserted else {
                 return String(localized: "Header names must be unique, regardless of capitalization.")
             }
+        }
+        return chatIDHeaderNameError(chatIDHeaderName, in: headers)
+    }
+
+    static func chatIDHeaderNameError(_ name: String?, in headers: [Self]) -> String? {
+        guard let name else { return nil }
+        if let error = Self(name: name).nameError { return error }
+        guard !headers.contains(where: { $0.name.lowercased() == name.lowercased() }) else {
+            return String(localized: "Header names must be unique, regardless of capitalization.")
         }
         return nil
     }
@@ -67,12 +77,17 @@ nonisolated struct ServerHTTPHeader: Codable, Equatable, Identifiable, Sendable 
         return left == right
     }
 
-    static func apply(_ headers: [Self], to request: inout URLRequest) throws {
-        if let error = validationError(in: headers) {
+    static func apply(
+        _ headers: [Self], to request: inout URLRequest, chatIDHeaderName: String? = nil, chatID: UUID? = nil
+    ) throws {
+        if let error = validationError(in: headers, chatIDHeaderName: chatIDHeaderName) {
             throw APIError.invalidRequest(error)
         }
         for header in headers {
             request.setValue(header.value, forHTTPHeaderField: header.name)
+        }
+        if let chatIDHeaderName, let chatID {
+            request.setValue(chatID.uuidString, forHTTPHeaderField: chatIDHeaderName)
         }
     }
 }

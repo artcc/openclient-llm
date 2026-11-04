@@ -57,6 +57,8 @@ description: "Use when changing automatic agent routing, tool registration, tool
   pending. Cancellation must terminate model requests, authorization, tool work, and stale event publication.
 - Capture the endpoint/credential authorization scope, including custom server headers, for a run. Revalidate it around
   every model or tool request and cancel the run when server configuration changes.
+- Capture the existing chat UUID for model and server-backed tool requests, including delegated work. The optional automatic
+  chat-ID header follows `litellm-api.instructions.md`; discovery omits it and per-chat values do not change authorization.
 
 ## Registry
 

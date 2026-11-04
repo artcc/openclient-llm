@@ -28,13 +28,31 @@ description: "Use when changing OpenAI-compatible or LiteLLM networking, model d
 - Reserve Authorization, Proxy-Authorization, Host, Content-Type, Content-Length, Connection, Transfer-Encoding, Trailer,
   TE, and Upgrade for the app or transport. User-Agent and provider-specific headers remain configurable.
 - Validate at editing, persistence, and request construction boundaries; surface localized errors without header values.
-- Custom headers are literal values shared by the configured server's requests. No automatic conversation-session values
-  are generated. Changes to effective header names/values invalidate the existing authorization scope, like API-key changes;
-  row identities, order, and name capitalization alone do not invalidate it.
+- Custom headers are literal values shared by the configured server's requests. Changes to effective header names/values
+  invalidate the existing authorization scope, like API-key changes; row identities, order, and name capitalization alone
+  do not invalidate it.
 - Requests carrying custom server headers, including connection/health checks, follow same-origin redirects only, including
   matching scheme and effective port. Requests without custom headers retain the session's existing redirect behavior.
   Capture the redirect policy with the request's header values so later settings changes cannot alter an in-flight policy.
   External downloads, browsing, and separate provider-enrichment URLs do not inherit server headers.
+
+## Automatic Chat ID Header
+
+- Advanced Server Settings offers a separate, disabled-by-default Send Chat ID option above static headers. The user supplies
+  only a header name; store it as optional `chatIDHeaderName` in the same Keychain record. Missing or nil means disabled.
+  Older stored records remain compatible, and legacy server/credential setters preserve this option.
+- Reuse the existing conversation UUID, or its existing pending session UUID before persistence and for Private Chat.
+  Sending, regenerating, editing/resending, and reopening a conversation retain its ID; new chats and forks use their own
+  existing IDs. Do not generate substitute IDs for requests without a conversation.
+- Capture the chat ID explicitly at the chat orchestration boundary and retain it in each client. Include it in regular
+  and agent completions, compaction, web search and MCP execution, delegated image analysis/generation/editing, direct image
+  work, and chat transcription/speech. Do not resolve identity from the currently selected chat during request construction.
+- Model listing/enrichment, tool discovery, connection/health checks, standalone audio screens, and external downloads have
+  no chat context and omit the automatic header. Static headers retain their existing behavior.
+- Apply the same token, reserved-name, and name-length rules as static headers; reject case-insensitive collisions with
+  static names. An enabled empty name is invalid. Count the automatic header and its 36-byte UUID toward combined limits.
+- Enabling, disabling, or renaming the automatic header invalidates the MCP authorization scope; capitalization-only edits
+  and the actual per-chat UUID do not. Requests carrying it use the same same-origin-only redirect policy as static headers.
 
 ## OpenAI-Compatible Endpoints
 

@@ -25,6 +25,8 @@ final class SettingsViewModel {
         case customHeaderAdded
         case customHeaderRemoved(UUID)
         case customHeaderChanged(ServerHTTPHeader)
+        case chatIDHeaderToggled(Bool)
+        case chatIDHeaderNameChanged(String)
         case cloudSyncToggled(Bool)
         case cloudSyncConflictResolved(keepLocal: Bool)
         case cloudSyncConflictCancelled
@@ -61,6 +63,8 @@ final class SettingsViewModel {
         var apiKey: String = ""
         var customHeaders: [ServerHTTPHeader] = []
         var customHeaderDraft: [ServerHTTPHeader]?
+        var chatIDHeaderName: String?
+        var chatIDHeaderNameDraft: String?
         var connectionStatus: ConnectionStatus = .idle
         var isSaved: Bool = false
         var serverPersistenceError: String?
@@ -209,6 +213,7 @@ extension SettingsViewModel {
             serverURL: getServerBaseURL,
             apiKey: settingsManager.getAPIKey(),
             customHeaders: settingsManager.getCustomHeaders(),
+            chatIDHeaderName: settingsManager.getChatIDHeaderName(),
             isCloudSyncEnabled: settingsManager.getIsCloudSyncEnabled(),
             showTokenUsage: settingsManager.getShowTokenUsage(),
             modelConfiguration: settingsManager.getGlobalChatModelConfiguration(),
