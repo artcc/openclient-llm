@@ -29,23 +29,33 @@ extension SettingsManager {
         keychainManager.getCustomHeaders()
     }
 
+    func getChatIDHeaderName() -> String? {
+        keychainManager.getChatIDHeaderName()
+    }
+
     @discardableResult
     func setServerConfiguration(
-        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader]
+        serverBaseURL: String, apiKey: String, customHeaders: [ServerHTTPHeader], chatIDHeaderName: String?
     ) -> Bool {
-        guard ServerHTTPHeader.validationError(in: customHeaders) == nil else { return false }
+        guard ServerHTTPHeader.validationError(in: customHeaders, chatIDHeaderName: chatIDHeaderName) == nil else {
+            return false
+        }
         let previousURL = keychainManager.getServerBaseURL()
         let previousAPIKey = keychainManager.getAPIKey()
         let previousHeaders = keychainManager.getCustomHeaders()
+        let previousChatIDHeaderName = keychainManager.getChatIDHeaderName()
         let endpointChanged = MCPToolInfo.normalizedServerURL(previousURL)
             != MCPToolInfo.normalizedServerURL(serverBaseURL)
         let credentialsChanged = previousAPIKey != apiKey
             || !ServerHTTPHeader.hasSameValues(previousHeaders, customHeaders)
+            || previousChatIDHeaderName?.lowercased() != chatIDHeaderName?.lowercased()
 
         guard endpointChanged || credentialsChanged else {
-            guard previousURL != serverBaseURL || previousHeaders != customHeaders else { return true }
+            guard previousURL != serverBaseURL || previousHeaders != customHeaders
+                    || previousChatIDHeaderName != chatIDHeaderName else { return true }
             let didSave = keychainManager.setServerConfiguration(
-                serverBaseURL: serverBaseURL, apiKey: apiKey, customHeaders: customHeaders
+                serverBaseURL: serverBaseURL, apiKey: apiKey,
+                customHeaders: customHeaders, chatIDHeaderName: chatIDHeaderName
             )
             if didSave {
                 NotificationCenter.default.post(name: .serverConfigurationDidChange, object: nil)
@@ -55,7 +65,8 @@ extension SettingsManager {
         guard rotateMCPAuthorizationScope() else { return false }
         _ = updateMCPToolConfigurationKeys([:])
         let didSave = keychainManager.setServerConfiguration(
-            serverBaseURL: serverBaseURL, apiKey: apiKey, customHeaders: customHeaders
+            serverBaseURL: serverBaseURL, apiKey: apiKey,
+            customHeaders: customHeaders, chatIDHeaderName: chatIDHeaderName
         )
         NotificationCenter.default.post(name: .mcpToolSettingsDidChange, object: nil)
         if didSave {

@@ -12,6 +12,7 @@ description: "Use when changing LiteLLM web-search configuration, registration, 
   routing, client-side search keys, native `web_search_options`, or manual search-result injection.
 - Discover available server configurations through `GET /v1/search/tools`. Settings supply the selected server tool name
   used in the endpoint; the model cannot choose or override it.
+- Search execution captures the invoking chat's ID for the optional automatic header; search-tool discovery omits it.
 
 ## Availability And Routing
 

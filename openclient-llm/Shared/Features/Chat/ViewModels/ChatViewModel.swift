@@ -70,14 +70,14 @@ final class ChatViewModel {
     let prepareImageAttachmentUseCase: PrepareImageAttachmentUseCaseProtocol
     let attachmentRepository: AttachmentRepositoryProtocol
     let streamMessageUseCase: StreamMessageUseCaseProtocol?
-    let generateImageUseCase: GenerateImageUseCaseProtocol
+    let generateImageUseCase: GenerateImageUseCaseProtocol?
     let imageToolChatRepository: ChatRepositoryProtocol?
     let imageToolGenerationUseCase: GenerateImageUseCaseProtocol?
     let agentStreamUseCase: AgentStreamUseCaseProtocol?
-    let webSearchUseCase: WebSearchUseCaseProtocol
+    let webSearchUseCase: WebSearchUseCaseProtocol?
     let saveConversationUseCase: SaveConversationUseCaseProtocol
-    private let synthesizeSpeechUseCase: SynthesizeSpeechUseCaseProtocol
-    let transcribeAudioUseCase: TranscribeAudioUseCaseProtocol
+    private let synthesizeSpeechUseCase: SynthesizeSpeechUseCaseProtocol?
+    let transcribeAudioUseCase: TranscribeAudioUseCaseProtocol?
     let exportConversationUseCase: ExportConversationUseCaseProtocol
     let branchConversationUseCase: BranchConversationUseCaseProtocol
     let getChatPreferencesUseCase: GetChatPreferencesUseCaseProtocol
@@ -96,7 +96,7 @@ final class ChatViewModel {
     let triggerHapticFeedbackUseCase: TriggerHapticFeedbackUseCaseProtocol
     let streamingBackgroundUseCase: StreamingBackgroundUseCaseProtocol
     let notifyStreamingCompletedUseCase: NotifyStreamingCompletedUseCaseProtocol
-    let compactConversationUseCase: CompactConversationUseCaseProtocol
+    let compactConversationUseCase: CompactConversationUseCaseProtocol?
     var streamTask: Task<Void, Never>?
     @ObservationIgnored var streamingUpdateBuffer = StreamingUpdateBuffer()
     @ObservationIgnored var backgroundPersistenceObserver: NSObjectProtocol?
@@ -138,12 +138,12 @@ final class ChatViewModel {
         prepareImageAttachmentUseCase: PrepareImageAttachmentUseCaseProtocol = PrepareImageAttachmentUseCase(),
         attachmentRepository: AttachmentRepositoryProtocol = AttachmentRepository(),
         streamMessageUseCase: StreamMessageUseCaseProtocol? = nil,
-        generateImageUseCase: GenerateImageUseCaseProtocol = GenerateImageUseCase(),
+        generateImageUseCase: GenerateImageUseCaseProtocol? = nil,
         agentStreamUseCase: AgentStreamUseCaseProtocol? = nil,
-        webSearchUseCase: WebSearchUseCaseProtocol = WebSearchUseCase(),
+        webSearchUseCase: WebSearchUseCaseProtocol? = nil,
         saveConversationUseCase: SaveConversationUseCaseProtocol = SaveConversationUseCase(),
-        synthesizeSpeechUseCase: SynthesizeSpeechUseCaseProtocol = SynthesizeSpeechUseCase(),
-        transcribeAudioUseCase: TranscribeAudioUseCaseProtocol = TranscribeAudioUseCase(),
+        synthesizeSpeechUseCase: SynthesizeSpeechUseCaseProtocol? = nil,
+        transcribeAudioUseCase: TranscribeAudioUseCaseProtocol? = nil,
         exportConversationUseCase: ExportConversationUseCaseProtocol = ExportConversationUseCase(),
         branchConversationUseCase: BranchConversationUseCaseProtocol = BranchConversationUseCase(),
         getChatPreferencesUseCase: GetChatPreferencesUseCaseProtocol = GetChatPreferencesUseCase(),
@@ -162,7 +162,7 @@ final class ChatViewModel {
         triggerHapticFeedbackUseCase: TriggerHapticFeedbackUseCaseProtocol = TriggerHapticFeedbackUseCase(),
         streamingBackgroundUseCase: StreamingBackgroundUseCaseProtocol = StreamingBackgroundUseCase(),
         notifyStreamingCompletedUseCase: NotifyStreamingCompletedUseCaseProtocol = NotifyStreamingCompletedUseCase(),
-        compactConversationUseCase: CompactConversationUseCaseProtocol = CompactConversationUseCase(),
+        compactConversationUseCase: CompactConversationUseCaseProtocol? = nil,
         imageToolChatRepository: ChatRepositoryProtocol? = nil,
         imageToolGenerationUseCase: GenerateImageUseCaseProtocol? = nil
     ) {
@@ -443,9 +443,12 @@ private extension ChatViewModel {
         loadedState.isSpeaking = true
         loadedState.speakingMessageId = message.id
         state = .loaded(loadedState)
+        let useCase = synthesizeSpeechUseCase ?? SynthesizeSpeechUseCase(repository: TextToSpeechRepository(
+            apiClient: makeChatAPIClient(chatID: loadedState.chatID)
+        ))
         Task {
             do {
-                let audioData = try await synthesizeSpeechUseCase.execute(
+                let audioData = try await useCase.execute(
                     text: message.content,
                     model: ttsModelId,
                     voice: getChatPreferencesUseCase.getSelectedTTSVoice(forModelId: ttsModelId)

@@ -15,6 +15,8 @@ struct APIClient: APIClientProtocol, Sendable {
     private let serverBaseURLProvider: @MainActor @Sendable () -> String
     private let apiKeyProvider: @MainActor @Sendable () -> String
     private let customHeadersProvider: @MainActor @Sendable () -> [ServerHTTPHeader]
+    private let chatIDHeaderNameProvider: @MainActor @Sendable () -> String?
+    private let chatID: UUID?
     private let streamTimeoutInterval: TimeInterval
 
     // MARK: - Init
@@ -22,12 +24,15 @@ struct APIClient: APIClientProtocol, Sendable {
     init(
         session: URLSession = .shared,
         settingsManager: SettingsManagerProtocol = SettingsManager(),
+        chatID: UUID? = nil,
         streamTimeoutInterval: TimeInterval = 60
     ) {
         self.session = session
         self.serverBaseURLProvider = { settingsManager.getServerBaseURL() }
         self.apiKeyProvider = { settingsManager.getAPIKey() }
         self.customHeadersProvider = { settingsManager.getCustomHeaders() }
+        self.chatIDHeaderNameProvider = { settingsManager.getChatIDHeaderName() }
+        self.chatID = chatID
         self.streamTimeoutInterval = streamTimeoutInterval
     }
 
@@ -36,12 +41,16 @@ struct APIClient: APIClientProtocol, Sendable {
         serverBaseURL: String,
         apiKey: String,
         customHeaders: [ServerHTTPHeader] = [],
+        chatIDHeaderName: String? = nil,
+        chatID: UUID? = nil,
         streamTimeoutInterval: TimeInterval = 60
     ) {
         self.session = session
         self.serverBaseURLProvider = { serverBaseURL }
         self.apiKeyProvider = { apiKey }
         self.customHeadersProvider = { customHeaders }
+        self.chatIDHeaderNameProvider = { chatIDHeaderName }
+        self.chatID = chatID
         self.streamTimeoutInterval = streamTimeoutInterval
     }
 
@@ -312,6 +321,7 @@ private extension APIClient {
     ) throws -> (request: URLRequest, redirectDelegate: ServerRequestRedirectDelegate?) {
         let baseURL = serverBaseURLProvider()
         let customHeaders = customHeadersProvider()
+        let chatIDHeaderName = chatIDHeaderNameProvider()
 
         let url: URL
         if let queryItems, !queryItems.isEmpty {
@@ -337,7 +347,7 @@ private extension APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
         request.timeoutInterval = timeoutInterval
-        try ServerHTTPHeader.apply(customHeaders, to: &request)
+        try ServerHTTPHeader.apply(customHeaders, to: &request, chatIDHeaderName: chatIDHeaderName, chatID: chatID)
 
         let apiKey = apiKeyProvider()
         if !apiKey.isEmpty {
@@ -349,7 +359,8 @@ private extension APIClient {
             request.httpBody = try JSONEncoder().encode(body)
         }
 
-        return (request, customHeaders.isEmpty ? nil : ServerRequestRedirectDelegate.shared)
+        let hasServerHeaders = !customHeaders.isEmpty || (chatIDHeaderName != nil && chatID != nil)
+        return (request, hasServerHeaders ? ServerRequestRedirectDelegate.shared : nil)
     }
 
     func request<T: Decodable & Sendable>(

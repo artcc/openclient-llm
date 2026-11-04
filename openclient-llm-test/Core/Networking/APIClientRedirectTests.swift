@@ -51,15 +51,36 @@ final class APIClientRedirectTests: XCTestCase {
         }
     }
 
+    func test_requests_automaticChatID_rejectsCrossOriginAndPreservesSameOriginHeaders() async throws {
+        let session = makeSession()
+        defer { session.invalidateAndCancel() }
+        let chatID = UUID()
+        for transport in [Transport.json, .raw, .multipart, .stream] {
+            do {
+                _ = try await perform(transport, session: session, route: "cross", headers: [], chatID: chatID)
+                XCTFail("Expected cross-origin redirect rejection for \(transport)")
+            } catch {
+                XCTAssertEqual(error as? APIError, .httpError(statusCode: 307))
+            }
+            let sameOrigin = try await perform(
+                transport, session: session, route: "same", headers: [], chatID: chatID
+            )
+            XCTAssertTrue(sameOrigin)
+        }
+    }
+
     private enum Transport: CaseIterable {
         case json, raw, multipart, stream, connection, health
     }
 
     private func perform(
-        _ transport: Transport, session: URLSession, route: String, headers: [ServerHTTPHeader]
+        _ transport: Transport, session: URLSession, route: String, headers: [ServerHTTPHeader], chatID: UUID? = nil
     ) async throws -> Bool {
         let baseURL = "https://source.invalid/\(route)"
-        let client = APIClient(session: session, serverBaseURL: baseURL, apiKey: "", customHeaders: headers)
+        let client = APIClient(
+            session: session, serverBaseURL: baseURL, apiKey: "", customHeaders: headers,
+            chatIDHeaderName: "X-Chat-ID", chatID: chatID
+        )
         let onboarding = OnboardingRepository(session: session)
         switch transport {
         case .json:
@@ -117,6 +138,7 @@ private final class RedirectFixtureURLProtocol: URLProtocol {
         }
         let requiresHeader = url.path.hasPrefix("/final/same/")
         let hasHeader = request.value(forHTTPHeaderField: "X-Test") == "test-value"
+            || request.value(forHTTPHeaderField: "X-Chat-ID").flatMap(UUID.init(uuidString:)) != nil
         let status = requiresHeader && !hasHeader ? 401 : 200
         guard let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: nil, headerFields: nil) else {
             return

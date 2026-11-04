@@ -15,9 +15,10 @@ struct ServerHTTPHeaderRow: View {
     @State private var isValueVisible = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
-                TextField("Name", text: $header.name)
+                TextField("Name", text: $header.name, prompt: Text("Name"))
+                    .labelsHidden()
                     .accessibilityLabel("Header name")
                     .textSelection(.enabled)
                 Button(role: .destructive, action: onDelete) {
@@ -35,11 +36,12 @@ struct ServerHTTPHeaderRow: View {
             HStack {
                 Group {
                     if isValueVisible {
-                        TextField("Value", text: $header.value)
+                        TextField("Value", text: $header.value, prompt: Text("Value"))
                     } else {
-                        SecureField("Value", text: $header.value)
+                        SecureField("Value", text: $header.value, prompt: Text("Value"))
                     }
                 }
+                .labelsHidden()
                 .accessibilityLabel("Header value")
                 .textSelection(.enabled)
                 Button {

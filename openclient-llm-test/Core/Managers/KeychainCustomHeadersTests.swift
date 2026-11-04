@@ -18,17 +18,21 @@ final class KeychainCustomHeadersTests: XCTestCase {
         defer { sut.deleteAll() }
         let headers = [ServerHTTPHeader(name: "X-Token", value: "synthetic-token")]
         XCTAssertTrue(sut.setServerConfiguration(
-            serverBaseURL: "https://example.invalid", apiKey: "test-key", customHeaders: headers
+            serverBaseURL: "https://example.invalid", apiKey: "test-key", customHeaders: headers,
+            chatIDHeaderName: "X-Chat-ID"
         ))
         let reloaded = KeychainManager(service: service)
         XCTAssertEqual(reloaded.getCustomHeaders(), headers)
+        XCTAssertEqual(reloaded.getChatIDHeaderName(), "X-Chat-ID")
         sut.setAPIKey("replacement-key")
         sut.setServerBaseURL("https://example.invalid/v1")
         XCTAssertEqual(sut.getCustomHeaders(), headers)
+        XCTAssertEqual(sut.getChatIDHeaderName(), "X-Chat-ID")
         XCTAssertEqual(sut.getAPIKey(), "replacement-key")
         XCTAssertEqual(sut.getServerBaseURL(), "https://example.invalid/v1")
         sut.deleteAll()
         XCTAssertEqual(sut.getCustomHeaders(), [])
+        XCTAssertNil(sut.getChatIDHeaderName())
     }
 
     func test_getCustomHeaders_olderStoredConfiguration_preservesCredentialsAndUsesEmptyHeaders() {
@@ -47,6 +51,25 @@ final class KeychainCustomHeadersTests: XCTestCase {
         XCTAssertEqual(sut.getServerBaseURL(), "https://example.invalid")
         XCTAssertEqual(sut.getAPIKey(), "test-key")
         XCTAssertEqual(sut.getCustomHeaders(), [])
+        XCTAssertNil(sut.getChatIDHeaderName())
+    }
+
+    func test_setServerConfiguration_automaticHeaderConflict_preservesSavedNameUntilExplicitlyDisabled() {
+        let sut = KeychainManager(service: "com.openclient-llm.tests.headers.\(UUID().uuidString)")
+        defer { sut.deleteAll() }
+        XCTAssertTrue(sut.setServerConfiguration(
+            serverBaseURL: "https://example.invalid", apiKey: "key", customHeaders: [], chatIDHeaderName: "X-Chat-ID"
+        ))
+        XCTAssertFalse(sut.setServerConfiguration(
+            serverBaseURL: "https://other.invalid", apiKey: "other-key",
+            customHeaders: [.init(name: "x-chat-id", value: "static")], chatIDHeaderName: "X-Chat-ID"
+        ))
+        XCTAssertEqual(sut.getChatIDHeaderName(), "X-Chat-ID")
+        XCTAssertEqual(sut.getServerBaseURL(), "https://example.invalid")
+        XCTAssertTrue(sut.setServerConfiguration(
+            serverBaseURL: "https://example.invalid", apiKey: "key", customHeaders: [], chatIDHeaderName: nil
+        ))
+        XCTAssertNil(sut.getChatIDHeaderName())
     }
 
     func test_setServerConfiguration_invalidHeaders_preservesExistingConfiguration() {

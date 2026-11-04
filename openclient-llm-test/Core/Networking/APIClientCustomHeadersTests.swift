@@ -65,12 +65,14 @@ final class APIClientCustomHeadersTests: XCTestCase {
         let session = makeSession()
         defer { session.invalidateAndCancel() }
         let sut = APIClient(
-            session: session, serverBaseURL: "https://example.invalid", apiKey: "test-key", customHeaders: headers
+            session: session, serverBaseURL: "https://example.invalid", apiKey: "test-key", customHeaders: headers,
+            chatIDHeaderName: "X-Chat-ID", chatID: UUID()
         )
         let result = try await sut.downloadData(from: XCTUnwrap(URL(string: "https://external.invalid/capture")))
         let captured = try JSONDecoder().decode(CapturedHeaders.self, from: result.data)
         XCTAssertNil(captured.session)
         XCTAssertNil(captured.authorization)
+        XCTAssertNil(captured.chatId)
         XCTAssertNotEqual(captured.userAgent, "OpenClient-Test")
     }
 
@@ -126,6 +128,69 @@ final class APIClientCustomHeadersTests: XCTestCase {
         }
     }
 
+    func test_requests_automaticChatID_sendsSameIDAcrossAllTransports() async throws {
+        let session = makeSession()
+        defer { session.invalidateAndCancel() }
+        let chatID = UUID()
+        let sut = APIClient(
+            session: session, serverBaseURL: "https://example.invalid", apiKey: "test-key", customHeaders: headers,
+            chatIDHeaderName: "X-Chat-ID", chatID: chatID
+        )
+
+        let regular: CapturedHeaders = try await sut.request(endpoint: "capture", method: .post, body: nil)
+        let multipart: CapturedHeaders = try await sut.multipartRequest(
+            endpoint: "capture", fields: [:], files: [], timeoutInterval: 30
+        )
+        let raw = try await sut.rawDataRequest(endpoint: "capture", body: ["input": "test"])
+        var captured = [regular, multipart, try JSONDecoder().decode(CapturedHeaders.self, from: raw)]
+        for try await data in sut.streamRequest(endpoint: "stream", body: ["stream": true]) {
+            captured.append(try JSONDecoder().decode(CapturedHeaders.self, from: data))
+        }
+
+        XCTAssertEqual(captured.count, 4)
+        for request in captured {
+            XCTAssertEqual(request.chatId, chatID.uuidString)
+            XCTAssertEqual(request.session, "test-session")
+            XCTAssertEqual(request.authorization, "Bearer test-key")
+        }
+    }
+
+    func test_request_chatContexts_areIndependentAndOmittedWhenDisabledOrAbsent() async throws {
+        let session = makeSession()
+        defer { session.invalidateAndCancel() }
+        let firstID = UUID()
+        let secondID = UUID()
+        let contexts: [(String?, UUID?)] = [
+            ("X-Chat-ID", firstID), ("X-Chat-ID", secondID), ("X-Chat-ID", nil), (nil, firstID)
+        ]
+        let clients = contexts.map { name, chatID in
+            APIClient(
+                session: session, serverBaseURL: "https://example.invalid", apiKey: "",
+                chatIDHeaderName: name, chatID: chatID
+            )
+        }
+        for index in [0, 1, 2, 3, 0] {
+            let captured: CapturedHeaders = try await clients[index].request(
+                endpoint: "capture", method: .get, body: nil
+            )
+            let expected = contexts[index].0 == nil ? nil : contexts[index].1?.uuidString
+            XCTAssertEqual(captured.chatId, expected)
+        }
+    }
+
+    func test_request_discoveryClient_omitsConfiguredChatIDHeader() async throws {
+        let session = makeSession()
+        defer { session.invalidateAndCancel() }
+        let settings = MockSettingsManager()
+        settings.serverBaseURL = "https://example.invalid/v1"
+        settings.chatIDHeaderName = "X-Chat-ID"
+        let sut = APIClient(session: session, settingsManager: settings)
+        for endpoint in ["models", "model/info", "v1/search/tools", "v1/mcp/server", "mcp-rest/tools/list"] {
+            let captured: CapturedHeaders = try await sut.request(endpoint: endpoint, method: .get, body: nil)
+            XCTAssertNil(captured.chatId)
+        }
+    }
+
     private var headers: [ServerHTTPHeader] {
         [.init(name: "x-opencode-session", value: "test-session"), .init(name: "User-Agent", value: "OpenClient-Test")]
     }
@@ -142,6 +207,7 @@ nonisolated private struct CapturedHeaders: Codable, Sendable {
     let userAgent: String?
     let authorization: String?
     let contentType: String?
+    let chatId: String?
 }
 
 private final class HeaderEchoURLProtocol: URLProtocol {
@@ -154,13 +220,14 @@ private final class HeaderEchoURLProtocol: URLProtocol {
             session: request.value(forHTTPHeaderField: "x-opencode-session"),
             userAgent: request.value(forHTTPHeaderField: "User-Agent"),
             authorization: request.value(forHTTPHeaderField: "Authorization"),
-            contentType: request.value(forHTTPHeaderField: "Content-Type")
+            contentType: request.value(forHTTPHeaderField: "Content-Type"),
+            chatId: request.value(forHTTPHeaderField: "X-Chat-ID")
         )
         do {
             var data = try JSONEncoder().encode(captured)
             var status = 200
             if ["/models", "/health/readiness"].contains(url.path) {
-                status = captured.session == "test-session" ? 200 : 401
+                status = captured.session == "test-session" && captured.chatId == nil ? 200 : 401
                 data = Data(#"{"litellm_version":"test"}"#.utf8)
             } else if url.lastPathComponent == "stream" {
                 guard let json = String(data: data, encoding: .utf8) else { throw URLError(.cannotDecodeContentData) }

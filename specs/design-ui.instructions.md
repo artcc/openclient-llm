@@ -76,12 +76,16 @@ description: "Use when changing OpenClient SwiftUI visuals, interaction feedback
 
 ## Advanced Server Settings
 
-- Settings > Server opens Advanced Server Settings as a native shared sheet, with Custom Headers as its initial section.
+- Settings > Server opens Advanced Server Settings as a native shared sheet, with Send Chat ID above Custom Headers.
+- Send Chat ID is disabled by default and reveals a header-name field when enabled. Explain that the option is needed only
+  for servers requiring a conversation identifier, that OpenClient supplies a stable ID for each chat, and that model listing
+  and connection tests omit it. Never ask the user to enter the ID value. Validate the name and collisions with static headers.
 - Each row edits a name and an initially concealed, revealable value, and supports explicit deletion. Add Header creates
   a draft row. Show validation errors beside the affected fields and disable Done while the draft is invalid.
 - Cancel or dismiss discards modal edits. Done copies valid edits into the Server draft; the existing Server Save action
-  persists URL, API key, and headers together, preserving header name capitalization and row order even when effective
-  values are unchanged. Explain this two-step behavior in the sheet. Test Connection uses that draft.
+  persists URL, API key, static headers, and the optional chat-ID header name together, preserving capitalization and row order
+  even when effective values are unchanged. Explain this two-step behavior in the sheet. Test Connection uses that draft,
+  omitting the automatic chat-ID header.
 - Applying changed headers clears the saved/connection status. A failed save retains the draft and the existing persistence
   error/retry presentation. Editing server configuration cancels checks and rejects their stale completions.
 

@@ -29,11 +29,16 @@ extension ChatViewModel {
     }
 
     func performAgentStreaming(_ context: SendMessageContext) async {
-        let registry = makeToolRegistry(webSearchEnabled: context.webSearchEnabled, messages: context.messages)
+        guard case .loaded(let loadedState) = state, loadedState.chatID == context.chatID else { return }
+        let registry = makeToolRegistry(
+            webSearchEnabled: context.webSearchEnabled, loadedState: loadedState, messages: context.messages
+        )
         let serverConfigurationScope = settingsManager.getMCPAuthorizationScope()
         updateImageToolModelNames(registry: registry)
         let useCase = agentStreamUseCase ?? AgentStreamUseCase(
-            repository: makeChatRepository(generatesImages: context.selectedModel.supportsNativeImageGeneration)
+            repository: makeChatRepository(
+                chatID: context.chatID, generatesImages: context.selectedModel.supportsNativeImageGeneration
+            )
         )
         streamingBackgroundUseCase.update(.thinking)
 
@@ -68,9 +73,7 @@ extension ChatViewModel {
                       await processAgentStreamEvent(event, assistantMessageId: context.assistantId) else { return }
             }
 
-            await handleAgentStreamSuccess(
-                context.assistantId,
-                modelId: context.modelId,
+            await handleAgentStreamSuccess(context.assistantId, modelId: context.modelId,
                 reportedPromptTokens: didRequestMemoryMutation ? nil : reportedPromptTokens
             )
         } catch is CancellationError {
@@ -239,10 +242,12 @@ private extension ChatViewModel {
             tools.append(SaveMemoryTool(memoryManager: memoryManager ?? MemoryManager()))
             tools.append(DeleteMemoryTool(memoryManager: memoryManager ?? MemoryManager()))
         }
-        if webSearchEnabled {
-            tools.append(WebSearchTool(webSearchUseCase: webSearchUseCase))
-        }
         if let loadedState = resolvedLoadedState(providedState) {
+            if webSearchEnabled {
+                tools.append(WebSearchTool(webSearchUseCase: webSearchUseCase ?? WebSearchUseCase(
+                    apiClient: makeChatAPIClient(chatID: loadedState.chatID), settingsManager: settingsManager
+                )))
+            }
             appendImageTools(from: loadedState, messages: messages, to: &tools)
         }
         tools = tools.map { ConfiguredBuiltInTool(tool: $0, settingsManager: settingsManager) }
@@ -262,11 +267,7 @@ private extension ChatViewModel {
         guard loadedState.mcpDiscoveryScope == settingsManager.getMCPAuthorizationScope() else { return }
         guard !settingsManager.getIsMCPDiscoveryFailed() else { return }
         let sharedFailedServerIds = settingsManager.getFailedMCPServerIds()
-        let repository = MCPRepository(apiClient: APIClient(
-            serverBaseURL: settingsManager.getServerBaseURL(),
-            apiKey: settingsManager.getAPIKey(),
-            customHeaders: settingsManager.getCustomHeaders()
-        ))
+        let repository = MCPRepository(apiClient: makeChatAPIClient(chatID: loadedState.chatID))
         for tool in loadedState.availableMCPTools
             where loadedState.enabledMCPToolIds.contains(tool.id)
                 && !loadedState.failedMCPServerIds.contains(tool.serverId)

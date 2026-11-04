@@ -9,20 +9,6 @@
 import Foundation
 
 extension ChatViewModel {
-    func makeChatRepository(generatesImages: Bool) -> ChatRepository {
-        ChatRepository(
-            apiClient: APIClient(
-                serverBaseURL: settingsManager.getServerBaseURL(),
-                apiKey: settingsManager.getAPIKey(),
-                customHeaders: settingsManager.getCustomHeaders(),
-                streamTimeoutInterval: generatesImages ? 600 : 60
-            ),
-            attachmentRepository: attachmentRepository,
-            responseModalities: generatesImages ? ["image", "text"] : nil,
-            requestTimeoutInterval: generatesImages ? 600 : 60
-        )
-    }
-
     func updateImageToolModelNames(registry: ToolRegistry) {
         guard case .loaded(var loadedState) = state else { return }
         let names = Set(registry.definitions.map(\.function.name))
@@ -47,7 +33,7 @@ extension ChatViewModel {
         guard let principal = loadedState.selectedModel,
               principal.capabilities.contains(.functionCalling),
               loadedState.modelCatalogScope == settingsManager.getMCPAuthorizationScope() else { return }
-        let client = makeImageToolAPIClient()
+        let client = makeChatAPIClient(chatID: loadedState.chatID)
         let repository = imageToolChatRepository ?? ChatRepository(
             apiClient: client,
             attachmentRepository: attachmentRepository
@@ -93,13 +79,6 @@ extension ChatViewModel {
                 checks.contains { $0() }
             }))
         }
-    }
-
-    private func makeImageToolAPIClient() -> APIClient {
-        APIClient(
-            serverBaseURL: settingsManager.getServerBaseURL(), apiKey: settingsManager.getAPIKey(),
-            customHeaders: settingsManager.getCustomHeaders()
-        )
     }
 
     private func editingTool(
@@ -151,7 +130,9 @@ extension ChatViewModel {
                 )
                     as any GenerateImageUseCaseProtocol
                 : GenerateChatImageUseCase(
-                    repository: imageToolChatRepository ?? makeChatRepository(generatesImages: true)
+                    repository: imageToolChatRepository ?? makeChatRepository(
+                        chatID: state.chatID, generatesImages: true
+                    )
                 ) as any GenerateImageUseCaseProtocol
         )
         let user = messages.last { $0.role == .user }

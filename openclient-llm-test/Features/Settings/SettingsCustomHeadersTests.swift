@@ -153,6 +153,77 @@ final class SettingsCustomHeadersTests: XCTestCase {
         return state
     }
 
+    func test_send_automaticHeaderCancelAndDone_preservesTwoStageSave() throws {
+        let save = MockSaveServerConfigurationUseCase()
+        let sut = makeViewModel(save: save)
+        XCTAssertNil(try loadedState(sut).chatIDHeaderName)
+        sut.send(.advancedServerSettingsOpened)
+        sut.send(.chatIDHeaderToggled(true))
+        sut.send(.chatIDHeaderNameChanged("X-Chat-ID"))
+        sut.send(.advancedServerSettingsCancelled)
+        XCTAssertNil(try loadedState(sut).chatIDHeaderName)
+        sut.send(.advancedServerSettingsOpened)
+        XCTAssertNil(try loadedState(sut).chatIDHeaderNameDraft)
+
+        sut.send(.chatIDHeaderToggled(true))
+        sut.send(.chatIDHeaderNameChanged("X-Chat-ID"))
+        sut.send(.advancedServerSettingsApplied)
+        XCTAssertEqual(try loadedState(sut).chatIDHeaderName, "X-Chat-ID")
+        XCTAssertFalse(try loadedState(sut).isSaved)
+        XCTAssertNil(save.savedChatIDHeaderName)
+        save.result = false
+        sut.send(.saveTapped)
+        XCTAssertEqual(try loadedState(sut).chatIDHeaderName, "X-Chat-ID")
+        XCTAssertNotNil(try loadedState(sut).serverPersistenceError)
+        save.result = true
+        sut.send(.saveTapped)
+        XCTAssertEqual(save.savedChatIDHeaderName, "X-Chat-ID")
+        XCTAssertTrue(try loadedState(sut).isSaved)
+
+        sut.send(.advancedServerSettingsOpened)
+        sut.send(.chatIDHeaderToggled(false))
+        sut.send(.advancedServerSettingsApplied)
+        sut.send(.saveTapped)
+        XCTAssertNil(save.savedChatIDHeaderName)
+        XCTAssertNil(try loadedState(sut).chatIDHeaderName)
+    }
+
+    func test_send_invalidAutomaticHeader_keepsModalOpenAndStaticHeadersIntact() throws {
+        let header = ServerHTTPHeader(name: "X-Chat-ID", value: "static")
+        let sut = makeViewModel(headers: [header])
+        sut.send(.advancedServerSettingsOpened)
+        sut.send(.chatIDHeaderToggled(true))
+        for invalidName in ["", "Authorization", "x-chat-id"] {
+            sut.send(.chatIDHeaderNameChanged(invalidName))
+            sut.send(.advancedServerSettingsApplied)
+            XCTAssertEqual(try loadedState(sut).chatIDHeaderNameDraft, invalidName)
+            XCTAssertEqual(try loadedState(sut).customHeaderDraft, [header])
+            XCTAssertNil(try loadedState(sut).chatIDHeaderName)
+        }
+        sut.send(.chatIDHeaderNameChanged("X-Conversation-ID"))
+        sut.send(.advancedServerSettingsApplied)
+        XCTAssertEqual(try loadedState(sut).chatIDHeaderName, "X-Conversation-ID")
+        XCTAssertEqual(try loadedState(sut).customHeaders, [header])
+        XCTAssertNil(try loadedState(sut).customHeaderDraft)
+    }
+
+    func test_send_automaticHeaderChangedDuringConnectionTest_ignoresStaleCompletion() async throws {
+        let connection = MockTestServerConnectionUseCase()
+        let sut = makeViewModel(connection: connection)
+        connection.onExecute = {
+            sut.send(.advancedServerSettingsOpened)
+            sut.send(.chatIDHeaderToggled(true))
+            sut.send(.chatIDHeaderNameChanged("X-Chat-ID"))
+            sut.send(.advancedServerSettingsApplied)
+        }
+        defer { connection.onExecute = nil }
+        sut.send(.testConnectionTapped)
+        await sut.serverConnectionTask?.value
+        XCTAssertEqual(try loadedState(sut).connectionStatus, .idle)
+        XCTAssertEqual(try loadedState(sut).chatIDHeaderName, "X-Chat-ID")
+        XCTAssertEqual(connection.testedCustomHeaders, [])
+    }
+
     private func makeViewModel(
         headers: [ServerHTTPHeader] = [],
         save: MockSaveServerConfigurationUseCase = MockSaveServerConfigurationUseCase(),

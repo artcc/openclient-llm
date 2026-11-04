@@ -28,18 +28,16 @@ extension SettingsViewModel {
         switch event {
         case .advancedServerSettingsOpened:
             loadedState.customHeaderDraft = loadedState.customHeaders
+            loadedState.chatIDHeaderNameDraft = loadedState.chatIDHeaderName
         case .advancedServerSettingsCancelled:
             loadedState.customHeaderDraft = nil
+            loadedState.chatIDHeaderNameDraft = nil
         case .advancedServerSettingsApplied:
             applyCustomHeaderDraft(&loadedState)
-        case .customHeaderAdded:
-            guard let draft = loadedState.customHeaderDraft, draft.count < ServerHTTPHeader.maximumCount else { return }
-            loadedState.customHeaderDraft?.append(ServerHTTPHeader())
-        case .customHeaderRemoved(let id):
-            loadedState.customHeaderDraft?.removeAll { $0.id == id }
-        case .customHeaderChanged(let header):
-            guard let index = loadedState.customHeaderDraft?.firstIndex(where: { $0.id == header.id }) else { return }
-            loadedState.customHeaderDraft?[index] = header
+        case .customHeaderAdded, .customHeaderRemoved, .customHeaderChanged:
+            updateCustomHeaderDraft(event, in: &loadedState)
+        case .chatIDHeaderToggled, .chatIDHeaderNameChanged:
+            updateChatIDHeaderDraft(event, in: &loadedState)
         default:
             return
         }
@@ -48,7 +46,9 @@ extension SettingsViewModel {
 
     func testConnection() {
         guard case .loaded(var loadedState) = state else { return }
-        if let error = ServerHTTPHeader.validationError(in: loadedState.customHeaders) {
+        if let error = ServerHTTPHeader.validationError(
+            in: loadedState.customHeaders, chatIDHeaderName: loadedState.chatIDHeaderName
+        ) {
             loadedState.connectionStatus = .failure(error)
             state = .loaded(loadedState)
             return
@@ -80,7 +80,9 @@ extension SettingsViewModel {
 
     func saveSettings() {
         guard case .loaded(var loadedState) = state else { return }
-        if let error = ServerHTTPHeader.validationError(in: loadedState.customHeaders) {
+        if let error = ServerHTTPHeader.validationError(
+            in: loadedState.customHeaders, chatIDHeaderName: loadedState.chatIDHeaderName
+        ) {
             loadedState.isSaved = false
             loadedState.serverPersistenceError = error
             state = .loaded(loadedState)
@@ -89,8 +91,10 @@ extension SettingsViewModel {
         let configurationChanged = loadedState.serverURL != settingsManager.getServerBaseURL()
             || loadedState.apiKey != settingsManager.getAPIKey()
             || !ServerHTTPHeader.hasSameValues(loadedState.customHeaders, settingsManager.getCustomHeaders())
+            || loadedState.chatIDHeaderName?.lowercased() != settingsManager.getChatIDHeaderName()?.lowercased()
         guard saveServerConfigurationUseCase.execute(
-            serverURL: loadedState.serverURL, apiKey: loadedState.apiKey, customHeaders: loadedState.customHeaders
+            serverURL: loadedState.serverURL, apiKey: loadedState.apiKey,
+            customHeaders: loadedState.customHeaders, chatIDHeaderName: loadedState.chatIDHeaderName
         ) else {
             loadedState.isSaved = false
             loadedState.serverPersistenceFailureCount += 1
@@ -130,13 +134,44 @@ extension SettingsViewModel {
         loadedState.serverPersistenceError = nil
     }
 
+    private func updateCustomHeaderDraft(_ event: Event, in loadedState: inout LoadedState) {
+        switch event {
+        case .customHeaderAdded:
+            guard let draft = loadedState.customHeaderDraft,
+                  draft.count + (loadedState.chatIDHeaderNameDraft == nil ? 0 : 1) < ServerHTTPHeader.maximumCount
+            else { return }
+            loadedState.customHeaderDraft?.append(ServerHTTPHeader())
+        case .customHeaderRemoved(let id):
+            loadedState.customHeaderDraft?.removeAll { $0.id == id }
+        case .customHeaderChanged(let header):
+            guard let index = loadedState.customHeaderDraft?.firstIndex(where: { $0.id == header.id }) else { return }
+            loadedState.customHeaderDraft?[index] = header
+        default: break
+        }
+    }
+
+    private func updateChatIDHeaderDraft(_ event: Event, in loadedState: inout LoadedState) {
+        guard loadedState.customHeaderDraft != nil else { return }
+        switch event {
+        case .chatIDHeaderToggled(let enabled):
+            loadedState.chatIDHeaderNameDraft = enabled ? (loadedState.chatIDHeaderNameDraft ?? "") : nil
+        case .chatIDHeaderNameChanged(let name):
+            guard loadedState.chatIDHeaderNameDraft != nil else { return }
+            loadedState.chatIDHeaderNameDraft = name
+        default: break
+        }
+    }
+
     private func applyCustomHeaderDraft(_ loadedState: inout LoadedState) {
         guard let draft = loadedState.customHeaderDraft,
-              ServerHTTPHeader.validationError(in: draft) == nil else { return }
-        if draft != loadedState.customHeaders {
+              ServerHTTPHeader.validationError(in: draft, chatIDHeaderName: loadedState.chatIDHeaderNameDraft) == nil
+        else { return }
+        if draft != loadedState.customHeaders || loadedState.chatIDHeaderNameDraft != loadedState.chatIDHeaderName {
             loadedState.customHeaders = draft
+            loadedState.chatIDHeaderName = loadedState.chatIDHeaderNameDraft
             markServerConfigurationEdited(&loadedState)
         }
         loadedState.customHeaderDraft = nil
+        loadedState.chatIDHeaderNameDraft = nil
     }
 }

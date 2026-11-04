@@ -105,7 +105,7 @@ private extension ChatViewModel {
             systemPrompt: systemPrompt,
             tools: tools
         )
-        guard let compacted = try await compactConversationUseCase.execute(
+        guard let compacted = try await makeCompactionUseCase(chatID: sendContext.chatID).execute(
             messages: ImageAttachmentContext.messagesForModel(sendContext.messages, model: sendContext.selectedModel),
             configuration: configuration
         ), compactionCursorAdvanced(
