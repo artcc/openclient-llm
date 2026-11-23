@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## [1.7.50-build-136] - Unreleased
+
+### Added
+
+- Chat folders on iOS, iPadOS, and macOS let you move chats individually or in groups without changing their order in history.
+- The macOS sidebar lists folders beneath Chats and lets you drag conversations into a folder or back to Unfiled.
+- On iPhone, the folder button in Chats opens a side panel; on iPad, folders appear directly in the sidebar when it is visible.
+- New chats started in a folder and forks of chats in that folder inherit its location.
+- Deleting a folder returns its chats to Unfiled without deleting any conversations.
+
+### Changed
+
+- iCloud sync and full backups now preserve folders, including empty ones, while individual chat exports omit folder information.
+
 ## [1.7.45-build-135] - 2026-11-04
 
 ### Added

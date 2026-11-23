@@ -37,8 +37,16 @@ final class MockConversationRepository: ConversationRepositoryProtocol, @uncheck
         return conversations
     }
 
+    func loadBackupSnapshot() async throws -> ConversationBackupSnapshot {
+        (try await loadLocal(), ConversationFolderSnapshot(folders: [], memberships: []))
+    }
+
     @discardableResult
-    func save(_ conversation: Conversation, expectedBase: Conversation?) async throws -> Conversation {
+    func save(
+        _ conversation: Conversation,
+        expectedBase: Conversation?,
+        creationPlacement: ConversationCreationPlacement?
+    ) async throws -> Conversation {
         if let saveError { throw saveError }
         savedConversations.append(conversation)
         if let index = conversations.firstIndex(where: { $0.id == conversation.id }) {
@@ -49,7 +57,10 @@ final class MockConversationRepository: ConversationRepositoryProtocol, @uncheck
         return conversation
     }
 
-    func importBatch(_ conversations: [Conversation]) async throws -> [Conversation] {
+    func importBatch(
+        _ conversations: [Conversation],
+        organization: ConversationFolderSnapshot
+    ) async throws -> [Conversation] {
         if let saveError { throw saveError }
         savedConversations.append(contentsOf: conversations)
         self.conversations.append(contentsOf: conversations)

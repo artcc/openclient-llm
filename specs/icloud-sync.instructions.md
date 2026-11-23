@@ -6,7 +6,7 @@ description: "Use when implementing or changing iCloud synchronization, iCloud D
 
 ## Scope
 
-OpenClient synchronizes conversations and their attachments, the user profile, memory items, custom prompt templates, and
+OpenClient synchronizes conversations, their attachments and folder organization, the user profile, memory items, custom prompt templates, and
 their deletion metadata through the private iCloud Documents container. The contract is file based through `Codable` and
 `FileManager`; SwiftData, CloudKit records, third-party databases, and server-side synchronization are outside its scope.
 
@@ -36,6 +36,9 @@ Documents/
   ConversationTombstones/<conversation UUID>.json
   ConversationTombstones.json
   ConversationDeleteAll.json
+  ConversationFolders/<folder UUID>.json
+  ConversationFolderMemberships/<conversation UUID>.json
+  ConversationFolderTombstones/<folder UUID>.json
   UserProfile.json
   UserProfileDeletion.json
   PromptTemplates/<template UUID>.json
@@ -112,6 +115,22 @@ deterministically; persist and verify local then cloud output; and apply deletio
 - Conversations are keyed by `Conversation.id`; the newest valid `updatedAt` wins. A tombstone rejects versions not newer
   than its deletion date. Attachments are children of conversations; referenced files are materialized, and unreferenced
   cloud folders are removed only after verified parent reconciliation.
+- Folder organization is additive within the conversations category. Each folder has `id`, `name`, and `updatedAt`;
+  each membership has `conversationId`, an optional `folderId`, and an independent `updatedAt`. Moving a chat or renaming
+  a folder does not change the chat payload, timestamp, or attachments. An explicit move to the root persists a nil
+  destination, so older assignments cannot reappear. Missing directories are valid legacy input.
+- Folder names and memberships reconcile by UUID, newest revision first; different values at the same revision use
+  canonical JSON byte order and preserve the loser locally. Folder deletion permanently retires that UUID via a durable
+  tombstone (`id`, `deletedAt`); references to unavailable folders display as unfiled and never recreate folders.
+  A deleted conversation's membership is removed; a recreated conversation cannot inherit a pre-deletion assignment.
+- The folder files participate in the same snapshot, download preflight, coordinated compare-and-apply, metadata
+  observation, and purge category as conversations. The conversation delete-all and global purge barriers also reject
+  stale folder payloads and memberships; per-folder deletion tombstones remain durable across purge. Local reset removes
+  folder state and recovery copies without publishing a cloud tombstone.
+  The local organization file is verified inside the conversation transaction for imports and first-save placement.
+  Initial placement is provisional locally until reconciliation confirms the chat is new to iCloud. A cloud-existing
+  chat keeps its placement (including unfiled) over a stale first-save retry; an explicit subsequent move is a normal
+  membership edit. The provisional marker is neither synchronized nor exported.
 - Memory is merged by `MemoryItem.id`, and custom templates by `PromptTemplate.id`, using their modification values and
   durable per-item deletion metadata. Built-in templates are not cloud user data.
 - The profile is a singleton resolved by modification metadata and `UserProfileDeletion.json`. Unsafe automatic choices

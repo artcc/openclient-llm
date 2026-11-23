@@ -8,6 +8,8 @@
 
 import Foundation
 
+typealias ConversationBackupSnapshot = (conversations: [Conversation], organization: ConversationFolderSnapshot)
+
 struct ConversationExportDocument: Codable, Equatable, Sendable {
     // MARK: - Supporting Types
 
@@ -31,16 +33,21 @@ struct ConversationExportDocument: Codable, Equatable, Sendable {
     let version: Int
     let exportedAt: Date
     let conversations: [ExportedConversation]
+    let folders: [ConversationFolder]?
+    let memberships: [ConversationFolderMembership]?
 
     // MARK: - Init
 
     init(
         exportedAt: Date = Date(),
-        conversations: [ExportedConversation]
+        conversations: [ExportedConversation],
+        organization: ConversationFolderSnapshot? = nil
     ) {
         format = Self.formatIdentifier
         version = Self.currentVersion
         self.exportedAt = exportedAt
         self.conversations = conversations
+        folders = organization.flatMap { $0.folders.isEmpty ? nil : $0.folders }
+        memberships = organization.flatMap { $0.memberships.isEmpty ? nil : $0.memberships }
     }
 }

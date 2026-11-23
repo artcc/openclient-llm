@@ -55,11 +55,6 @@ final class ChatViewModel {
         case toggleFavourite(UUID)
     }
 
-    struct PersistenceResult {
-        let didPersist: Bool
-        let durableConversation: Conversation?
-    }
-
     var state: State
 
     var onConversationUpdated: (() -> Void)?
@@ -123,6 +118,7 @@ final class ChatViewModel {
     var mcpDiscoveryGeneration = 0
     var observedMCPAuthorizationScope: String
     private var pendingConversation: Conversation?
+    @ObservationIgnored var initialFolderID: UUID?
     var isPreparingAppHandoff = false
     var attachmentPreparationCount = 0
     var attachmentPreparationGeneration = 0
@@ -132,6 +128,7 @@ final class ChatViewModel {
 
     init(
         conversation: Conversation? = nil,
+        initialFolderID: UUID? = nil,
         isPrivateChat: Bool = false,
         state: State = .loading,
         fetchModelsUseCase: FetchModelsUseCaseProtocol = FetchModelsUseCase(),
@@ -168,6 +165,7 @@ final class ChatViewModel {
     ) {
         self.state = state
         self.pendingConversation = conversation
+        self.initialFolderID = isPrivateChat ? nil : initialFolderID
         if case .loaded(let loadedState) = state {
             self.persistenceBase = loadedState.conversation ?? conversation
         } else {
@@ -312,6 +310,8 @@ final class ChatViewModel {
         persistenceTask = nil
         queuedPersistenceConversation = nil
         persistenceBase = nil
+        initialFolderID = nil
+        pendingConversation = nil
         loadInitialData()
     }
 }
@@ -321,6 +321,9 @@ final class ChatViewModel {
 private extension ChatViewModel {
 
     func loadInitialData() {
+        if initialFolderID != nil, case .loaded(let draft) = state {
+            pendingConversation = draft.conversation
+        }
         cancelRecording()
         cancelAttachmentPreparation()
         cancelActiveStreaming()
@@ -381,6 +384,7 @@ private extension ChatViewModel {
         cancelRecording()
         cancelAttachmentPreparation()
         cancelActiveStreaming()
+        initialFolderID = nil
         guard case .loaded(var loadedState) = state else {
             pendingConversation = conversation
             return

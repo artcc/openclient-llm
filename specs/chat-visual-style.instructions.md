@@ -13,6 +13,29 @@ applyTo: "{openclient-llm/Shared/Features/Chat/**/*.swift,openclient-llm/Shared/
   navigation details not specified by either contract.
 - Keep the conversation content-first, readable, and visually stable during updates.
 
+## History And Folders
+
+- Chats starts in All Chats, which includes filed and unfiled conversations. On iPhone and on iPad without a visible
+  tab sidebar, the history's leading toolbar button opens a folder drawer. Selecting a scope closes the drawer. Keep
+  the button at the history root, including empty states; never replace Back or intercept its edge gesture inside a chat.
+- When the iPad tab sidebar is visible, show the folder choices directly there instead of offering the drawer. Preserve
+  the scope and open chat across placement changes; do not add a folder tab, duplicate histories, or scope global search.
+- On macOS, Chats and the collapsible Folders section in the main sidebar select the scope of the existing detail pane.
+  Opening a chat preserves its sidebar selection. Create folders from the section header, rename or delete them from
+  their context menu, and move chats using the existing move menu or by dropping them onto a folder or Unfiled.
+- In All Chats, show the folder icon and name after the date as secondary row metadata. Also identify filed chats in
+  global search results. Omit this metadata for unfiled chats and when browsing a single folder.
+- The dedicated Search screen shows no results for a blank or whitespace-only query. Results use the same date and
+  folder presentation as Chats, without model or tag badges.
+- Folders have one level and one optional membership per saved chat. Scope the existing tag filter, pinned group and
+  activity-date groups to the selected folder. Filing is not activity and must not reorder Recents or remove a pin.
+- Preserve the history scope per scene when opening a conversation, returning from search, or adapting iPad layout.
+  Global search results include the folder name when present; an in-list search on Mac can expand to all chats.
+- The list supports moving one or several chats, creating a folder while choosing a destination, renaming folders, and
+  deleting a folder with confirmation. Deletion leaves its conversations unfiled; it never deletes conversations.
+- Only a new chat explicitly started within a folder inherits that destination on first save. Forks inherit their source
+  folder at creation. External entries and Private Chat do not inherit the visible folder; opening a chat never moves it.
+
 ## Conversation Layout
 
 - Keep messages in an adaptable readable column: use available compact width without allowing lines to become excessively

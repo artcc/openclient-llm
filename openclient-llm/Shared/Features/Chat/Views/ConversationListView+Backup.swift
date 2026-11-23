@@ -31,11 +31,13 @@ extension ConversationListView {
         let conversationCount = importResult.importedConversationCount
         let restoredAttachmentCount = importResult.restoredAttachmentCount
         let skippedAttachmentCount = importResult.skippedAttachmentCount
+        let folderSummary = importResult.importedFolderCount > 0
+            ? "\n" + String(localized: "Folders imported: \(importResult.importedFolderCount)") : ""
         guard skippedAttachmentCount > 0 else {
             let format = String(
                 localized: "Imported %lld conversations and restored %lld attachments."
             )
-            return String.localizedStringWithFormat(format, conversationCount, restoredAttachmentCount)
+            return String.localizedStringWithFormat(format, conversationCount, restoredAttachmentCount) + folderSummary
         }
         let format = String(
             localized: "Imported %lld conversations, restored %lld attachments, and skipped %lld attachments."
@@ -45,7 +47,7 @@ extension ConversationListView {
             conversationCount,
             restoredAttachmentCount,
             skippedAttachmentCount
-        )
+        ) + folderSummary
     }
 
     func importBackup(_ result: Result<[URL], Error>) {

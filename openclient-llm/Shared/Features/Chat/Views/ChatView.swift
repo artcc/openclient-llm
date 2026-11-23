@@ -46,6 +46,7 @@ struct ChatView: View {
 
     init(
         conversation: Conversation? = nil,
+        initialFolderID: UUID? = nil,
         isPrivateChat: Bool = false,
         shareItem: ShareExtensionItem? = nil,
         urlSchemeText: String? = nil,
@@ -60,6 +61,7 @@ struct ChatView: View {
     ) {
         _viewModel = State(initialValue: viewModel ?? ChatViewModel(
             conversation: conversation,
+            initialFolderID: shareItem == nil && urlSchemeText == nil && !isMenuBarPresentation ? initialFolderID : nil,
             isPrivateChat: isPrivateChat
         ))
         conversationInput = conversation.map(ChatConversationInput.init)
@@ -178,6 +180,7 @@ private extension ChatView {
         }
         .task {
             viewModel.onConversationUpdated = onConversationUpdated
+            viewModel.onForkCreated = onForkCreated
             viewModel.send(.viewAppeared)
             await processShareItemIfNeeded(
                 viewModel: viewModel,

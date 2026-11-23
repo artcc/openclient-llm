@@ -28,4 +28,8 @@ final class MockLoadConversationsUseCase: LoadConversationsUseCaseProtocol, @unc
         executeLocallyCallCount += 1
         return try result.get()
     }
+
+    func executeForBackup() async throws -> ConversationBackupSnapshot {
+        (try result.get(), ConversationFolderSnapshot(folders: [], memberships: []))
+    }
 }

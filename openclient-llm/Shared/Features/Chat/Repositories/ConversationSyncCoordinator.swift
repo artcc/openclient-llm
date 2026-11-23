@@ -117,6 +117,7 @@ actor ConversationSyncCoordinator {
     func save(
         _ conversation: Conversation,
         expectedBase: Conversation?,
+        creationPlacement: ConversationCreationPlacement? = nil,
         synchronize: Bool,
         admissionToken: AdmissionToken
     ) async throws -> Conversation {
@@ -137,7 +138,8 @@ actor ConversationSyncCoordinator {
                 conversation,
                 expectedBase: expectedBase,
                 synchronize: synchronizeSave,
-                preservePendingBase: shouldPreservePendingBase
+                preservePendingBase: shouldPreservePendingBase,
+                creationPlacement: creationPlacement
             )
         }
         mutationTasks[id] = task
@@ -152,7 +154,8 @@ actor ConversationSyncCoordinator {
                 conversation,
                 expectedBase: expectedBase,
                 synchronize: false,
-                preservePendingBase: true
+                preservePendingBase: true,
+                creationPlacement: creationPlacement
             )
         }
         guard let saved else { throw CloudSyncError.staleConversationRevision }

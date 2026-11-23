@@ -46,11 +46,6 @@ final class ConversationListViewModel {
         case titleEdited(UUID, String)
     }
 
-    enum FilterEvent {
-        case searchChanged(String)
-        case tagChanged(String?)
-    }
-
     enum BackupEvent {
         case exportTapped
         case dataConsumed
@@ -74,23 +69,23 @@ final class ConversationListViewModel {
         var searchQuery: String = ""
         var filteredConversations: [Conversation] = []
         var activeTagFilter: String?
+        var folderScope: ConversationFolderScope = .all
+        var folders: [ConversationFolder] = []
+        var folderIDs: [UUID: UUID] = [:]
+        var hasLoadedFolders = false
+        var searchesAllFolders = false
         var backupData: Data?
         var importResult: ImportConversationsResult?
-
-        var allTags: [ConversationTag] {
-            let tags = Dictionary(conversations.flatMap(\.tags).map { ($0.name, $0) },
-                                  uniquingKeysWith: { first, _ in first }).values
-            return tags.sorted {
-                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-            }
-        }
-
-        var groupedConversations: [ConversationSection] {
-            ConversationSection.group(filteredConversations)
-        }
     }
 
     private(set) var state: State
+    let folderRepository: any ConversationFolderRepositoryProtocol
+    var requestedScope: ConversationFolderScope = .all
+    var folderLoadID = UUID()
+    var folderIssue: FolderIssue?
+    var isSavingFolderChange = false
+    var moveSelection: Set<UUID>?
+    var onNewConversation: ((Conversation) -> Void)?
 
     private let loadConversationsUseCase: LoadConversationsUseCaseProtocol
     private let deleteConversationUseCase: DeleteConversationUseCaseProtocol
@@ -124,6 +119,7 @@ final class ConversationListViewModel {
         exportBackupUseCase: ExportBackupUseCaseProtocol = ExportBackupUseCase(),
         importConversationsUseCase: ImportConversationsUseCaseProtocol = ImportConversationsUseCase(),
         settingsManager: SettingsManagerProtocol = SettingsManager(),
+        folderRepository: any ConversationFolderRepositoryProtocol = ConversationFolderRepository(),
         cloudRetryDelays: [Duration] = [.seconds(1), .seconds(2), .seconds(4), .seconds(8)]
     ) {
         self.state = state
@@ -137,12 +133,17 @@ final class ConversationListViewModel {
         self.exportBackupUseCase = exportBackupUseCase
         self.importConversationsUseCase = importConversationsUseCase
         self.settingsManager = settingsManager
+        self.folderRepository = folderRepository
         self.cloudRetryDelays = cloudRetryDelays
         observeAppDataReset()
         observeConversationUpdated()
     }
 
     // MARK: - Input functions
+
+    func updateLoadedState(_ loaded: LoadedState) {
+        state = .loaded(loaded)
+    }
 
     func send(_ event: Event) {
         switch event {
@@ -179,17 +180,19 @@ final class ConversationListViewModel {
         Task {
             do {
                 let conversations = try await loadConversationsUseCase.executeLocally()
-                state = .loaded(LoadedState(
-                    conversations: conversations,
-                    filteredConversations: conversations
-                ))
+                var loaded = LoadedState(conversations: conversations, folderScope: requestedScope)
+                applySearchFilter(&loaded)
+                state = .loaded(loaded)
+                await reloadFolders()
 
                 // Let SwiftUI render local data before starting iCloud work.
                 await Task.yield()
                 await synchronizeAndReloadConversations()
             } catch {
-                state = .loaded(LoadedState(errorMessage: error.localizedDescription))
+                state = .loaded(LoadedState(errorMessage: error.localizedDescription, folderScope: requestedScope))
                 scheduleErrorDismiss()
+                // Folder metadata has its own store and retry state, even when the history cannot be read.
+                await reloadFolders()
                 return
             }
 
@@ -207,18 +210,21 @@ final class ConversationListViewModel {
     }
 
     func reloadConversations() async {
-        guard case .loaded(var loadedState) = state else { return }
-
+        guard case .loaded = state else { return }
         do {
-            loadedState.conversations = try await loadConversationsUseCase.executeLocally()
+            let conversations = try await loadConversationsUseCase.executeLocally()
+            guard case .loaded(var loadedState) = state else { return }
+            loadedState.conversations = conversations
             loadedState.errorMessage = nil
             applySearchFilter(&loadedState)
             state = .loaded(loadedState)
         } catch {
+            guard case .loaded(var loadedState) = state else { return }
             loadedState.errorMessage = error.localizedDescription
             state = .loaded(loadedState)
             scheduleErrorDismiss()
         }
+        await reloadFolders()
     }
 
     func synchronizeAndReloadConversations(retryAttempt: Int = 0) async {
@@ -267,6 +273,13 @@ private extension ConversationListViewModel {
             updateSearch(query)
         case .tagChanged(let tag):
             updateTagFilter(tag)
+        case .scopeChanged(let scope):
+            setFolderScope(scope)
+        case .searchAllFolders(let enabled):
+            guard case .loaded(var loaded) = state else { return }
+            loaded.searchesAllFolders = enabled
+            applySearchFilter(&loaded)
+            state = .loaded(loaded)
         }
     }
 
@@ -299,7 +312,11 @@ private extension ConversationListViewModel {
             ?? ""
 
         let conversation = Conversation(modelId: modelId)
-        onConversationSelected?(conversation)
+        if let onNewConversation {
+            onNewConversation(conversation)
+        } else {
+            onConversationSelected?(conversation)
+        }
     }
 
     func selectConversation(_ conversation: Conversation) {
@@ -421,6 +438,7 @@ private extension ConversationListViewModel {
         do {
             let result = try await importConversationsUseCase.execute(data)
             let conversations = try await loadConversationsUseCase.executeLocally()
+            await reloadFolders()
             guard case .loaded(var loadedState) = state else { return }
             loadedState.conversations = conversations
             loadedState.importResult = result

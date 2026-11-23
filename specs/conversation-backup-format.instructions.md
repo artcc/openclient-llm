@@ -9,7 +9,8 @@ applyTo: "openclient-llm/Shared/Features/Chat/**/*.swift"
 
 This specification defines the interoperable OpenClient JSON backup contract and, separately, the behavior of the current
 importer. A single-conversation export contains one entry in `conversations`; a complete backup uses the same format and
-contains every conversation available at export time.
+contains every conversation and folder available at export time. Conversations and folder placement for a full backup
+are read together in one local storage snapshot.
 
 ## Interoperable Version 1 Contract
 
@@ -29,6 +30,12 @@ contains every conversation available at export time.
         }
       ]
     }
+  ],
+  "folders": [
+    { "id": "Folder UUID", "name": "Projects", "updatedAt": "2026-07-13T08:00:00Z" }
+  ],
+  "memberships": [
+    { "conversationId": "Conversation UUID", "folderId": "Folder UUID", "updatedAt": "2026-07-13T08:00:00Z" }
   ]
 }
 ```
@@ -44,10 +51,20 @@ contains every conversation available at export time.
 | `attachments[].messageId` | UUID | Yes | Message containing the attachment metadata. |
 | `attachments[].attachmentId` | UUID | Yes | Attachment identifier on that message. |
 | `attachments[].data` | Base64 string | Yes | Binary attachment content. |
+| `folders` | Array | No | Live folders, including empty ones; each has `id` (UUID), `name` (string), and `updatedAt` (ISO 8601 date). |
+| `memberships` | Array | No | Placement records with `conversationId` (UUID), optional `folderId` (UUID), and `updatedAt` (ISO 8601 date). |
 
 Version 1 rules:
 
 - Dates are ISO 8601. Required fields must decode; unknown JSON keys are ignored.
+- `folders` and `memberships` are independent, additive Version 1 fields. Missing arrays mean no records. Older
+  Version 1 readers restore conversations and ignore both fields. Single-conversation exports always omit both;
+  complete backups omit empty arrays and can contain only empty folders, or no conversations or folders at all.
+- Folder IDs must be unique. Names must be non-empty after trimming whitespace and newlines. Names need not be unique.
+  Each membership references a conversation in the document, at most once; a non-null `folderId` references a folder
+  in the same document. A missing/null `folderId` or absent membership means unfiled. Complete exports exclude
+  memberships for unavailable conversations and represent assignments to a deleted folder as unfiled. Deletion markers
+  and internal synchronization records are never exported.
 - A conversation requires `id`, `title`, `modelId`, `messages`, `createdAt`, and `updatedAt`. Each message requires `id`,
   `role`, `content`, and `timestamp`. Attachment metadata requires `id`, `type`, and `fileName`. Their decoders supply the
   compatible defaults for fields added during Version 1.
@@ -79,6 +96,13 @@ Version 1 rules:
 - Imported conversations, messages, and attachments receive new UUIDs. Existing conversations are never overwritten.
   Parent-conversation and branched-message references are remapped independently when their UUID exists in the imported
   document; references without a mapped UUID are removed. Summary cursors use the message UUID map.
+- Imported folders also receive fresh UUIDs, including empty folders. Memberships are rewritten with the imported
+  conversation and folder IDs. Restored names are trimmed. New conversations, folders and placement records use the
+  import time for their revision. At commit, revisions that would not survive the effective synchronized purge/delete-all
+  or local-reset barrier are advanced to the next durable revision; already-newer stored revisions and chat creation
+  dates are preserved. This also applies to backups containing only folders.
+  Existing same-named folders are not reused. Invalid organization rejects the whole document
+  before persistence. The import result includes the count of restored folders, even when the conversation count is zero.
 - Attachment payloads are decoded and written to new local paths; exported paths are ignored. Missing or invalid base64
   for declared attachment metadata skips that attachment and increments `skippedAttachmentCount`; a missing required
   `data` field or an invalid payload reference invalidates the document.
@@ -94,13 +118,14 @@ Version 1 rules:
   `toolName` or an unambiguous assistant call with the same `toolCallId`.
 - Import never executes tool calls. Tool transcripts and both image reservation fields are restored as historical
   data only.
-- Local persistence is atomic for the import batch: a local write or verification failure removes newly written attachments
-  and rolls back every conversation already restored by that document. When cloud sync is enabled, synchronization occurs
+- Local persistence is atomic for conversations, attachment bytes, folders, and memberships in one batch: a local write
+  or verification failure restores the prior local state for all four. When cloud sync is enabled, synchronization occurs
   before and after the local commit; a failure after that commit is reported but does not roll back the local batch.
 
 ## Privacy And Limits
 
-Backups contain full conversation content, tool transcripts, and raw attachment bytes. Store and share them only through
+Backups contain full conversation content, tool transcripts, raw attachment bytes and, for a complete backup, folder
+names and organization. Store and share them only through
 trusted encrypted locations. Version 1 defines no artificial file-size or conversation-count limit; device storage and
 memory are the practical limits.
 

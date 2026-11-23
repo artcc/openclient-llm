@@ -214,7 +214,18 @@ extension ChatViewModel {
         return enqueuePersistence(of: snapshot)
     }
 
-    private func conversationForPersistence() -> (conversation: Conversation, expectedBase: Conversation?)? {
+    struct PersistenceResult {
+        let didPersist: Bool
+        let durableConversation: Conversation?
+    }
+
+    private struct PersistenceSnapshot {
+        let conversation: Conversation
+        let expectedBase: Conversation?
+        let initialFolderID: UUID?
+    }
+
+    private func conversationForPersistence() -> PersistenceSnapshot? {
         guard !isPrivateChat else { return nil }
         guard case .loaded(var loadedState) = state,
               var conversation = loadedState.conversation else { return nil }
@@ -232,12 +243,16 @@ extension ChatViewModel {
         }
         loadedState.conversation = conversation
         state = .loaded(loadedState)
-        return (conversation, expectedBase)
+        return PersistenceSnapshot(
+            conversation: conversation,
+            expectedBase: expectedBase,
+            initialFolderID: initialFolderID
+        )
     }
 
     @discardableResult
     private func enqueuePersistence(
-        of snapshot: (conversation: Conversation, expectedBase: Conversation?)
+        of snapshot: PersistenceSnapshot
     ) -> Task<PersistenceResult, Never> {
         let previousTask = persistenceTask
         persistenceGeneration += 1
@@ -266,7 +281,7 @@ extension ChatViewModel {
     }
 
     private func persistSnapshot(
-        _ snapshot: (conversation: Conversation, expectedBase: Conversation?),
+        _ snapshot: PersistenceSnapshot,
         previousResult: PersistenceResult?,
         generation: Int,
         resetGeneration: Int
@@ -289,7 +304,9 @@ extension ChatViewModel {
             }
             let persisted = try await saveConversationUseCase.execute(
                 submittedConversation,
-                expectedBase: durableBase
+                expectedBase: durableBase,
+                creationPlacement: previousResult?.durableConversation?.id == submittedConversation.id
+                    ? nil : snapshot.initialFolderID.map(ConversationCreationPlacement.folder)
             )
             guard !Task.isCancelled, resetGeneration == persistenceResetGeneration else {
                 return PersistenceResult(didPersist: false, durableConversation: nil)
@@ -318,6 +335,7 @@ extension ChatViewModel {
     ) {
         guard case .loaded(var loadedState) = state,
               loadedState.conversation?.id == persistedConversation.id else { return }
+        initialFolderID = nil
         persistenceBase = persistedConversation
         var desiredConversation = loadedState.conversation ?? submittedConversation
         desiredConversation.messages = loadedState.messages

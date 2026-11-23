@@ -24,6 +24,7 @@ final class ConversationListViewModelTests: XCTestCase {
     var mockSettingsManager: MockSettingsManager!
     var mockExportBackup: MockExportBackupUseCase!
     var mockImportConversations: MockImportConversationsUseCase!
+    var mockFolders: ListFolderStoreDouble!
 
     // MARK: - Setup
 
@@ -40,7 +41,13 @@ final class ConversationListViewModelTests: XCTestCase {
         mockSettingsManager = MockSettingsManager()
         mockExportBackup = MockExportBackupUseCase()
         mockImportConversations = MockImportConversationsUseCase()
-        sut = ConversationListViewModel(
+        mockFolders = ListFolderStoreDouble()
+        sut = makeViewModel()
+    }
+
+    func makeViewModel(state: ConversationListViewModel.State = .loading) -> ConversationListViewModel {
+        ConversationListViewModel(
+            state: state,
             loadConversationsUseCase: mockLoadConversations,
             deleteConversationUseCase: mockDeleteConversation,
             pinConversationUseCase: mockPinConversation,
@@ -51,6 +58,7 @@ final class ConversationListViewModelTests: XCTestCase {
             exportBackupUseCase: mockExportBackup,
             importConversationsUseCase: mockImportConversations,
             settingsManager: mockSettingsManager,
+            folderRepository: mockFolders,
             cloudRetryDelays: [.zero]
         )
     }
@@ -67,6 +75,7 @@ final class ConversationListViewModelTests: XCTestCase {
         mockSettingsManager = nil
         mockExportBackup = nil
         mockImportConversations = nil
+        mockFolders = nil
 
         try await super.tearDown()
     }

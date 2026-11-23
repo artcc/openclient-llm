@@ -11,6 +11,7 @@ import Foundation
 protocol LoadConversationsUseCaseProtocol: Sendable {
     func execute() async throws -> [Conversation]
     func executeLocally() async throws -> [Conversation]
+    func executeForBackup() async throws -> ConversationBackupSnapshot
 }
 
 struct LoadConversationsUseCase: LoadConversationsUseCaseProtocol {
@@ -34,6 +35,11 @@ struct LoadConversationsUseCase: LoadConversationsUseCaseProtocol {
     func executeLocally() async throws -> [Conversation] {
         let conversations = try await repository.loadLocal()
         return normalizeTags(in: conversations)
+    }
+
+    func executeForBackup() async throws -> ConversationBackupSnapshot {
+        let snapshot = try await repository.loadBackupSnapshot()
+        return (normalizeTags(in: snapshot.conversations), snapshot.organization)
     }
 }
 

@@ -31,7 +31,7 @@ extension ConversationStorage {
     }
 
     struct SynchronizationPlan {
-        let output: ConversationCloudSyncOutput
+        var output: ConversationCloudSyncOutput
         let mutatedConversation: Conversation?
         let resolvedPendingMutationIds: Set<UUID>
         let resolvedPendingDeletionIds: Set<UUID>

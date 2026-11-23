@@ -17,15 +17,24 @@ struct HomeView: View {
 
     @State private var viewModel = HomeViewModel()
     @State var selectedConversation: Conversation?
+    @State private var newChatPlacement: (conversationID: UUID, folderID: UUID)?
     @State var isPrivateChatActive: Bool = false
     @State private var requestedSettingsPresentation: SettingsPresentation?
 
 #if os(macOS)
-    @State private var sidebarDestination: SidebarDestination = .chats
-    @State private var macSearchRequestID = 0
+    @State private var macHistory = ConversationListViewModel()
+    @State private var sidebarDestination: MacChatSidebar.Destination = .history(.all)
+    @State private var macSearchRequested = false
+    private var folderScope: ConversationFolderScope {
+        if case .history(let scope) = sidebarDestination { return scope }
+        return .all
+    }
 #endif
 
 #if os(iOS)
+    @State var mobileHistory = ConversationListViewModel()
+    @State var showsFolderDrawer = false
+    private var folderScope: ConversationFolderScope { mobileHistory.requestedScope }
     @State var selectedTab: AppTab = .chats
     @State var iPadSearchText = ""
     @State var isSidebarSearchVisible = false
@@ -57,6 +66,11 @@ struct HomeView: View {
                 .safeAreaInset(edge: .top, spacing: 0) {
                     remoteBannerInset
                 }
+                .modifier(MobileFolderDrawerPresentation(
+                    history: mobileHistory,
+                    isPresented: $showsFolderDrawer,
+                    onSelect: selectMobileFolder
+                ))
 #endif
         }
         .onContinueUserActivity(SpotlightConstants.activityType) { activity in
@@ -70,9 +84,13 @@ struct HomeView: View {
         .onChange(of: viewModel.isPrivateChatRequested) { _, isRequested in
             guard isRequested else { return }
 #if os(iOS)
+            showsFolderDrawer = false
+            dismissSidebarSearch()
+            openConversation(nil)
             selectedTab = .chats
 #elseif os(macOS)
-            sidebarDestination = .chats
+            openConversation(nil)
+            showMacHistoryForExternalEntry()
 #endif
             isPrivateChatActive = true
             viewModel.send(.privateChatRequestConsumed)
@@ -80,11 +98,15 @@ struct HomeView: View {
         .onChange(of: viewModel.pendingConversation) { _, conversation in
             guard let conversation else { return }
 #if os(iOS)
+            showsFolderDrawer = false
+            dismissSidebarSearch()
+            isPrivateChatActive = false
             selectedTab = .chats
 #elseif os(macOS)
-            sidebarDestination = .chats
+            isPrivateChatActive = false
+            showMacHistoryForExternalEntry()
 #endif
-            selectedConversation = conversation
+            openConversation(conversation)
             viewModel.send(.pendingConversationConsumed)
         }
         .task {
@@ -127,6 +149,41 @@ struct HomeView: View {
 private extension HomeView {
 #if os(iOS)
     var iOSLayout: some View {
+        iOSTabs
+            .tabViewStyle(.sidebarAdaptable)
+            .tabViewSidebarHeader {
+                if UIDevice.current.userInterfaceIdiom == .pad { iPadSidebarSearch }
+            }
+            .tabViewSidebarFooter {
+                if UIDevice.current.userInterfaceIdiom == .pad { iPadFolderSidebar }
+            }
+            .task { mobileHistory.send(.viewAppeared) }
+            .onDisappear {
+                mobileHistory.onConversationSelected = nil
+                mobileHistory.onNewConversation = nil
+                mobileHistory.onPrivateChatSelected = nil
+            }
+            .onChange(of: selectedTab) { _, tab in
+                if tab != .chats {
+                    showsFolderDrawer = false
+                    dismissSidebarSearch()
+                }
+            }
+            .onChange(of: selectedConversation) { _, conversation in
+                if conversation != nil {
+                    showsFolderDrawer = false
+                    dismissSidebarSearch()
+                }
+            }
+            .onChange(of: isPrivateChatActive) { _, active in
+                if active {
+                    showsFolderDrawer = false
+                    dismissSidebarSearch()
+                }
+            }
+    }
+
+    var iOSTabs: some View {
         TabView(selection: tabSelection) {
             Tab(value: AppTab.chats) {
                 chatsTab
@@ -169,33 +226,6 @@ private extension HomeView {
             }
             .hidden(isSidebarSearchVisible)
         }
-        .tabViewStyle(.sidebarAdaptable)
-        .tabViewSidebarHeader {
-            if UIDevice.current.userInterfaceIdiom == .pad {
-                iPadSidebarSearch
-            }
-        }
-        .onChange(of: selectedTab) { _, tab in
-            if tab != .chats {
-                isSidebarSearchFocusRequested = false
-                isSidebarSearchActive = false
-                isSidebarSearchFocused = false
-            }
-        }
-        .onChange(of: selectedConversation) { _, conversation in
-            if conversation != nil {
-                isSidebarSearchFocusRequested = false
-                isSidebarSearchActive = false
-                isSidebarSearchFocused = false
-            }
-        }
-        .onChange(of: isPrivateChatActive) { _, active in
-            if active {
-                isSidebarSearchFocusRequested = false
-                isSidebarSearchActive = false
-                isSidebarSearchFocused = false
-            }
-        }
     }
 
     @ViewBuilder
@@ -204,6 +234,7 @@ private extension HomeView {
             SearchConversationsView(
                 searchText: $iPadSearchText,
                 showsSearchField: false,
+                sidebarFolderHistory: mobileHistory,
                 onConversationSelected: openSearchResult
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -221,23 +252,16 @@ private extension HomeView {
 
     var iPhoneChatsLayout: some View {
         NavigationStack {
-            ConversationListView(activeConversationId: selectedConversation?.id) { conversation in
-                selectedConversation = conversation
-            } onPrivateChatSelected: {
-                isPrivateChatActive = true
-            }
-            .navigationDestination(item: $selectedConversation) { conversation in
-                ChatView(
-                    conversation: conversation,
-                    shareItem: viewModel.pendingShareItem,
-                    urlSchemeText: viewModel.pendingURLSchemeText,
-                    onForkCreated: { fork in
-                        selectedConversation = fork
-                    },
-                    onShareItemProcessed: { viewModel.send(.shareItemConsumed) },
-                    onURLSchemeTextProcessed: { viewModel.send(.urlSchemeTextConsumed) }
-                )
-            }
+            ConversationListView(
+                viewModel: mobileHistory,
+                folderScope: Binding(get: { folderScope }, set: { mobileHistory.setFolderScope($0) }),
+                activeConversationId: selectedConversation?.id,
+                onShowFolders: canOpenFolderDrawer ? { showsFolderDrawer = true } : nil,
+                onNewConversation: openNewConversation,
+                onConversationSelected: openConversation,
+                onPrivateChatSelected: { isPrivateChatActive = true }
+            )
+            .navigationDestination(item: $selectedConversation, destination: chatDestination)
             .navigationDestination(isPresented: $isPrivateChatActive) {
                 ChatView(isPrivateChat: true)
             }
@@ -254,6 +278,7 @@ private extension HomeView {
             viewModel.send(.newPrivateChatShortcutTriggered)
         case .search:
 #if os(iOS)
+            showsFolderDrawer = false
             if isSidebarSearchVisible {
                 activateSidebarSearch()
             } else {
@@ -261,22 +286,21 @@ private extension HomeView {
             }
 #else
             selectedConversation = nil
-            sidebarDestination = .chats
-            macSearchRequestID += 1
+            isPrivateChatActive = false
+            showMacHistoryForExternalEntry()
+            macSearchRequested = true
 #endif
         }
     }
 
 #if os(macOS)
-    enum SidebarDestination: Hashable {
-        case chats
-        case models
-        case settings
-    }
-
     var macOSLayout: some View {
         NavigationSplitView {
-            sidebar
+            MacChatSidebar(
+                selection: Binding(get: { sidebarDestination }, set: selectMacDestination),
+                history: macHistory,
+                showsFolderIssues: selectedConversation != nil || isPrivateChatActive || !isShowingMacHistory
+            )
         } detail: {
             detailContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -284,59 +308,62 @@ private extension HomeView {
                     remoteBannerInset
                 }
         }
-        .onChange(of: sidebarDestination) { _, _ in
-            selectedConversation = nil
+        .task {
+            macHistory.send(.viewAppeared)
+        }
+        .onChange(of: macHistory.requestedScope) { _, scope in
+            if isShowingMacHistory, folderScope != scope {
+                sidebarDestination = .history(scope)
+            }
         }
     }
 
-    var sidebar: some View {
-        List(selection: $sidebarDestination) {
-            Section {
-                Label(String(localized: "Chats"), systemImage: "bubble.left.and.bubble.right")
-                    .tag(SidebarDestination.chats)
-            }
+    var isShowingMacHistory: Bool {
+        if case .history = sidebarDestination { return true }
+        return false
+    }
 
-            Section {
-                Label(String(localized: "Models"), systemImage: "brain.head.profile")
-                    .tag(SidebarDestination.models)
-
-                Label(String(localized: "Settings"), systemImage: "gearshape")
-                    .tag(SidebarDestination.settings)
-            }
+    func selectMacDestination(_ destination: MacChatSidebar.Destination) {
+        openConversation(nil)
+        isPrivateChatActive = false
+        sidebarDestination = destination
+        if case .history(let scope) = destination {
+            macHistory.setFolderScope(scope)
+        } else {
+            macHistory.moveSelection = nil
         }
-        .navigationTitle(String(localized: "OpenClient"))
-        .navigationSplitViewColumnWidth(180)
+    }
+
+    func showMacHistoryForExternalEntry() {
+        if !isShowingMacHistory {
+            sidebarDestination = .history(.all)
+            macHistory.setFolderScope(.all)
+        }
     }
 
     @ViewBuilder
     var detailContent: some View {
         switch sidebarDestination {
-        case .chats:
+        case .history:
             NavigationStack {
                 ConversationListView(
+                    viewModel: macHistory,
+                    folderScope: Binding(get: { folderScope }, set: { selectMacDestination(.history($0)) }),
                     activeConversationId: selectedConversation?.id,
-                    macSearchRequestID: macSearchRequestID
-                ) { conversation in
-                    selectedConversation = conversation
-                } onPrivateChatSelected: {
-                    isPrivateChatActive = true
-                }
-                .navigationDestination(item: $selectedConversation) { conversation in
-                    ChatView(
-                        conversation: conversation,
-                        shareItem: viewModel.pendingShareItem,
-                        urlSchemeText: viewModel.pendingURLSchemeText,
-                        onForkCreated: { fork in
-                            selectedConversation = fork
-                        },
-                        onShareItemProcessed: { viewModel.send(.shareItemConsumed) },
-                        onURLSchemeTextProcessed: { viewModel.send(.urlSchemeTextConsumed) }
-                    )
-                }
+                    macSearchRequest: $macSearchRequested,
+                    onNewConversation: openNewConversation,
+                    onConversationSelected: openConversation,
+                    onPrivateChatSelected: {
+                        openConversation(nil)
+                        isPrivateChatActive = true
+                    }
+                )
+                .navigationDestination(item: $selectedConversation, destination: chatDestination)
                 .navigationDestination(isPresented: $isPrivateChatActive) {
                     ChatView(isPrivateChat: true)
                 }
             }
+            .focusedSceneValue(\.conversationListViewModel, macHistory)
         case .models:
             ModelsView()
         case .settings:
@@ -344,6 +371,37 @@ private extension HomeView {
         }
     }
 #endif
+
+    func openNewConversation(_ conversation: Conversation) {
+#if os(macOS)
+        isPrivateChatActive = false
+#endif
+        if case .folder(let id) = folderScope {
+            newChatPlacement = (conversation.id, id)
+        } else {
+            newChatPlacement = nil
+        }
+        selectedConversation = conversation
+    }
+
+    func chatDestination(_ conversation: Conversation) -> some View {
+        ChatView(
+            conversation: conversation,
+            initialFolderID: newChatPlacement?.conversationID == conversation.id ? newChatPlacement?.folderID : nil,
+            shareItem: viewModel.pendingShareItem,
+            urlSchemeText: viewModel.pendingURLSchemeText,
+            onForkCreated: { fork in
+                guard selectedConversation?.id == conversation.id, !isPrivateChatActive else { return }
+#if os(iOS)
+                guard selectedTab == .chats, !isSidebarSearchActive else { return }
+#endif
+                openConversation(fork)
+            },
+            onShareItemProcessed: { viewModel.send(.shareItemConsumed) },
+            onURLSchemeTextProcessed: { viewModel.send(.urlSchemeTextConsumed) }
+        )
+        .id(conversation.id)
+    }
 
     @ViewBuilder
     var remoteBannerInset: some View {
@@ -378,10 +436,17 @@ private extension HomeView {
 #if os(iOS)
         selectedTab = .settings
 #else
-        sidebarDestination = .settings
+        selectMacDestination(.settings)
 #endif
         requestedSettingsPresentation = presentation
         onRemoteBannerDismiss()
+    }
+}
+
+extension HomeView {
+    func openConversation(_ conversation: Conversation?) {
+        newChatPlacement = nil
+        selectedConversation = conversation
     }
 }
 

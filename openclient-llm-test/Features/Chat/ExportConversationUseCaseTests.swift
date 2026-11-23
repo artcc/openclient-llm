@@ -49,6 +49,8 @@ final class ExportConversationUseCaseTests: XCTestCase {
         XCTAssertNotNil(json)
         XCTAssertEqual(json?["format"] as? String, ConversationExportDocument.formatIdentifier)
         XCTAssertEqual(json?["version"] as? Int, ConversationExportDocument.currentVersion)
+        XCTAssertNil(json?["folders"])
+        XCTAssertNil(json?["memberships"])
     }
 
     func test_execute_outputIsPrettyPrinted() throws {
