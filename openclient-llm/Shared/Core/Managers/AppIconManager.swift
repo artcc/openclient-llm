@@ -44,7 +44,7 @@ struct AppIconManager: AppIconManagerProtocol {
 #if os(iOS)
         AppIcon(alternateIconName: application.alternateIconName)
 #else
-        .defaultIcon
+            .defaultIcon
 #endif
     }
 
