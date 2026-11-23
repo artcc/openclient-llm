@@ -9,11 +9,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  toolchain:
+    uses: ./.github/workflows/apple-toolchain.yml
+
   test-ios:
     name: Build & Test (iOS)
-    runs-on: xcode-27
+    needs: toolchain
+    runs-on: ${{ needs.toolchain.outputs.runner }}
+    env:
+      DEVELOPER_DIR: ${{ needs.toolchain.outputs.developer_dir }}
     steps:
       - uses: actions/checkout@v5
+
+      - name: Show Xcode version
+        run: xcodebuild -version
 
       - name: Create Secrets.xcconfig
         run: |
@@ -71,9 +80,15 @@ jobs:
 
   build-macos:
     name: Build (macOS)
-    runs-on: macos-26
+    needs: toolchain
+    runs-on: ${{ needs.toolchain.outputs.runner }}
+    env:
+      DEVELOPER_DIR: ${{ needs.toolchain.outputs.developer_dir }}
     steps:
       - uses: actions/checkout@v5
+
+      - name: Show Xcode version
+        run: xcodebuild -version
 
       - name: Create Secrets.xcconfig
         run: |
