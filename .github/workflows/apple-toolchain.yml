@@ -1,0 +1,47 @@
+name: Resolve Apple toolchain
+
+on:
+  workflow_call:
+    outputs:
+      runner:
+        value: ${{ jobs.resolve.outputs.runner }}
+      developer_dir:
+        value: ${{ jobs.resolve.outputs.developer_dir }}
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      runner: ${{ steps.xcode.outputs.runner }}
+      developer_dir: ${{ steps.xcode.outputs.developer_dir }}
+    steps:
+      - name: Find the newest stable Xcode on a supported Apple Silicon runner
+        id: xcode
+        shell: python
+        run: |
+          import os
+          import re
+          from urllib.request import urlopen
+
+          def inventory(path):
+              with urlopen("https://raw.githubusercontent.com/actions/runner-images/main/" + path, timeout=20) as res:
+                  return res.read().decode()
+
+          labels = set(re.findall(r"images/macos/((?:macos|xcode)-\d+)-arm64-Readme\.md", inventory("README.md")))
+          candidates = []
+          for label in labels:
+              image = inventory(f"images/macos/{label}-arm64-Readme.md")
+              for line in image.splitlines():
+                  row = re.match(r"^\|\s*(\d+(?:\.\d+)*)(?: \(default\))?\s*\|[^|]*\|\s*"
+                                 r"(/Applications/Xcode(?:_[\d.]+)?\.app)\s*\|", line)
+                  if row:
+                      version = tuple(map(int, row[1].split(".")))
+                      if version[0] >= 27:
+                          candidates.append((version, label.startswith("xcode-"), label, row[2]))
+          if not candidates:
+              raise SystemExit("No stable Xcode 27 or newer found in the GitHub runner inventory")
+          version, _, label, bundle = max(candidates)
+          print(f"Xcode {'.'.join(map(str, version))} on {label}: {bundle}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              print(f"runner={label}", f"developer_dir={bundle}/Contents/Developer", sep="\n", file=out)
