@@ -1,7 +1,6 @@
 Hi there! We've got some great new features for you in this update.
 
-• Enable Send Chat ID in Settings > Server > Advanced if your server requires a conversation identifier in an HTTP header. Choose the header name and OpenClient supplies the value automatically.
-• Each chat keeps its own identifier when you reopen it or retry a response; new chats and forks use a different one. Model listing and connection checks omit this header.
+• Organize your chats into folders and move several at once. On Mac, you can also drag chats into a folder in the sidebar.
 • Minor bug fixes and stability improvements.
 
 Thanks for your continued support and for helping us build the best possible LLM client together.

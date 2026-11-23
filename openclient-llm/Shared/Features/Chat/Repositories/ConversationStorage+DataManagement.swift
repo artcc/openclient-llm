@@ -17,6 +17,8 @@ extension ConversationStorage {
         _ = try loadTombstones()
         _ = try loadDeleteAllMarker()
         _ = try loadLocalAttachmentFiles()
+        _ = try readFolderState()
+        try manageFolderRecovery()
         try validateRecoveryConversations()
     }
 
@@ -24,7 +26,8 @@ extension ConversationStorage {
         try Task.checkCancellation()
         try ensureDirectoryExists()
         let plan = try makeLocalPurgePlan(through: marker)
-        try applyLocalPurge(plan)
+        try applyLocalPurge(plan, through: marker)
+        try manageFolderRecovery(purgeThrough: marker.deletedAt)
         try purgeRecoveryData(through: marker, retaining: plan.survivingConversationIds)
     }
 }
@@ -60,13 +63,19 @@ private extension ConversationStorage {
         )
     }
 
-    func applyLocalPurge(_ plan: LocalPurgePlan) throws {
+    func applyLocalPurge(_ plan: LocalPurgePlan, through marker: CloudPurgeMarker) throws {
         let transaction = try ConversationLocalTransaction(
             fileManager: fileManager,
             documentsURL: documentsURL,
             backsUpAllAttachments: true
         )
         do {
+            var state = try readFolderState()
+            state.purge(through: marker.deletedAt)
+            let removed = Set(plan.staleConversationIds)
+            state.memberships.removeAll { removed.contains($0.conversationId) }
+            state.discardUnassignedCreationPlacements()
+            try writeFolderState(state)
             try removeStaleLocalData(plan)
             let attachmentsURL = documentsURL.appendingPathComponent("Attachments", isDirectory: true)
             try purgeAttachmentFolders(at: attachmentsURL, retaining: plan.survivingConversationIds)

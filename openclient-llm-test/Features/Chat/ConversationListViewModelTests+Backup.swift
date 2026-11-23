@@ -39,8 +39,10 @@ extension ConversationListViewModelTests {
     func test_send_importBackupData_reloadsConversationsAndStoresResult() async throws {
         // Given
         let importedConversation = Conversation(modelId: "gpt-4")
+        let importedFolder = ConversationFolder(id: UUID(), name: "Restored", updatedAt: .now)
         let result = ImportConversationsResult(
             importedConversationCount: 1,
+            importedFolderCount: 1,
             restoredAttachmentCount: 2,
             skippedAttachmentCount: 0
         )
@@ -50,6 +52,7 @@ extension ConversationListViewModelTests {
         sut.send(.viewAppeared)
         try await Task.sleep(for: .milliseconds(100))
         mockLoadConversations.result = .success([importedConversation])
+        mockFolders.snapshot = .init(folders: [importedFolder], memberships: [])
 
         // When
         let backupData = Data("backup".utf8)
@@ -65,6 +68,7 @@ extension ConversationListViewModelTests {
         }
         XCTAssertEqual(mockImportConversations.importedData, [backupData])
         XCTAssertEqual(loadedState.conversations, [importedConversation])
+        XCTAssertEqual(loadedState.folders, [importedFolder])
         XCTAssertEqual(loadedState.importResult, result)
     }
 

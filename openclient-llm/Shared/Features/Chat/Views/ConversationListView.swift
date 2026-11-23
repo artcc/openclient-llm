@@ -20,11 +20,18 @@ struct ConversationListView: View {
     @State private var hasBeenActive = false
     @State private var didEnterBackground = false
 
+#if os(iOS)
+    let viewModel: ConversationListViewModel
+#else
     @State var viewModel = ConversationListViewModel()
+#endif
     @State private var editingTagsConversation: Conversation?
     @State private var conversationToDelete: Conversation?
     @State private var renamingConversation: Conversation?
     @State private var renameText: String = ""
+    @State var isNamingFolder = false
+    @State var folderNameDraft = ""
+    @State var idsForNewFolder: [UUID] = []
     @State var isShowingBackupImporter = false
     @State private var isShowingBackupExporter = false
     @State private var backupFileDocument: ConversationBackupFileDocument?
@@ -33,14 +40,18 @@ struct ConversationListView: View {
 
 #if os(macOS)
     @State var isMacSearchExpanded = false
-    @State var macSearchText = ""
+    @State var startGlobalSearch = false
     @FocusState var isMacSearchFocused: Bool
 #endif
 
+    @Binding var folderScope: ConversationFolderScope
     var activeConversationId: UUID?
-#if os(macOS)
-    var macSearchRequestID = 0
+#if os(iOS)
+    var onShowFolders: (() -> Void)?
+#elseif os(macOS)
+    var macSearchRequest: Binding<Bool>?
 #endif
+    var onNewConversation: ((Conversation) -> Void)?
     let onConversationSelected: (Conversation?) -> Void
     let onPrivateChatSelected: () -> Void
 
@@ -58,20 +69,40 @@ struct ConversationListView: View {
                 loadedView(loadedState)
             }
         }
-        .navigationTitle(String(localized: "Chats"))
+        .navigationTitle(historyTitle)
 #if os(macOS)
-        .focusedSceneValue(\.conversationListViewModel, viewModel)
-        .task(id: macSearchRequestID) {
-            guard macSearchRequestID > 0 else { return }
+        .task(id: macSearchRequest?.wrappedValue) {
+            guard let macSearchRequest, macSearchRequest.wrappedValue else { return }
+            macSearchRequest.wrappedValue = false
+            startGlobalSearch = macSearchText.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            if !startGlobalSearch { viewModel.send(.filter(.searchAllFolders(true))) }
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                 isMacSearchExpanded = true
+            }
+            isMacSearchFocused = true
+        }
+#elseif os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let onShowFolders {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Folders", systemImage: "sidebar.left", action: onShowFolders)
+                        .labelStyle(.iconOnly)
+                        .accessibilityLabel("Show Folders")
+                }
             }
         }
 #endif
         .task {
             viewModel.onConversationSelected = onConversationSelected
+            viewModel.onNewConversation = onNewConversation
+            viewModel.send(.filter(.scopeChanged(folderScope)))
             viewModel.onPrivateChatSelected = onPrivateChatSelected
             viewModel.send(.viewAppeared)
+        }
+        .onChange(of: folderScope) { _, scope in
+            viewModel.onNewConversation = onNewConversation
+            viewModel.send(.filter(.scopeChanged(scope)))
         }
         .onChange(of: scenePhase) { _, newPhase in
             // Reload when the app comes back to the foreground so iCloud-synced
@@ -205,16 +236,26 @@ private extension ConversationListView {
         return loadedState.allTags
     }
 
-    func loadedView(_ loadedState: ConversationListViewModel.LoadedState) -> some View {
-        Group {
-            if loadedState.conversations.isEmpty {
-                emptyState
-            } else if loadedState.filteredConversations.isEmpty {
-                noTagResults
+    func scopedHistory(_ loadedState: ConversationListViewModel.LoadedState) -> some View {
+        VStack(spacing: 0) {
+            folderControls(loadedState)
+#if os(macOS)
+            searchScopeControl(loadedState)
+#endif
+            if loadedState.filteredConversations.isEmpty {
+                if !loadedState.scopedTags.isEmpty && !loadedState.searchesAllFolders {
+                    tagFilterBar(loadedState)
+                }
+                filteredEmptyState(loadedState)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 conversationList(loadedState)
             }
         }
+    }
+
+    func loadedView(_ loadedState: ConversationListViewModel.LoadedState) -> some View {
+        scopedHistory(loadedState)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 newChatToolbarMenu
@@ -232,10 +273,13 @@ private extension ConversationListView {
                 macSearchToolbarItem
             }
             ToolbarItem(placement: .primaryAction) {
-                overflowMenu
+                overflowMenu(loadedState)
             }
 #endif
 #if os(iOS)
+            ToolbarItem(placement: .secondaryAction) {
+                selectChatsToMoveButton(loadedState)
+            }
             ToolbarItem(placement: .secondaryAction) {
                 Button {
                     viewModel.send(.exportBackupTapped)
@@ -257,23 +301,10 @@ private extension ConversationListView {
         }
     }
 
-    var noTagResults: some View {
-        ContentUnavailableView {
-            Label(
-                String(localized: "No Conversations"),
-                systemImage: "tag.slash"
-            )
-        } description: {
-            Text(String(localized: "No conversations found with the selected tag"))
-        }
-    }
-
     func conversationList(_ loadedState: ConversationListViewModel.LoadedState) -> some View {
         List {
-            if !loadedState.allTags.isEmpty {
-                Section {
-                    // pinned tag filter bar — no rows
-                } header: {
+            if !loadedState.scopedTags.isEmpty && !loadedState.searchesAllFolders {
+                Section {} header: {
                     tagFilterBar(loadedState)
                         .listRowInsets(EdgeInsets())
                 }
@@ -285,6 +316,7 @@ private extension ConversationListView {
                             .listRowBackground(Color.clear)
                             .listRowInsets(EdgeInsets(top: 4, leading: 2, bottom: 4, trailing: 2))
                             .contextMenu {
+                                moveMenu(ids: [conversation.id], loaded: loadedState)
                                 conversationContextMenu(conversation)
                             }
                             .popoverTip(organizationTip(for: conversation, loadedState: loadedState))
@@ -393,7 +425,7 @@ private extension ConversationListView {
                 ) {
                     viewModel.send(.tagFilterChanged(nil))
                 }
-                ForEach(loadedState.allTags, id: \.name) { tag in
+                ForEach(loadedState.scopedTags, id: \.name) { tag in
                     tagChip(
                         label: tag.name,
                         systemImage: "tag.fill",
@@ -436,9 +468,29 @@ private extension ConversationListView {
     }
 }
 
-#Preview {
-    NavigationStack {
-        ConversationListView { _ in } onPrivateChatSelected: {}
-            .navigationTitle(String(localized: "Chats"))
-    }
+#Preview("Empty folder") {
+    let folder = ConversationFolder(id: UUID(), name: "Reading", updatedAt: .now)
+    let loaded = ConversationListViewModel.LoadedState(
+        folderScope: .folder(folder.id), folders: [folder], hasLoadedFolders: true
+    )
+    ConversationListView(viewModel: ConversationListViewModel(), folderScope: .constant(.folder(folder.id)),
+                         onConversationSelected: { _ in },
+                         onPrivateChatSelected: {})
+        .loadedView(loaded)
+        .frame(width: 320)
+}
+
+#Preview("Folder with a pinned chat") {
+    let folder = ConversationFolder(id: UUID(), name: "Projects", updatedAt: .now)
+    let chat = Conversation(title: "Review", modelId: "Preview", isPinned: true,
+                            tags: [.init(name: "UX", color: .blue)])
+    let loaded = ConversationListViewModel.LoadedState(
+        conversations: [chat], filteredConversations: [chat], folderScope: .folder(folder.id),
+        folders: [folder], folderIDs: [chat.id: folder.id], hasLoadedFolders: true
+    )
+    ConversationListView(viewModel: ConversationListViewModel(), folderScope: .constant(.folder(folder.id)),
+                         onConversationSelected: { _ in },
+                         onPrivateChatSelected: {})
+        .loadedView(loaded)
+        .frame(width: 600)
 }

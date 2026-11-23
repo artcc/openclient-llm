@@ -39,8 +39,10 @@ final class CloudDataManagementViewModel {
         let category: Category
         let items: [Item]
         let failure: InventoryFailure?
+        var folderCount = 0
 
         var id: Category { category }
+        var hasContent: Bool { !items.isEmpty || folderCount > 0 }
     }
 
     enum ItemKind: Equatable {
@@ -279,7 +281,7 @@ private extension CloudDataManagementViewModel {
     func makeState(from inventory: CloudDataInventory) -> State {
         let sections = Category.allCases.map { makeSection($0, inventory: inventory) }
         let failures = sections.compactMap(\.failure)
-        let hasItems = sections.contains { !$0.items.isEmpty }
+        let hasItems = sections.contains(where: \.hasContent)
         let hasUnfinishedDeletion: Bool
         switch operationState {
         case .failed, .partiallyFailed:
@@ -313,13 +315,15 @@ private extension CloudDataManagementViewModel {
             guard let items = items(for: category, value: value) else {
                 return .init(category: category, items: [], failure: .error)
             }
-            return .init(category: category, items: items, failure: nil)
+            var section = CategorySection(category: category, items: items, failure: nil)
+            if case .conversations(_, let folderCount) = value { section.folderCount = folderCount }
+            return section
         }
     }
 
     func items(for category: Category, value: CloudInventoryCategoryValue) -> [Item]? {
         switch (category, value) {
-        case (.conversations, .conversations(let conversations)):
+        case (.conversations, .conversations(let conversations, _)):
             return conversations.map {
                 Item(
                     id: $0.id,

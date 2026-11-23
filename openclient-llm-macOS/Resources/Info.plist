@@ -19,6 +19,19 @@
 	</array>
 	<key>LSMultipleInstancesProhibited</key>
 	<true/>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.artcc.openclient-llm.chat-folder-drag</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>OpenClient Chat Selection</string>
+		</dict>
+	</array>
 	<key>NSAccentColorName</key>
 	<string>AccentColor</string>
 	<key>NSAppTransportSecurity</key>

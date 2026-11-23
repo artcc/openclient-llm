@@ -26,7 +26,7 @@ extension ConversationListViewModelTests {
 
         // When
         sut.send(.viewAppeared)
-        Self.observeModelsLoaded(sut, expectation: modelsLoaded)
+        Self.observeLoadedState(sut, expectation: modelsLoaded) { !$0.availableModels.isEmpty }
         await fulfillment(of: [modelsLoaded], timeout: 2)
 
         // Then
@@ -60,14 +60,18 @@ extension ConversationListViewModelTests {
         XCTAssertEqual(loadedState.conversations, conversations)
     }
 
-    func test_send_viewAppeared_withError_setsErrorMessage() async throws {
+    func test_send_viewAppeared_whenHistoryReadFails_preservesErrorAndLoadsSelectedFolder() async throws {
         // Given
+        let folder = ConversationFolder(id: UUID(), name: "Work", updatedAt: .now)
+        mockFolders.snapshot = .init(folders: [folder], memberships: [])
         mockLoadConversations.result = .failure(NSError(domain: "test", code: 1))
-        mockFetchModels.result = .success([])
+        sut.setFolderScope(.folder(folder.id))
+        let foldersLoaded = expectation(description: "Folder metadata available")
 
         // When
         sut.send(.viewAppeared)
-        try await Task.sleep(for: .milliseconds(100))
+        Self.observeLoadedState(sut, expectation: foldersLoaded) { $0.hasLoadedFolders }
+        await fulfillment(of: [foldersLoaded], timeout: 2)
 
         // Then
         guard case .loaded(let loadedState) = sut.state else {
@@ -76,6 +80,8 @@ extension ConversationListViewModelTests {
         }
         XCTAssertTrue(loadedState.conversations.isEmpty)
         XCTAssertNotNil(loadedState.errorMessage)
+        XCTAssertEqual(loadedState.folders, [folder])
+        XCTAssertEqual(loadedState.folderScope, .folder(folder.id))
     }
 
     func test_send_viewAppeared_withModelsError_stillLoadsConversations() async throws {
@@ -101,8 +107,12 @@ extension ConversationListViewModelTests {
 // MARK: - Private
 
 private extension ConversationListViewModelTests {
-    static func observeModelsLoaded(_ sut: ConversationListViewModel, expectation: XCTestExpectation) {
-        if case .loaded(let loadedState) = sut.state, !loadedState.availableModels.isEmpty {
+    static func observeLoadedState(
+        _ sut: ConversationListViewModel,
+        expectation: XCTestExpectation,
+        matching: @escaping @MainActor @Sendable (ConversationListViewModel.LoadedState) -> Bool
+    ) {
+        if case .loaded(let loadedState) = sut.state, matching(loadedState) {
             expectation.fulfill()
             return
         }
@@ -111,7 +121,7 @@ private extension ConversationListViewModelTests {
         } onChange: { [weak sut] in
             Task { @MainActor in
                 guard let sut else { return }
-                observeModelsLoaded(sut, expectation: expectation)
+                observeLoadedState(sut, expectation: expectation, matching: matching)
             }
         }
     }

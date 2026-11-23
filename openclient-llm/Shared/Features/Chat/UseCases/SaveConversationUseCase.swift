@@ -10,14 +10,21 @@ import Foundation
 
 protocol SaveConversationUseCaseProtocol: Sendable {
     @discardableResult
-    func execute(_ conversation: Conversation, expectedBase: Conversation?) async throws -> Conversation
-    func executeImportBatch(_ conversations: [Conversation]) async throws -> [Conversation]
+    func execute(
+        _ conversation: Conversation,
+        expectedBase: Conversation?,
+        creationPlacement: ConversationCreationPlacement?
+    ) async throws -> Conversation
+    func executeImportBatch(
+        _ conversations: [Conversation],
+        organization: ConversationFolderSnapshot
+    ) async throws -> [Conversation]
 }
 
 extension SaveConversationUseCaseProtocol {
     @discardableResult
-    func execute(_ conversation: Conversation) async throws -> Conversation {
-        try await execute(conversation, expectedBase: nil)
+    func execute(_ conversation: Conversation, expectedBase: Conversation? = nil) async throws -> Conversation {
+        try await execute(conversation, expectedBase: expectedBase, creationPlacement: nil)
     }
 }
 
@@ -35,14 +42,25 @@ struct SaveConversationUseCase: SaveConversationUseCaseProtocol {
     // MARK: - Execute
 
     @discardableResult
-    func execute(_ conversation: Conversation, expectedBase: Conversation?) async throws -> Conversation {
-        let saved = try await repository.save(conversation, expectedBase: expectedBase)
+    func execute(
+        _ conversation: Conversation,
+        expectedBase: Conversation?,
+        creationPlacement: ConversationCreationPlacement?
+    ) async throws -> Conversation {
+        let saved = try await repository.save(
+            conversation,
+            expectedBase: expectedBase,
+            creationPlacement: creationPlacement
+        )
         SpotlightManager.index(saved)
         return saved
     }
 
-    func executeImportBatch(_ conversations: [Conversation]) async throws -> [Conversation] {
-        let saved = try await repository.importBatch(conversations)
+    func executeImportBatch(
+        _ conversations: [Conversation],
+        organization: ConversationFolderSnapshot
+    ) async throws -> [Conversation] {
+        let saved = try await repository.importBatch(conversations, organization: organization)
         saved.forEach(SpotlightManager.index)
         return saved
     }

@@ -91,6 +91,10 @@ extension ConversationStorage {
             )
             try saveTombstones(try mergedTombstones([tombstone]))
         }
+        var state = try readFolderState()
+        state.memberships.removeAll { $0.conversationId == conversationId }
+        state.discardUnassignedCreationPlacements()
+        try writeFolderState(state)
         try removeLocalFileIfPresent(conversationFileURL(for: conversationId))
         try removePendingMutation(conversationId: conversationId)
         try removePendingDeletion(conversationId: conversationId)
@@ -153,6 +157,7 @@ extension ConversationStorage {
         }
         try removeAllPendingMutations()
         try removeAllPendingDeletions()
+        try removeLocalFileIfPresent(documentsURL.appendingPathComponent(ConversationFolderState.fileName))
         try removeLocalFileIfPresent(directoryURL)
         try attachmentRepository.deleteAll()
     }
@@ -187,8 +192,10 @@ extension ConversationStorage {
         snapshot: ConversationCloudSyncSnapshot
     ) throws -> ConversationDeleteAllMarker {
         let existingMarker = newestMarker(try loadDeleteAllMarker(), snapshot.deleteAllMarker)
-        let newestRevision = try (loadLocalConversations().map(\.updatedAt)
-            + snapshot.conversations.values.map(\.updatedAt)).max()
+        let chatRevisions = try loadLocalConversations().map(\.updatedAt)
+            + snapshot.conversations.values.map(\.updatedAt)
+        let folderRevisions = try readFolderState().revisions + snapshot.folderState.revisions
+        let newestRevision = (chatRevisions + folderRevisions).max()
         if let existingMarker,
            newestRevision.map({ $0 < existingMarker.deletedAt }) ?? true {
             return existingMarker

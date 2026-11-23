@@ -12,9 +12,17 @@ import WidgetKit
 protocol ConversationRepositoryProtocol: Sendable {
     func loadAll() async throws -> [Conversation]
     func loadLocal() async throws -> [Conversation]
+    func loadBackupSnapshot() async throws -> ConversationBackupSnapshot
     @discardableResult
-    func save(_ conversation: Conversation, expectedBase: Conversation?) async throws -> Conversation
-    func importBatch(_ conversations: [Conversation]) async throws -> [Conversation]
+    func save(
+        _ conversation: Conversation,
+        expectedBase: Conversation?,
+        creationPlacement: ConversationCreationPlacement?
+    ) async throws -> Conversation
+    func importBatch(
+        _ conversations: [Conversation],
+        organization: ConversationFolderSnapshot
+    ) async throws -> [Conversation]
     func setPinned(_ isPinned: Bool, conversationId: UUID) async throws -> Conversation?
     func rename(_ conversationId: UUID, title: String) async throws -> Conversation?
     func updateTags(_ conversationId: UUID, tags: [ConversationTag]) async throws -> Conversation?
@@ -31,8 +39,8 @@ protocol ConversationRepositoryProtocol: Sendable {
 
 extension ConversationRepositoryProtocol {
     @discardableResult
-    func save(_ conversation: Conversation) async throws -> Conversation {
-        try await save(conversation, expectedBase: nil)
+    func save(_ conversation: Conversation, expectedBase: Conversation? = nil) async throws -> Conversation {
+        try await save(conversation, expectedBase: expectedBase, creationPlacement: nil)
     }
 }
 
@@ -81,13 +89,23 @@ struct ConversationRepository: ConversationRepositoryProtocol {
     // MARK: - Public
 
     func loadAll() async throws -> [Conversation] {
+        try await loadAfterSynchronization { try await self.loadLocal() }
+    }
+
+    func loadBackupSnapshot() async throws -> ConversationBackupSnapshot {
+        try await loadAfterSynchronization { try await self.storage.loadBackupSnapshot() }
+    }
+
+    private func loadAfterSynchronization<Value: Sendable>(
+        _ load: @escaping @Sendable () async throws -> Value
+    ) async throws -> Value {
         let requiredCloudIntent = settingsManager.getIsCloudSyncEnabled()
-        guard requiredCloudIntent else { return try await loadLocal() }
+        guard requiredCloudIntent else { return try await load() }
         return try await mutationGate.perform {
             try await self.checkCloudIntent(requiredCloudIntent)
             _ = await self.syncCoordinator.synchronize()
             try await self.checkCloudIntent(requiredCloudIntent)
-            return try await self.loadLocal()
+            return try await load()
         }
     }
 
@@ -98,26 +116,32 @@ struct ConversationRepository: ConversationRepositoryProtocol {
     }
 
     @discardableResult
-    func save(_ conversation: Conversation, expectedBase: Conversation?) async throws -> Conversation {
-        let requiredCloudIntent = settingsManager.getIsCloudSyncEnabled()
-        guard requiredCloudIntent else {
-            return try await saveSerialized(conversation, expectedBase: expectedBase, synchronize: false)
-        }
-        return try await mutationGate.perform {
-            try await self.checkCloudIntent(requiredCloudIntent)
-            return try await self.saveSerialized(conversation, expectedBase: expectedBase, synchronize: true)
+    func save(
+        _ conversation: Conversation,
+        expectedBase: Conversation?,
+        creationPlacement: ConversationCreationPlacement?
+    ) async throws -> Conversation {
+        try await performMutation { synchronize in
+            try await saveSerialized(
+                conversation,
+                expectedBase: expectedBase,
+                creationPlacement: creationPlacement,
+                synchronize: synchronize
+            )
         }
     }
 
     private func saveSerialized(
         _ conversation: Conversation,
         expectedBase: Conversation?,
+        creationPlacement: ConversationCreationPlacement?,
         synchronize: Bool
     ) async throws -> Conversation {
         let admissionToken = await syncCoordinator.admissionToken()
         let saved = try await syncCoordinator.save(
             conversation,
             expectedBase: expectedBase,
+            creationPlacement: creationPlacement,
             synchronize: synchronize,
             admissionToken: admissionToken
         )
@@ -125,28 +149,29 @@ struct ConversationRepository: ConversationRepositoryProtocol {
         return saved
     }
 
-    func importBatch(_ conversations: [Conversation]) async throws -> [Conversation] {
-        let requiredCloudIntent = settingsManager.getIsCloudSyncEnabled()
-        guard requiredCloudIntent else { return try await importBatchSerialized(conversations, synchronize: false) }
-        return try await mutationGate.perform {
-            try await self.checkCloudIntent(requiredCloudIntent)
-            return try await self.importBatchSerialized(conversations, synchronize: true)
+    func importBatch(
+        _ conversations: [Conversation],
+        organization: ConversationFolderSnapshot
+    ) async throws -> [Conversation] {
+        try await performMutation { synchronize in
+            try await importBatchSerialized(conversations, organization: organization, synchronize: synchronize)
         }
     }
 
     private func importBatchSerialized(
         _ conversations: [Conversation],
+        organization: ConversationFolderSnapshot,
         synchronize: Bool
     ) async throws -> [Conversation] {
         if synchronize {
             try requireSuccessfulSynchronization(await syncCoordinator.synchronize())
             try checkCloudIntent(true)
         }
-        let saved = try await storage.importBatch(conversations)
+        let saved = try await storage.importBatch(conversations, organization: organization)
         if synchronize {
             try requireSuccessfulSynchronization(await syncCoordinator.synchronize())
         }
-        if let localConversations = try? await storage.loadLocal() {
+        if !saved.isEmpty, let localConversations = try? await storage.loadLocal() {
             updateWidgetSnapshot(conversations: localConversations)
         }
         return saved
@@ -295,6 +320,22 @@ struct ConversationRepository: ConversationRepositoryProtocol {
 
     func validateLocalReset() async throws {
         try await storage.validateLocalReset()
+    }
+}
+
+// MARK: - Folders
+
+extension ConversationRepository {
+    func loadFolderSnapshot() async throws -> ConversationFolderSnapshot {
+        try await storage.loadFolderSnapshot()
+    }
+
+    func changeFolders(_ mutation: ConversationFolderMutation) async throws -> ConversationFolderSnapshot {
+        let snapshot = try await performMutation { synchronize in
+            try await self.storage.changeFolders(mutation, synchronize: synchronize)
+        }
+        NotificationCenter.default.post(name: .conversationDidUpdate, object: nil)
+        return snapshot
     }
 }
 

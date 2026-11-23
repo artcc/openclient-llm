@@ -154,22 +154,31 @@ extension ChatViewModel {
     }
 
     func forkConversation(fromMessage messageId: UUID) {
-        guard case .loaded(let loadedState) = state,
+        guard !isPrivateChat, case .loaded(let loadedState) = state,
               let conversation = loadedState.conversation else { return }
+        let pendingSave = queuedPersistenceConversation?.id == conversation.id ? persistenceTask : nil
+        let resetGeneration = persistenceResetGeneration
 
         Task {
             do {
+                _ = await pendingSave?.value
+                guard resetGeneration == persistenceResetGeneration else { return }
                 let fork = try await branchConversationUseCase.execute(
                     conversation: conversation,
                     fromMessageId: messageId
                 )
-                guard case .loaded(var currentState) = state else { return }
+                NotificationCenter.default.post(name: .conversationDidUpdate, object: nil)
+                guard case .loaded(var currentState) = state, currentState.conversation?.id == conversation.id else {
+                    return
+                }
                 currentState.branchedConversation = fork
                 state = .loaded(currentState)
                 onForkCreated?(fork)
                 LogManager.success("forkConversation fromMessage=\(messageId) newId=\(fork.id)")
             } catch {
-                guard case .loaded(var currentState) = state else { return }
+                guard case .loaded(var currentState) = state, currentState.conversation?.id == conversation.id else {
+                    return
+                }
                 currentState.errorMessage = error.localizedDescription
                 state = .loaded(currentState)
                 LogManager.error("forkConversation failed: \(error)")

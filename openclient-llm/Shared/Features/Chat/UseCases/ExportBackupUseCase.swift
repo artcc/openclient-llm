@@ -31,6 +31,20 @@ struct ExportBackupUseCase: ExportBackupUseCaseProtocol {
     // MARK: - Execute
 
     func execute() async throws -> Data {
-        try exportConversationsUseCase.execute(await loadConversationsUseCase.execute())
+        let (conversations, snapshot) = try await loadConversationsUseCase.executeForBackup()
+        let conversationIds = Set(conversations.map(\.id))
+        let folderIds = Set(snapshot.folders.map(\.id))
+        let memberships = snapshot.memberships.compactMap { membership -> ConversationFolderMembership? in
+            guard conversationIds.contains(membership.conversationId) else { return nil }
+            return ConversationFolderMembership(
+                conversationId: membership.conversationId,
+                folderId: membership.folderId.flatMap { folderIds.contains($0) ? $0 : nil },
+                updatedAt: membership.updatedAt
+            )
+        }
+        return try exportConversationsUseCase.execute(
+            conversations,
+            organization: ConversationFolderSnapshot(folders: snapshot.folders, memberships: memberships)
+        )
     }
 }

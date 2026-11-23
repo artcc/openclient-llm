@@ -202,6 +202,31 @@ extension ChatViewModelTests {
         XCTAssertEqual(savedAssistant.attachments.first?.transientData, Data([0x01, 0x02]))
     }
 
+    func test_resetAfterAppDataReset_pendingConversationIsLoading_doesNotRestoreOrSaveDeletedChat() async {
+        let deleted = Conversation(modelId: "model", messages: [.init(role: .user, content: "Deleted")])
+        sut.send(.conversationLoaded(deleted))
+        let reset = expectation(description: "Reset during initial model fetch")
+        mockFetchModels.onExecute = {
+            self.mockFetchModels.onExecute = nil
+            self.sut.resetAfterAppDataReset()
+            reset.fulfill()
+        }
+
+        sut.send(.viewAppeared)
+        await fulfillment(of: [reset], timeout: 2)
+        await waitUntil {
+            if case .loaded = self.sut.state { return true }
+            return false
+        }
+
+        guard case .loaded(let state) = sut.state else { return XCTFail("Expected reloaded chat") }
+        XCTAssertNil(state.conversation)
+        XCTAssertTrue(state.messages.isEmpty)
+        let didSave = await sut.persistConversation()
+        XCTAssertFalse(didSave)
+        XCTAssertTrue(mockSaveConversation.savedConversations.isEmpty)
+    }
+
     func test_resetAfterAppDataReset_streamingConversation_doesNotQueuePersistence() async {
         // Given
         let gate = TestAsyncGate()

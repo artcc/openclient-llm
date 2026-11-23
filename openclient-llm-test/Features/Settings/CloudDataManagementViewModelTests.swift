@@ -106,6 +106,20 @@ final class CloudDataManagementViewModelTests: XCTestCase {
         XCTAssertEqual(useCase.calls, ["resumeDeletion", "inventory"])
     }
 
+    func test_send_viewAppeared_onlyEmptyFolders_keepsCloudManagementAvailable() async {
+        var categories = emptyInventory().categories
+        categories[.conversations] = .available(.conversations([], folderCount: 2))
+        useCase.inventoryResult = CloudDataInventory(categories: categories)
+
+        sut.send(.viewAppeared)
+        await waitUntil { self.sut.state != .loading }
+
+        guard case .loaded(let state) = sut.state else { return XCTFail("Expected synchronized folders") }
+        XCTAssertEqual(state.sections.first { $0.category == .conversations }?.folderCount, 2)
+        sut.send(.deleteAllRequested)
+        XCTAssertEqual(sut.confirmation, .all)
+    }
+
     func test_send_viewAppeared_unfinishedDeletionSurfacesPartialResultWithEmptyInventory() async {
         // Given
         let marker = CloudPurgeMarker(id: UUID(), deletedAt: Date())

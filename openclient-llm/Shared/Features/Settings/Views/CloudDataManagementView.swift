@@ -110,7 +110,7 @@ private extension CloudDataManagementView {
     func inventorySections(_ loadedState: CloudDataManagementViewModel.LoadedState) -> some View {
         operationSection
         ForEach(loadedState.sections) { section in
-            if !section.items.isEmpty || section.failure != nil {
+            if section.hasContent || section.failure != nil {
                 categorySection(section)
             }
         }
@@ -199,6 +199,9 @@ private extension CloudDataManagementView {
                     .accessibilityLabel(categoryTitle(section.category))
                     .accessibilityValue(inventoryFailureText(failure))
             } else {
+                if section.folderCount > 0 {
+                    LabeledContent("Chat Folders") { Text(section.folderCount, format: .number) }
+                }
                 ForEach(visibleItems(in: section)) { item in
                     itemRow(item)
                 }

@@ -8,12 +8,40 @@
 
 #if os(macOS)
 import SwiftUI
+import UniformTypeIdentifiers
+
+nonisolated struct ChatFolderDrag: Codable, Transferable {
+    let ids: [UUID]
+
+    static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(contentType: UTType(exportedAs: "com.artcc.openclient-llm.chat-folder-drag",
+                                                   conformingTo: .data))
+            .visibility(.ownProcess)
+    }
+}
 
 extension ConversationListView {
     // MARK: - macOS Toolbar
 
-    var overflowMenu: some View {
+    @ViewBuilder
+    func searchScopeControl(_ loaded: ConversationListViewModel.LoadedState) -> some View {
+        if !loaded.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           loaded.folderScope != .all || loaded.activeTagFilter != nil {
+            Toggle("Search All Chats", isOn: Binding(
+                get: { loaded.searchesAllFolders },
+                set: { viewModel.send(.filter(.searchAllFolders($0))) }
+            ))
+            .toggleStyle(.checkbox)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal)
+            .padding(.vertical, 4)
+        }
+    }
+
+    func overflowMenu(_ loaded: ConversationListViewModel.LoadedState) -> some View {
         Menu {
+            selectChatsToMoveButton(loaded)
+            Divider()
             Button {
                 viewModel.send(.exportBackupTapped)
             } label: {
@@ -35,10 +63,23 @@ extension ConversationListView {
         .menuOrder(.fixed)
     }
 
+    var macSearchText: Binding<String> {
+        Binding {
+            guard case .loaded(let loaded) = viewModel.state else { return "" }
+            return loaded.searchQuery
+        } set: { query in
+            viewModel.send(.searchChanged(query))
+            if startGlobalSearch, !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                startGlobalSearch = false
+                viewModel.send(.filter(.searchAllFolders(true)))
+            }
+        }
+    }
+
     var macSearchToolbarItem: some View {
         HStack(spacing: 4) {
             if isMacSearchExpanded {
-                TextField(String(localized: "Search conversations..."), text: $macSearchText)
+                TextField(macSearchPrompt, text: macSearchText)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 180)
                     .focused($isMacSearchFocused)
@@ -49,25 +90,19 @@ extension ConversationListView {
                     .onAppear {
                         isMacSearchFocused = true
                     }
-                    .task(id: macSearchRequestID) {
-                        guard macSearchRequestID > 0 else { return }
-                        isMacSearchFocused = true
-                    }
-                    .onChange(of: macSearchText) { _, newValue in
-                        viewModel.send(.searchChanged(newValue))
-                    }
                     .onSubmit {
+                        startGlobalSearch = false
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             isMacSearchExpanded = false
                             isMacSearchFocused = false
                         }
                     }
                     .onExitCommand {
+                        startGlobalSearch = false
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             isMacSearchExpanded = false
                             isMacSearchFocused = false
-                            macSearchText = ""
-                            viewModel.send(.searchChanged(""))
+                            macSearchText.wrappedValue = ""
                         }
                     }
             }
@@ -75,9 +110,9 @@ extension ConversationListView {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     isMacSearchExpanded.toggle()
                     if !isMacSearchExpanded {
+                        startGlobalSearch = false
                         isMacSearchFocused = false
-                        macSearchText = ""
-                        viewModel.send(.searchChanged(""))
+                        macSearchText.wrappedValue = ""
                     }
                 }
             } label: {
@@ -88,6 +123,17 @@ extension ConversationListView {
                 : String(localized: "Search conversations"))
             .help(String(localized: "Search"))
         }
+        .onAppear {
+            if !macSearchText.wrappedValue.isEmpty { isMacSearchExpanded = true }
+        }
+    }
+
+    private var macSearchPrompt: String {
+        guard !startGlobalSearch, case .loaded(let loaded) = viewModel.state,
+              loaded.folderScope != .all, !loaded.searchesAllFolders else {
+            return String(localized: "Search conversations...")
+        }
+        return String(localized: "Search in \(loaded.scopeTitle)")
     }
 }
 #endif

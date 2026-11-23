@@ -23,9 +23,7 @@ extension HomeView {
             set: { tab in
                 // Switching to results can write the Chats selection back before its view appears.
                 guard !isSidebarSearchFocusRequested || tab != .chats else { return }
-                isSidebarSearchFocusRequested = false
-                isSidebarSearchFocused = false
-                isSidebarSearchActive = false
+                dismissSidebarSearch()
                 selectedTab = tab
             }
         )
@@ -72,6 +70,7 @@ extension HomeView {
         guard showsSidebar != isSidebarSearchVisible else { return }
         isSidebarSearchVisible = showsSidebar
         if showsSidebar {
+            showsFolderDrawer = false
             if selectedTab == .search { activateSidebarSearch() }
         } else {
             isSidebarSearchFocusRequested = false
@@ -84,12 +83,16 @@ extension HomeView {
     }
 
     func openSearchResult(_ conversation: Conversation) {
-        isSidebarSearchFocusRequested = false
-        isSidebarSearchFocused = false
-        isSidebarSearchActive = false
+        dismissSidebarSearch()
         isPrivateChatActive = false
-        selectedConversation = conversation
+        openConversation(conversation)
         selectedTab = .chats
+    }
+
+    func dismissSidebarSearch() {
+        isSidebarSearchFocusRequested = false
+        isSidebarSearchActive = false
+        isSidebarSearchFocused = false
     }
 }
 #endif

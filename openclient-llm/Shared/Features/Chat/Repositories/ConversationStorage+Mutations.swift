@@ -15,7 +15,8 @@ extension ConversationStorage {
         _ conversation: Conversation,
         expectedBase: Conversation?,
         synchronize: Bool,
-        preservePendingBase: Bool = false
+        preservePendingBase: Bool = false,
+        creationPlacement: ConversationCreationPlacement? = nil
     ) throws -> Conversation? {
         try ensureDirectoryExists()
         let canonicalIncoming = try canonicalConversation(conversation)
@@ -31,7 +32,8 @@ extension ConversationStorage {
             return try saveNewConversation(
                 incoming,
                 attachmentData: canonicalIncoming.attachmentData,
-                synchronize: synchronize && !Task.isCancelled
+                synchronize: synchronize && !Task.isCancelled,
+                creationPlacement: creationPlacement
             )
         }
         let base = expectedBase ?? latestLocal
@@ -184,42 +186,41 @@ extension ConversationStorage {
     func saveNewConversation(
         _ conversation: Conversation,
         attachmentData: [CloudAttachmentKey: Data],
-        synchronize: Bool
+        synchronize: Bool,
+        creationPlacement: ConversationCreationPlacement?
     ) throws -> Conversation? {
         if let localBarrier = try deletionBarrier(for: conversation.id) {
             guard conversation.updatedAt > localBarrier else {
                 throw CloudSyncError.staleConversationRevision
             }
         }
-        guard synchronize else {
-            try persistNewLocalConversation(conversation, attachmentData: attachmentData)
-            return try loadLocalConversation(id: conversation.id)
-        }
-        guard cloudSyncManager.isCloudAvailable() else {
-            try persistNewLocalConversation(conversation, attachmentData: attachmentData)
-            return try loadLocalConversation(id: conversation.id)
-        }
-        do {
-            let snapshot = try cloudSyncManager.loadConversationSyncSnapshot()
-            let tombstoneDate = snapshot.tombstones
-                .filter { $0.conversationId == conversation.id }
-                .map(\.deletedAt)
-                .max()
-            let cloudBarrier = [tombstoneDate, snapshot.deleteAllMarker?.deletedAt]
-                .compactMap { $0 }
-                .max()
-            if let cloudBarrier {
-                guard conversation.updatedAt > cloudBarrier else {
-                    throw CloudSyncError.staleConversationRevision
-                }
+        let snapshot: ConversationCloudSyncSnapshot?
+        if synchronize, cloudSyncManager.isCloudAvailable() {
+            do {
+                snapshot = try cloudSyncManager.loadConversationSyncSnapshot()
+            } catch {
+                LogManager.error("New conversation cloud synchronization deferred")
+                snapshot = nil
             }
-            try persistNewLocalConversation(conversation, attachmentData: attachmentData)
-            try self.synchronize(with: snapshot)
-        } catch CloudSyncError.staleConversationRevision {
-            throw CloudSyncError.staleConversationRevision
-        } catch {
-            try persistNewLocalConversation(conversation, attachmentData: attachmentData)
-            LogManager.error("New conversation cloud synchronization deferred")
+        } else {
+            snapshot = nil
+        }
+        if let snapshot {
+            try validateSaveBase(conversation, against: snapshot)
+        }
+        try persistNewLocalConversation(
+            conversation, attachmentData: attachmentData,
+            creationPlacement: snapshot?.conversations[conversation.id] == nil ? creationPlacement : nil,
+            cloud: snapshot
+        )
+        if let snapshot {
+            do {
+                try self.synchronize(with: snapshot)
+            } catch CloudSyncError.staleConversationRevision {
+                throw CloudSyncError.staleConversationRevision
+            } catch {
+                LogManager.error("New conversation cloud synchronization deferred")
+            }
         }
         guard let saved = try loadLocalConversation(id: conversation.id) else {
             throw CloudSyncError.staleConversationRevision

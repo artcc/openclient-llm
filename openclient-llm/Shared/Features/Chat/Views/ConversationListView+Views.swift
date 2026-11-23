@@ -13,22 +13,14 @@ extension ConversationListView {
         _ conversation: Conversation,
         loadedState: ConversationListViewModel.LoadedState
     ) -> some View {
-        let isSelected = activeConversationId == conversation.id
+        let isSelecting = viewModel.moveSelection != nil
+        let isSelected = viewModel.moveSelection?.contains(conversation.id) ?? (activeConversationId == conversation.id)
+        let rowSymbol = isSelecting ? (isSelected ? "checkmark.circle.fill" : "circle")
+            : (conversation.isPinned ? "pin.fill" : "sparkles")
 
-        return Button {
-            viewModel.send(.conversationTapped(conversation))
-        } label: {
+        return Button { viewModel.activateRow(conversation) } label: {
             HStack(alignment: .top, spacing: 10) {
-                Image(systemName: conversation.isPinned ? "pin.fill" : "sparkles")
-                    .accessibilityHidden(true)
-                    .font(.system(size: 14))
-                    .foregroundStyle(isSelected ? .white : (conversation.isPinned ? .orange : Color.appAccent))
-#if os(macOS)
-                    .frame(width: 28, height: 28)
-#else
-                    .frame(width: 32, height: 32)
-#endif
-                    .glassEffect(isSelected ? .regular.tint(Color.appAccent) : .regular, in: .circle)
+                rowIcon(rowSymbol, isPinned: conversation.isPinned, isSelected: isSelected)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(conversationTitle(conversation))
                         .font(.headline)
@@ -41,7 +33,7 @@ extension ConversationListView {
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
                     }
-                    conversationMetadata(conversation)
+                    conversationMetadata(conversation, loaded: loadedState)
                 }
                 .multilineTextAlignment(.leading)
             }
@@ -62,9 +54,35 @@ extension ConversationListView {
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityValue(conversation.isPinned ? String(localized: "Pinned") : "")
+        .accessibilityHint(isSelecting ? String(localized: "Select or deselect this chat to move it.") : "")
+        .disabled(isSelecting && viewModel.isSavingFolderChange)
+#if os(macOS)
+        .draggable(ChatFolderDrag(ids: dragIDs(for: conversation.id)))
+#endif
     }
 
-    func conversationMetadata(_ conversation: Conversation) -> some View {
+#if os(macOS)
+    private func dragIDs(for id: UUID) -> [UUID] {
+        guard let selection = viewModel.moveSelection, selection.contains(id) else { return [id] }
+        return Array(selection)
+    }
+#endif
+
+    private func rowIcon(_ symbol: String, isPinned: Bool, isSelected: Bool) -> some View {
+        Image(systemName: symbol)
+            .accessibilityHidden(true)
+            .font(.system(size: 14))
+            .foregroundStyle(isSelected ? .white : (isPinned ? .orange : Color.appAccent))
+#if os(macOS)
+            .frame(width: 28, height: 28)
+#else
+            .frame(width: 32, height: 32)
+#endif
+            .glassEffect(isSelected ? .regular.tint(Color.appAccent) : .regular, in: .circle)
+    }
+
+    func conversationMetadata(_ conversation: Conversation,
+                              loaded: ConversationListViewModel.LoadedState) -> some View {
         FlowLayout(spacing: 4) {
             Text(formattedDate(conversation.updatedAt))
                 .font(.caption2)
@@ -72,6 +90,10 @@ extension ConversationListView {
                 .lineLimit(1)
                 .frame(maxWidth: 180, alignment: .leading)
                 .padding(.vertical, 2)
+            if showsFolderName(in: loaded),
+               let folder = loaded.folderName(for: conversation.id) {
+                ConversationFolderCaption(name: folder)
+            }
             branchBadge(for: conversation)
             modelBadge(conversation.modelId)
             ForEach(conversation.tags.prefix(3), id: \.self) { tag in
@@ -79,6 +101,10 @@ extension ConversationListView {
             }
         }
         .padding(.top, 2)
+    }
+
+    private func showsFolderName(in loaded: ConversationListViewModel.LoadedState) -> Bool {
+        loaded.hasLoadedFolders && (loaded.folderScope == .all || loaded.searchesAllFolders)
     }
 
     func modelBadge(_ modelId: String) -> some View {
@@ -124,6 +150,23 @@ extension ConversationListView {
     }
 }
 
+struct ConversationFolderCaption: View {
+    let name: String
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "folder")
+                .accessibilityHidden(true)
+            Text(verbatim: name)
+        }
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+        .frame(maxWidth: 180, alignment: .leading)
+        .padding(.vertical, 2)
+    }
+}
+
 #Preview("Conversation with long metadata") {
     let conversation = Conversation(
         title: "Review the interface across iPhone, iPad, and Mac",
@@ -133,8 +176,13 @@ extension ConversationListView {
         tags: [.init(name: "Interface review", color: .orange), .init(name: "Accessibility", color: .orange)],
         parentConversationId: UUID()
     )
-    ConversationListView(onConversationSelected: { _ in }, onPrivateChatSelected: {})
-        .conversationRow(conversation, loadedState: .init())
+    let folder = ConversationFolder(id: UUID(), name: "Client projects", updatedAt: .now)
+    let loaded = ConversationListViewModel.LoadedState(
+        folders: [folder], folderIDs: [conversation.id: folder.id], hasLoadedFolders: true
+    )
+    ConversationListView(viewModel: ConversationListViewModel(), folderScope: .constant(.all),
+                         onConversationSelected: { _ in }, onPrivateChatSelected: {})
+        .conversationRow(conversation, loadedState: loaded)
         .frame(width: 320)
         .padding()
 }

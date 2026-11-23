@@ -72,7 +72,11 @@ struct BranchConversationUseCase: BranchConversationUseCaseProtocol {
             branchedFromMessageId: fromMessageId
         )
 
-        return try await saveConversationUseCase.execute(fork)
+        return try await saveConversationUseCase.execute(
+            fork,
+            expectedBase: nil,
+            creationPlacement: .inheritFrom(conversation.id)
+        )
     }
 }
 
