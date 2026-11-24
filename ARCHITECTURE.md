@@ -165,6 +165,10 @@ packages: SwiftLintPlugins, VoticeSDK, and ConfettiSwiftUI.
 - **`WidgetsExtension-iOS/` / `WidgetsExtension-macOS/`** — Platform-owned plists and entitlements. Only the iOS extension
   enables complete Data Protection so sensitive widgets are hidden while the device is locked.
 - **`#if os(iOS)` / `#if os(macOS)`** — Used inside shared views for platform-specific UI variations.
+- The macOS main window uses its navigation sidebar to select chat folders. The sidebar and history share the scene's
+  conversation list ViewModel; the detail pane displays the selected history or conversation.
+- On iOS and iPadOS, the Chats history, compact folder drawer and iPad tab sidebar share one scene-owned history
+  ViewModel. Adapting between drawer and sidebar does not replace the chat navigation stack.
 
 The iOS and macOS app targets set `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`. The test and extension targets do not;
 tests that access app-isolated types declare `@MainActor` explicitly.

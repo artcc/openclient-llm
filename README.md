@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/License-AGPL%20v3.0-blue?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/Platform-iOS%2026+%20|%20iPadOS%2026+%20|%20macOS%2026+-blue?style=flat-square" alt="Platform" />
   <img src="https://img.shields.io/badge/Swift-6+-orange?style=flat-square&logo=swift" alt="Swift" />
-  <img src="https://img.shields.io/badge/Version-1.7.45-brightgreen?style=flat-square" alt="Version 1.7.45" />
+  <img src="https://img.shields.io/badge/Version-1.7.50-brightgreen?style=flat-square" alt="Version 1.7.50" />
 </p>
 
 OpenClient connects directly to the AI server you configure, without an OpenClient-hosted proxy or subscription.
@@ -68,7 +68,8 @@ servers that provide the endpoints used by your selected features; point the app
 - Custom system prompt and model parameters (temperature, max tokens, top-p) per conversation
 
 **Conversations**
-- Full conversation history with search, pins, and tags
+- Organize chats into folders, move several at once, and filter by tags without changing their order in history
+- Search across all conversations and pin chats for quick access
 - Branch from any message to explore alternative responses; edit and regenerate
 - Media & Files gallery: browse all attached images and documents in one place
 - Share content from any app (Safari, Telegram, Photos, Files…) directly into a new conversation via the system Share sheet

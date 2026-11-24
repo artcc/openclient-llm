@@ -1,7 +1,9 @@
 ¡Hola! Esta actualización viene cargada de novedades.
 
-• Activa Enviar ID del chat en Ajustes > Servidor > Avanzado si tu servidor requiere un identificador de conversación en una cabecera HTTP. Elige el nombre de la cabecera y OpenClient enviará el valor automáticamente.
-• Cada chat conserva su identificador al reabrirlo o reintentar una respuesta; los chats nuevos y las bifurcaciones usan uno distinto. Esta cabecera no se envía al listar modelos ni al comprobar la conexión.
+• Organiza tus chats en carpetas y mueve varios a la vez. En Mac también puedes arrastrarlos a una carpeta de la barra lateral.
+• En algunas actualizaciones verás las novedades en lugar del banner de avisos. Pulsa Continuar o elige la acción adicional si aparece.
+• En el nuevo diseño del banner, el botón aparece junto al mensaje o debajo, según el ancho de la pantalla.
+• Tanto la pantalla de novedades como el banner pueden llevarte directamente al App Store para escribir una reseña.
 • Correcciones de errores menores y mejoras de estabilidad.
 
 Gracias por seguir apoyándonos y por ayudarnos a crear juntos el mejor cliente posible para modelos de lenguaje.

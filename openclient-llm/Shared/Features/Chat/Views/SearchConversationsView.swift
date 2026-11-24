@@ -22,6 +22,7 @@ struct SearchConversationsView: View {
     private let externalSearchText: Binding<String>?
     private let showsSearchField: Bool
     private let isSearchActive: Bool
+    private let sidebarFolderHistory: ConversationListViewModel?
     private let onConversationSelected: ((Conversation) -> Void)?
 
     // MARK: - Init
@@ -30,11 +31,13 @@ struct SearchConversationsView: View {
         searchText: Binding<String>? = nil,
         showsSearchField: Bool = true,
         isSearchActive: Bool = true,
+        sidebarFolderHistory: ConversationListViewModel? = nil,
         onConversationSelected: ((Conversation) -> Void)? = nil
     ) {
         externalSearchText = searchText
         self.showsSearchField = showsSearchField
         self.isSearchActive = isSearchActive
+        self.sidebarFolderHistory = sidebarFolderHistory
         self.onConversationSelected = onConversationSelected
     }
 
@@ -115,16 +118,27 @@ private extension SearchConversationsView {
     var searchNavigation: some View {
         NavigationStack {
             Group {
-                switch viewModel.state {
-                case .loading:
+                if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    ContentUnavailableView {
+                        Label("Search Conversations", systemImage: "magnifyingglass")
+                    } description: {
+                        Text("Search your conversations by title or message content")
+                    }
+                } else if case .loaded(let loadedState) = viewModel.state, loadedState.searchQuery == searchText {
+                    searchContent(loadedState)
+                } else {
                     ProgressView()
                         .accessibilityLabel(String(localized: "Loading conversations..."))
                         .tint(.secondary)
-                case .loaded(let loadedState):
-                    searchContent(loadedState)
                 }
             }
             .navigationTitle(String(localized: "Search"))
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if sidebarFolderHistory == nil {
+                    ConversationFolderIssueView(viewModel: viewModel)
+                        .padding(.horizontal)
+                }
+            }
             .navigationDestination(item: $selectedConversation) { conversation in
                 ChatView(conversation: conversation) {
                     viewModel.refresh()
@@ -135,39 +149,17 @@ private extension SearchConversationsView {
 
     @ViewBuilder
     func searchContent(_ loadedState: ConversationListViewModel.LoadedState) -> some View {
-        if externalSearchText != nil && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            ContentUnavailableView {
-                Label(String(localized: "Search Conversations"), systemImage: "magnifyingglass")
-            } description: {
-                Text(String(localized: "Search your conversations by title or message content"))
-            }
-        } else if !searchText.isEmpty && loadedState.filteredConversations.isEmpty {
+        let conversations = loadedState.filteredConversations
+        if conversations.isEmpty {
             ContentUnavailableView.search(text: searchText)
+        } else if let sidebarFolderHistory, case .loaded(let sidebarState) = sidebarFolderHistory.state {
+            resultsList(conversations, loadedState: sidebarState)
         } else {
-            let conversations = searchText.isEmpty
-                ? loadedState.conversations
-                : loadedState.filteredConversations
-
-            if conversations.isEmpty {
-                emptyState
-            } else {
-                resultsList(conversations)
-            }
+            resultsList(conversations, loadedState: loadedState)
         }
     }
 
-    var emptyState: some View {
-        ContentUnavailableView {
-            Label(
-                String(localized: "No Conversations"),
-                systemImage: "bubble.left.and.bubble.right"
-            )
-        } description: {
-            Text(String(localized: "Start a new conversation to begin chatting"))
-        }
-    }
-
-    func resultsList(_ conversations: [Conversation]) -> some View {
+    func resultsList(_ conversations: [Conversation], loadedState: ConversationListViewModel.LoadedState) -> some View {
         List {
             ForEach(conversations) { conversation in
                 Button {
@@ -178,7 +170,7 @@ private extension SearchConversationsView {
                         selectedConversation = conversation
                     }
                 } label: {
-                    conversationRow(conversation)
+                    conversationRow(conversation, folderName: loadedState.folderName(for: conversation.id))
                 }
                 .accessibilityValue(conversation.isPinned ? String(localized: "Pinned") : "")
                 .listRowBackground(Color.clear)
@@ -190,7 +182,7 @@ private extension SearchConversationsView {
         .frame(maxWidth: .infinity)
     }
 
-    func conversationRow(_ conversation: Conversation) -> some View {
+    func conversationRow(_ conversation: Conversation, folderName: String?) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: conversation.isPinned ? "pin.fill" : "sparkles")
                 .accessibilityHidden(true)
@@ -216,11 +208,17 @@ private extension SearchConversationsView {
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
-                Text(formattedDate(conversation.updatedAt))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 2)
-                    .padding(.vertical, 2)
+                FlowLayout(spacing: 4) {
+                    Text(formattedDate(conversation.updatedAt))
+                        .lineLimit(1)
+                        .padding(.vertical, 2)
+                    if let folderName {
+                        ConversationFolderCaption(name: folderName)
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .padding(.top, 2)
             }
             .multilineTextAlignment(.leading)
         }
@@ -275,7 +273,7 @@ private extension SearchConversationsView {
             title: "Review the interface across iPhone, iPad, and Mac",
             modelId: "Preview",
             messages: [.init(role: .assistant, content: "Compare the layouts at different window sizes.")]
-        ))
+        ), folderName: "Design")
         .frame(width: 320)
         .padding()
         .environment(\.dynamicTypeSize, .accessibility1)

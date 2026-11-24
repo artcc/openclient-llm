@@ -47,12 +47,17 @@ extension ConversationListViewModelTests {
         for _ in 0..<10 { await Task.yield() }
         let remoteConversation = Conversation(modelId: "gpt-4")
         mockLoadConversations.result = .success([remoteConversation])
+        let folder = ConversationFolder(id: UUID(), name: "Renamed in another window", updatedAt: .now)
+        mockFolders.snapshot = .init(folders: [folder], memberships: [
+            .init(conversationId: remoteConversation.id, folderId: folder.id, updatedAt: .now)
+        ])
 
         // When
         NotificationCenter.default.post(name: .conversationDidUpdate, object: nil)
         await waitUntil {
             guard case .loaded(let loadedState) = self.sut.state else { return false }
             return loadedState.conversations == [remoteConversation]
+                && loadedState.folderName(for: remoteConversation.id) == folder.name
         }
 
         // Then

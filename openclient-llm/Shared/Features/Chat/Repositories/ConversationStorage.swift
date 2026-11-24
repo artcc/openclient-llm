@@ -331,7 +331,13 @@ extension ConversationStorage {
             conversationData: Dictionary(uniqueKeysWithValues: merged.map { ($0.conversation.id, $0.data) }),
             tombstones: tombstones,
             deleteAllMarker: marker,
-            attachments: try resolvedAttachments(for: merged, snapshot: snapshot)
+            attachments: try resolvedAttachments(for: merged, snapshot: snapshot),
+            folderState: try reconcileFolders(
+                cloud: snapshot,
+                conversations: merged.map(\.conversation.id),
+                conversationTombstones: tombstones,
+                barrier: marker?.deletedAt
+            )
         )
         try preserveRemovedCloudAttachments(
             output: output,

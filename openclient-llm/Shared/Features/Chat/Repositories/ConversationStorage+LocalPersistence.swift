@@ -71,6 +71,7 @@ extension ConversationStorage {
     }
 
     func persistLocal(output: ConversationCloudSyncOutput) throws {
+        try writeFolderState(output.folderState)
         for conversation in output.conversations {
             guard let data = output.conversationData[conversation.id] else {
                 throw CloudSyncError.invalidConversationData
@@ -98,6 +99,9 @@ extension ConversationStorage {
             output,
             knownAttachmentKeys: knownAttachmentKeys
         ) && plan.resolvedPendingMutationIds.isEmpty && plan.resolvedPendingDeletionIds.isEmpty
+        if let deletedAt = snapshot.deleteAllMarker?.deletedAt {
+            try manageFolderRecovery(purgeThrough: deletedAt)
+        }
         if isLocalCurrent {
             guard !isCloudOutputCurrent(output, snapshot: snapshot) else { return }
             try Task.checkCancellation()
@@ -259,7 +263,9 @@ extension ConversationStorage {
 
     func persistNewLocalConversation(
         _ conversation: Conversation,
-        attachmentData: [CloudAttachmentKey: Data]
+        attachmentData: [CloudAttachmentKey: Data],
+        creationPlacement: ConversationCreationPlacement? = nil,
+        cloud: ConversationCloudSyncSnapshot? = nil
     ) throws {
         let conversation = try canonicalJSONConversation(conversation)
         let attachmentKeys = try attachmentKeys(in: [conversation])
@@ -278,6 +284,7 @@ extension ConversationStorage {
         do {
             try persistLocalAttachments(attachmentData)
             try saveLocal(conversation)
+            try applyCreationPlacement(creationPlacement, to: conversation.id, cloud: cloud)
             try transaction.commit(verifying: .init(
                 conversations: [conversation.id: conversation],
                 attachments: expectedAttachments
@@ -425,7 +432,8 @@ extension ConversationStorage {
         _ output: ConversationCloudSyncOutput,
         knownAttachmentKeys: Set<CloudAttachmentKey>
     ) throws -> Bool {
-        guard try loadLocalConversationFiles().data == output.conversationData,
+        guard try readFolderState() == output.folderState,
+              try loadLocalConversationFiles().data == output.conversationData,
               try loadTombstones() == output.tombstones,
               try loadDeleteAllMarker() == output.deleteAllMarker else {
             return false
@@ -442,6 +450,7 @@ extension ConversationStorage {
         snapshot: ConversationCloudSyncSnapshot
     ) -> Bool {
         guard snapshot.manifestData != nil,
+              snapshot.folderState == output.folderState,
               snapshot.conversationData == output.conversationData,
               snapshot.attachmentData == output.attachments,
               snapshot.attachmentPlaceholders.isEmpty,
@@ -457,7 +466,7 @@ extension ConversationStorage {
         return snapshot.tombstoneData == tombstoneData
     }
 
-    private func recoveryDigest(for data: Data) -> String {
+    func recoveryDigest(for data: Data) -> String {
         SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
     }
 

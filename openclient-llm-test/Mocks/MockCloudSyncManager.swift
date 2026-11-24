@@ -52,6 +52,7 @@ final class MockCloudSyncManager: CloudSyncManagerProtocol, @unchecked Sendable 
     var deleteMemoryCalled: Bool = false
     var pendingConversationDownloads: Bool = false
     var cloudTombstones: [ConversationTombstone] = []
+    var cloudFolderState = ConversationFolderState()
     var cloudDeleteAllMarker: ConversationDeleteAllMarker?
     var cloudAttachmentData: [CloudAttachmentKey: Data] = [:]
     var materializedConversationIds: [UUID] = []
@@ -116,7 +117,8 @@ extension MockCloudSyncManager {
             attachmentData: cloudAttachmentData,
             attachmentPlaceholders: [],
             attachmentConversationIds: Set(cloudAttachmentData.keys.map(\.conversationId)),
-            purgeMarker: purgeMarker
+            purgeMarker: purgeMarker,
+            folderState: cloudFolderState
         )
     }
 
@@ -131,6 +133,7 @@ extension MockCloudSyncManager {
         syncedConversations.append(contentsOf: output.conversations)
         cloudConversations = output.conversations
         cloudTombstones = output.tombstones
+        cloudFolderState = output.folderState
         cloudDeleteAllMarker = output.deleteAllMarker
         cloudAttachmentData = output.attachments
     }

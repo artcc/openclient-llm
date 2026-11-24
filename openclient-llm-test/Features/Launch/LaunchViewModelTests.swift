@@ -31,8 +31,11 @@ final class LaunchViewModelTests: XCTestCase {
         sut = LaunchViewModel(
             checkOnboardingUseCase: mockUseCase,
             resetAppDataUseCase: mockResetAppData,
+            configureVoticeUseCase: NoOpConfigureVoticeUseCase(),
             attachmentMigrationUseCase: mockAttachmentMigration,
             remoteConfigManager: mockRemoteConfigManager,
+            settingsManager: MockSettingsManager(),
+            announcementSession: LaunchAnnouncementSession(),
             currentVersion: "1.0.0",
             launchDelay: .zero
         )
@@ -77,6 +80,53 @@ final class LaunchViewModelTests: XCTestCase {
 
         // Then
         XCTAssertTrue(mockResetAppData.executeCalled)
+    }
+
+    func test_send_viewDisappearedBeforeResetStarts_finishesCleanupWhileClosedAndReusesItOnReopen() async throws {
+        mockUseCase.result = false
+        let resetFinished = expectation(description: "Initial cleanup finished while the window was closed")
+        mockResetAppData.onExecute = {
+            try Task.checkCancellation()
+            resetFinished.fulfill()
+        }
+
+        sut.send(.viewAppeared)
+        let firstLaunch = try XCTUnwrap(sut.launchTask)
+        sut.send(.viewDisappeared)
+
+        await fulfillment(of: [resetFinished], timeout: 2)
+        await firstLaunch.value
+        XCTAssertEqual(sut.state, .loading)
+        sut.send(.viewAppeared)
+        await waitForLaunch()
+        XCTAssertEqual(mockResetAppData.executeCallCount, 1)
+        XCTAssertEqual(sut.state, .onboarding)
+    }
+
+    func test_send_reopenDuringInitialReset_completesTheSameCleanupWithoutCancellation() async {
+        mockUseCase.result = false
+        let resetStarted = expectation(description: "Initial cleanup reached its checkpoint")
+        let gate = TestAsyncGate()
+        var cleanupFinished = false
+        mockResetAppData.onExecute = {
+            resetStarted.fulfill()
+            await gate.wait()
+            try Task.checkCancellation()
+            cleanupFinished = true
+        }
+        sut.send(.viewAppeared)
+        let firstLaunch = sut.launchTask
+        await fulfillment(of: [resetStarted], timeout: 2)
+
+        sut.send(.viewDisappeared)
+        sut.send(.viewAppeared)
+        await gate.open()
+
+        await firstLaunch?.value
+        await waitForLaunch()
+        XCTAssertTrue(cleanupFinished)
+        XCTAssertEqual(mockResetAppData.executeCallCount, 1)
+        XCTAssertEqual(sut.state, .onboarding)
     }
 
     func test_send_viewAppeared_initialResetFails_setsResetFailedState() async {
@@ -126,8 +176,11 @@ final class LaunchViewModelTests: XCTestCase {
         sut = LaunchViewModel(
             checkOnboardingUseCase: mockUseCase,
             resetAppDataUseCase: mockResetAppData,
+            configureVoticeUseCase: NoOpConfigureVoticeUseCase(),
             attachmentMigrationUseCase: mockAttachmentMigration,
             remoteConfigManager: mockRemoteConfigManager,
+            settingsManager: MockSettingsManager(),
+            announcementSession: LaunchAnnouncementSession(),
             currentVersion: "1.0.0",
             launchDelay: .milliseconds(500)
         )
@@ -139,12 +192,13 @@ final class LaunchViewModelTests: XCTestCase {
         XCTAssertEqual(sut.state, .loading)
     }
 
-    func test_send_viewAppeared_onboardingCompleted_doesNotResetAppData() {
+    func test_send_viewAppeared_onboardingCompleted_doesNotResetAppData() async {
         // Given
         mockUseCase.result = true
 
         // When
         sut.send(.viewAppeared)
+        await waitForLaunch()
 
         // Then
         XCTAssertFalse(mockResetAppData.executeCalled)
@@ -156,8 +210,11 @@ final class LaunchViewModelTests: XCTestCase {
             state: .onboarding,
             checkOnboardingUseCase: mockUseCase,
             resetAppDataUseCase: mockResetAppData,
+            configureVoticeUseCase: NoOpConfigureVoticeUseCase(),
             attachmentMigrationUseCase: mockAttachmentMigration,
             remoteConfigManager: mockRemoteConfigManager,
+            settingsManager: MockSettingsManager(),
+            announcementSession: LaunchAnnouncementSession(),
             currentVersion: "1.0.0",
             launchDelay: .zero
         )
@@ -289,8 +346,7 @@ final class LaunchViewModelTests: XCTestCase {
 
 private extension LaunchViewModelTests {
     func waitForLaunch() async {
-        for _ in 0..<10 {
-            await Task.yield()
-        }
+        guard let launch = sut.launchTask else { return XCTFail("Expected a launch task") }
+        await launch.value
     }
 }

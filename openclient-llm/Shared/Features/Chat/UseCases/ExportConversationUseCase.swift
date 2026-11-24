@@ -30,6 +30,6 @@ struct ExportConversationUseCase: ExportConversationUseCaseProtocol {
     // MARK: - Execute
 
     func execute(_ conversation: Conversation) throws -> Data {
-        try exportConversationsUseCase.execute([conversation])
+        try exportConversationsUseCase.execute([conversation], organization: nil)
     }
 }

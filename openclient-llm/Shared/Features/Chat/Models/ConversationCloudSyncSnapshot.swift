@@ -32,6 +32,7 @@ nonisolated struct ConversationCloudSyncSnapshot: Sendable {
     let attachmentPlaceholders: Set<CloudAttachmentKey>
     let attachmentConversationIds: Set<UUID>
     var purgeMarker: CloudPurgeMarker?
+    var folderState: ConversationFolderState
 
     init(
         session: CloudSyncSession,
@@ -46,7 +47,8 @@ nonisolated struct ConversationCloudSyncSnapshot: Sendable {
         attachmentData: [CloudAttachmentKey: Data],
         attachmentPlaceholders: Set<CloudAttachmentKey>,
         attachmentConversationIds: Set<UUID> = [],
-        purgeMarker: CloudPurgeMarker? = nil
+        purgeMarker: CloudPurgeMarker? = nil,
+        folderState: ConversationFolderState = ConversationFolderState()
     ) {
         self.session = session
         self.manifestData = manifestData
@@ -61,6 +63,7 @@ nonisolated struct ConversationCloudSyncSnapshot: Sendable {
         self.attachmentPlaceholders = attachmentPlaceholders
         self.attachmentConversationIds = attachmentConversationIds
         self.purgeMarker = purgeMarker
+        self.folderState = folderState
     }
 }
 
@@ -70,6 +73,7 @@ nonisolated struct ConversationCloudSyncOutput: Sendable {
     let tombstones: [ConversationTombstone]
     let deleteAllMarker: ConversationDeleteAllMarker?
     let attachments: [CloudAttachmentKey: Data]
+    var folderState = ConversationFolderState()
 }
 
 nonisolated enum ConversationAttachmentPath {

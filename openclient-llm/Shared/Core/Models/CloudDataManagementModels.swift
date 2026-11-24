@@ -63,7 +63,7 @@ nonisolated struct CloudPromptTemplateInventoryItem: Equatable, Sendable {
 }
 
 nonisolated enum CloudInventoryCategoryValue: Equatable, Sendable {
-    case conversations([CloudConversationInventoryItem])
+    case conversations([CloudConversationInventoryItem], folderCount: Int = 0)
     case profileCount(Int)
     case memory([CloudMemoryInventoryItem])
     case promptTemplates([CloudPromptTemplateInventoryItem])

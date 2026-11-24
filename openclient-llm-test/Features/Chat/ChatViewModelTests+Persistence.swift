@@ -13,6 +13,47 @@ import XCTest
 
 @MainActor
 extension ChatViewModelTests {
+    func test_persistConversation_contextualDraft_retriesPlacementUntilFirstSave() async {
+        let folderID = UUID()
+        let draft = Conversation(modelId: "model")
+        sut = ChatViewModel(
+            initialFolderID: folderID,
+            state: .loaded(.init(conversation: draft)),
+            saveConversationUseCase: mockSaveConversation,
+            settingsManager: MockSettingsManager()
+        )
+        mockSaveConversation.failureAtCall = 1
+
+        let failed = await sut.persistConversation()
+        let retried = await sut.persistConversation()
+        let updated = await sut.persistConversation()
+
+        XCTAssertFalse(failed)
+        XCTAssertTrue(retried)
+        XCTAssertTrue(updated)
+        XCTAssertEqual(mockSaveConversation.creationPlacements, [.folder(folderID), .folder(folderID), nil])
+    }
+
+    func test_persistConversation_selectingExistingChat_discardsDraftDestination() async {
+        let draft = Conversation(modelId: "model")
+        let folderID = UUID()
+        let existing = Conversation(modelId: "model")
+        sut = ChatViewModel(
+            initialFolderID: folderID,
+            state: .loaded(.init(conversation: draft)),
+            saveConversationUseCase: mockSaveConversation,
+            settingsManager: MockSettingsManager()
+        )
+
+        sut.send(.systemPromptChanged("First checkpoint"))
+        sut.send(.conversationLoaded(existing))
+        let didSave = await sut.persistConversation()
+
+        XCTAssertTrue(didSave)
+        XCTAssertEqual(mockSaveConversation.savedConversations.map(\.id), [draft.id, existing.id])
+        XCTAssertEqual(mockSaveConversation.creationPlacements, [.folder(folderID), nil])
+    }
+
     func test_send_sendTapped_createsConversation() async throws {
         // Given
         mockFetchModels.result = .success([LLMModel(id: "gpt-4")])

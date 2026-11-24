@@ -27,6 +27,7 @@ nonisolated struct ConversationLocalTransaction {
 
     private static let defaultItemNames = [
         "Conversations",
+        ConversationFolderState.fileName,
         "ConversationTombstones.json",
         "ConversationDeleteAll.json",
         "ConversationLocalReset.json",

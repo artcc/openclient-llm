@@ -120,7 +120,8 @@ private extension CloudSyncManager {
             attachmentData: attachmentResult.data,
             attachmentPlaceholders: attachmentResult.placeholders,
             attachmentConversationIds: attachmentResult.conversationIds,
-            purgeMarker: purgeMarker
+            purgeMarker: purgeMarker,
+            folderState: try loadConversationFolderState(in: documentsURL)
         )
     }
 
@@ -234,6 +235,7 @@ private extension CloudSyncManager {
         output: ConversationCloudSyncOutput
     ) throws {
         guard current.manifestData == snapshot.manifestData,
+              current.folderState == snapshot.folderState,
               current.conversationData == snapshot.conversationData,
               current.tombstoneData == snapshot.tombstoneData,
               current.legacyTombstoneData == snapshot.legacyTombstoneData,
@@ -246,6 +248,7 @@ private extension CloudSyncManager {
               current.attachmentConversationIds == snapshot.attachmentConversationIds else {
             throw CloudSyncError.cloudContentChanged
         }
+        try validateFolderTransition(output, from: snapshot)
     }
 
     func apply(
@@ -270,6 +273,9 @@ private extension CloudSyncManager {
         try validate(snapshot.session)
         try writeMarker(output.deleteAllMarker, session: snapshot.session, documentsURL: documentsURL)
         try validate(snapshot.session)
+        try writeConversationFolderState(output.folderState, replacing: snapshot.folderState, in: documentsURL) {
+            try validate(snapshot.session)
+        }
         try writeConversations(output, session: snapshot.session, documentsURL: documentsURL)
         try validate(snapshot.session)
         try deleteUnreferencedAttachments(output: output, snapshot: snapshot, documentsURL: documentsURL)

@@ -69,6 +69,8 @@ final class BranchConversationUseCaseTests: XCTestCase {
         XCTAssertEqual(fork.messages.count, 2)
         XCTAssertEqual(fork.messages.first?.content, "First")
         XCTAssertEqual(fork.messages.last?.content, "Second")
+        XCTAssertEqual(fork.messages.map(\.timestamp), [msg1.timestamp, msg2.timestamp])
+        XCTAssertEqual(mockSave.creationPlacements, [.inheritFrom(conversation.id)])
     }
 
     func test_execute_setsParentConversationId() async throws {

@@ -48,6 +48,8 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
     var publishedFailedMCPServerIds: Set<String> = []
     var mcpDiscoveryFailed = false
     var dismissedRemoteBannerKey: String?
+    var seenWhatsNewIDs: Set<String> = []
+    var freshInstallVersion: String?
     var deleteAllCalled: Bool = false
 
     // MARK: - Public
@@ -357,6 +359,8 @@ final class MockSettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         hasEnoughConversationsForMemoryTip = false
         disabledBuiltInTools = []
         dismissedRemoteBannerKey = nil
+        seenWhatsNewIDs = []
+        freshInstallVersion = nil
         deleteAllCalled = true
         customHeaders = []
         chatIDHeaderName = nil

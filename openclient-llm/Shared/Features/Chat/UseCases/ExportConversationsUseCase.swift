@@ -9,7 +9,7 @@
 import Foundation
 
 protocol ExportConversationsUseCaseProtocol: Sendable {
-    func execute(_ conversations: [Conversation]) throws -> Data
+    func execute(_ conversations: [Conversation], organization: ConversationFolderSnapshot?) throws -> Data
 }
 
 struct ExportConversationsUseCase: ExportConversationsUseCaseProtocol {
@@ -25,9 +25,12 @@ struct ExportConversationsUseCase: ExportConversationsUseCaseProtocol {
 
     // MARK: - Execute
 
-    func execute(_ conversations: [Conversation]) throws -> Data {
+    func execute(_ conversations: [Conversation], organization: ConversationFolderSnapshot? = nil) throws -> Data {
         try conversations.forEach { try $0.validateContextMetadata() }
-        let document = ConversationExportDocument(conversations: conversations.map(exportedConversation))
+        let document = ConversationExportDocument(
+            conversations: conversations.map(exportedConversation),
+            organization: organization
+        )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601

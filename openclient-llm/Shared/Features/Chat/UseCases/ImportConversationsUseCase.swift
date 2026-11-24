@@ -33,8 +33,10 @@ struct ImportConversationsUseCase: ImportConversationsUseCaseProtocol {
     func execute(_ data: Data) async throws -> ImportConversationsResult {
         let document = try decodeDocument(from: data)
         try validate(document)
+        let conversationIds = makeConversationIds(for: document)
         let context = ImportContext(
-            conversationIds: makeConversationIds(for: document),
+            conversationIds: conversationIds,
+            organization: try restoreOrganization(in: document, conversationIds: conversationIds),
             messageIds: makeMessageIds(for: document),
             attachmentData: makeAttachmentData(for: document),
             tagColors: try await makeTagColors(for: document)
@@ -50,6 +52,7 @@ private extension ImportConversationsUseCase {
 
     struct ImportContext {
         let conversationIds: [UUID: UUID]
+        let organization: ConversationFolderSnapshot
         let messageIds: [UUID: UUID]
         let attachmentData: AttachmentData
         let tagColors: [String: TagColor]
@@ -128,6 +131,32 @@ private extension ImportConversationsUseCase {
         })
     }
 
+    func restoreOrganization(
+        in document: ConversationExportDocument,
+        conversationIds: [UUID: UUID]
+    ) throws -> ConversationFolderSnapshot {
+        let now = Date()
+        var folderIds = [UUID: UUID]()
+        let folders = try (document.folders ?? []).map { folder in
+            let name = folder.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty, folderIds[folder.id] == nil else { throw ImportConversationsError.invalidDocument }
+            let newId = UUID()
+            folderIds[folder.id] = newId
+            return ConversationFolder(id: newId, name: name, updatedAt: now)
+        }
+        var assigned = Set<UUID>()
+        let memberships = try (document.memberships ?? []).map { membership in
+            guard let conversationId = conversationIds[membership.conversationId],
+                  assigned.insert(conversationId).inserted else { throw ImportConversationsError.invalidDocument }
+            let folderId = try membership.folderId.map { source in
+                guard let id = folderIds[source] else { throw ImportConversationsError.invalidDocument }
+                return id
+            }
+            return ConversationFolderMembership(conversationId: conversationId, folderId: folderId, updatedAt: now)
+        }
+        return ConversationFolderSnapshot(folders: folders, memberships: memberships)
+    }
+
     func makeMessageIds(for document: ConversationExportDocument) -> [UUID: UUID] {
         Dictionary(uniqueKeysWithValues: document.conversations.flatMap { exportedConversation in
             exportedConversation.conversation.messages.map { ($0.id, UUID()) }
@@ -143,6 +172,7 @@ private extension ImportConversationsUseCase {
     }
 
     func makeTagColors(for document: ConversationExportDocument) async throws -> [String: TagColor] {
+        guard !document.conversations.isEmpty else { return [:] }
         let importedTags = document.conversations.flatMap(\.conversation.tags)
         return (try await loadConversationsUseCase.execute().flatMap(\.tags) + importedTags)
             .reduce(into: [String: TagColor]()) { colors, tag in
@@ -156,23 +186,25 @@ private extension ImportConversationsUseCase {
         _ document: ConversationExportDocument,
         context: ImportContext
     ) async throws -> ImportConversationsResult {
-        var result = ImportConversationsResult(
-            importedConversationCount: 0,
-            restoredAttachmentCount: 0,
-            skippedAttachmentCount: 0
-        )
+        var restoredAttachmentCount = 0
+        var skippedAttachmentCount = 0
         var restoredConversations: [Conversation] = []
         for exportedConversation in document.conversations {
             let restored = try restoreConversation(exportedConversation.conversation, context: context)
             restoredConversations.append(restored.conversation)
-            result = ImportConversationsResult(
-                importedConversationCount: result.importedConversationCount + 1,
-                restoredAttachmentCount: result.restoredAttachmentCount + restored.attachments.count,
-                skippedAttachmentCount: result.skippedAttachmentCount + restored.skippedAttachmentCount
-            )
+            restoredAttachmentCount += restored.attachments.count
+            skippedAttachmentCount += restored.skippedAttachmentCount
         }
-        _ = try await saveConversationUseCase.executeImportBatch(restoredConversations)
-        return result
+        _ = try await saveConversationUseCase.executeImportBatch(
+            restoredConversations,
+            organization: context.organization
+        )
+        return ImportConversationsResult(
+            importedConversationCount: restoredConversations.count,
+            importedFolderCount: context.organization.folders.count,
+            restoredAttachmentCount: restoredAttachmentCount,
+            skippedAttachmentCount: skippedAttachmentCount
+        )
     }
 
     func restoreConversation(

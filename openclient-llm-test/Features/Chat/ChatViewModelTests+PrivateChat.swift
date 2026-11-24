@@ -41,6 +41,7 @@ extension ChatViewModelTests {
         // Given
         let model = LLMModel(id: "gpt-4")
         sut = ChatViewModel(
+            initialFolderID: UUID(),
             isPrivateChat: true,
             state: .loaded(.init(selectedModel: model)),
             streamMessageUseCase: mockStreamMessage,

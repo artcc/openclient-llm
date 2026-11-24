@@ -91,7 +91,7 @@ private extension CloudSyncManager {
                     attachmentCount: attachmentCounts[$0.id] ?? 0
                 )
             }.sorted { $0.id.uuidString < $1.id.uuidString }
-            return .available(.conversations(items))
+            return .available(.conversations(items, folderCount: snapshot.folderState.folders.count))
         } catch {
             return .failed(inventoryFailure(for: error))
         }
@@ -225,6 +225,7 @@ private extension CloudSyncManager {
         let memory = try await loadMemorySyncSnapshot()
         let templates = try await loadTemplatesFromCloud()
         var revisions = conversations.conversations.values.map(\.updatedAt)
+        revisions += conversations.folderState.revisions
         revisions += conversations.tombstones.map(\.deletedAt)
         revisions += [conversations.deleteAllMarker?.deletedAt].compactMap { $0 }
         switch profile.state {
@@ -283,6 +284,9 @@ private extension CloudSyncManager {
     }
 
     func purgeConversations(in documentsURL: URL, marker: CloudPurgeMarker) throws {
+        let previous = try loadConversationFolderState(in: documentsURL)
+        var folders = previous
+        folders.purge(through: marker.deletedAt)
         let directory = documentsURL.appendingPathComponent("Conversations", isDirectory: true)
         var survivingIds = Set<UUID>()
         if fileManager.fileExists(atPath: directory.path) {
@@ -294,6 +298,9 @@ private extension CloudSyncManager {
                     try removeCategoryItemIfPresent(at: url)
                 }
             }
+        }
+        try writeConversationFolderState(folders, replacing: previous, in: documentsURL) {
+            guard try readPurgeMarker(in: documentsURL) == marker else { throw CloudSyncError.cloudContentChanged }
         }
         let attachmentsURL = documentsURL.appendingPathComponent("Attachments", isDirectory: true)
         guard fileManager.fileExists(atPath: attachmentsURL.path) else { return }
