@@ -53,6 +53,17 @@ description: "Use when changing OpenClient SwiftUI visuals, interaction feedback
 - Preserve sufficient contrast, Dynamic Type reflow, text selection where expected, and platform-appropriate target sizes.
 - Do not encode meaning solely through color or animation.
 
+## Launch Announcements
+
+- Keep the banner in its existing Home inset with independent close and action targets. Reflow the text action below
+  the copy when it cannot fit beside it; support Dynamic Type and narrow windows.
+- What's New is a dismissible native sheet for selected installed releases, not a first-install or required-update
+  screen. Present at Home when no update or external entry takes priority. Always offer Continue and at most one
+  localized contextual action. Both dismissal and action acknowledge the ID; opening the App Store does not mean a review
+  was submitted. Never automatically request a rating in a process that presented What's New.
+- Show at most one kind of announcement per app process, including across windows. After What's New closes, leave the
+  banner eligible for a later launch without recording a banner dismissal.
+
 ## Model Parameter Editor
 
 - Settings > Chat and each chat's Model Parameters action share the same modal editor and controls. The global editor saves

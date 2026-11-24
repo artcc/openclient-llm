@@ -1,6 +1,9 @@
 Hi there! We've got some great new features for you in this update.
 
 • Organize your chats into folders and move several at once. On Mac, you can also drag chats into a folder in the sidebar.
+• On selected updates, What’s New shows the highlights instead of an announcement banner. Choose Continue or use the extra action if one is offered.
+• The redesigned banner keeps its action beside the message or below it, depending on screen width.
+• Both What’s New and the banner can take you straight to the App Store to write a review.
 • Minor bug fixes and stability improvements.
 
 Thanks for your continued support and for helping us build the best possible LLM client together.

@@ -9,17 +9,20 @@
 import Foundation
 @testable import openclient_llm
 
-// Safety: Only used within serialized @MainActor test methods.
-final class MockResetAppDataUseCase: ResetAppDataUseCaseProtocol, @unchecked Sendable {
+@MainActor
+final class MockResetAppDataUseCase: ResetAppDataUseCaseProtocol {
     // MARK: - Properties
 
-    var executeCalled: Bool = false
+    private(set) var executeCallCount = 0
+    var executeCalled: Bool { executeCallCount > 0 }
     var executeError: Error?
+    var onExecute: (@MainActor () async throws -> Void)?
 
     // MARK: - Execute
 
     func execute() async throws {
-        executeCalled = true
+        executeCallCount += 1
         if let executeError { throw executeError }
+        try await onExecute?()
     }
 }

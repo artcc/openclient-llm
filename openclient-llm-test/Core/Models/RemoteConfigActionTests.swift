@@ -32,4 +32,18 @@ final class RemoteConfigActionTests: XCTestCase {
         // Then
         XCTAssertEqual(action, .tip)
     }
+
+    func test_decode_bannerWithWriteReviewCTA_returnsWriteReviewAction() throws {
+        let json = """
+        {
+          "active": true, "dismiss_banner_key": "review", "platforms": ["ios"],
+          "items": {"en": {"title": "Rate the app", "subtitle": "", "cta": "Write a review",
+                           "action": "write_review", "url": "", "emoji": ""}}
+        }
+        """
+
+        let banner = try JSONDecoder().decode(RemoteConfig.Banner.self, from: Data(json.utf8))
+
+        XCTAssertEqual(banner.items["en"]?.action, .writeReview)
+    }
 }

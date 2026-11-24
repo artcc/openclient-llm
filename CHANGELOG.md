@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## [1.7.50-build-136] - Unreleased
+## [1.7.50-build-137] - Unreleased
 
 ### Added
 
@@ -16,10 +16,14 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 - On iPhone, the folder button in Chats opens a side panel; on iPad, folders appear directly in the sidebar when it is visible.
 - New chats started in a folder and forks of chats in that folder inherit its location.
 - Deleting a folder returns its chats to Unfiled without deleting any conversations.
+- Selected releases show a What’s New screen with highlights for the installed version, a Continue button, and up to one additional action.
+- Both What’s New and the announcement banner can link directly to the App Store’s review form.
 
 ### Changed
 
 - iCloud sync and full backups now preserve folders, including empty ones, while individual chat exports omit folder information.
+- The redesigned announcement banner places its action beside the message when space allows and below it on narrower screens.
+- What’s New takes priority when both release highlights and an announcement banner are available.
 
 ## [1.7.45-build-135] - 2026-11-04
 

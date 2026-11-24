@@ -13,7 +13,13 @@ struct HomeView: View {
 
     let remoteBanner: RemoteBanner?
     let onRemoteBannerDismiss: () -> Void
-    let onRemoteBannerAction: () -> Void
+    @Binding var remoteWhatsNew: RemoteWhatsNew?
+    @Binding private var pendingSpotlightConversationID: UUID?
+    let onExternalEntry: () -> Void
+    let onNewsAppeared: () -> Void
+    @Environment(\.openURL) var openURL
+    @State var pendingNewsAction: RemoteWhatsNew?
+    @State var announcementWebPage: AnnouncementWebPage?
 
     @State private var viewModel = HomeViewModel()
     @State var selectedConversation: Conversation?
@@ -48,11 +54,17 @@ struct HomeView: View {
     init(
         remoteBanner: RemoteBanner? = nil,
         onRemoteBannerDismiss: @escaping () -> Void = {},
-        onRemoteBannerAction: @escaping () -> Void = {}
+        remoteWhatsNew: Binding<RemoteWhatsNew?> = .constant(nil),
+        pendingSpotlightConversationID: Binding<UUID?> = .constant(nil),
+        onExternalEntry: @escaping () -> Void = {},
+        onNewsAppeared: @escaping () -> Void = {}
     ) {
         self.remoteBanner = remoteBanner
         self.onRemoteBannerDismiss = onRemoteBannerDismiss
-        self.onRemoteBannerAction = onRemoteBannerAction
+        _remoteWhatsNew = remoteWhatsNew
+        _pendingSpotlightConversationID = pendingSpotlightConversationID
+        self.onExternalEntry = onExternalEntry
+        self.onNewsAppeared = onNewsAppeared
     }
 
     // MARK: - View
@@ -73,16 +85,17 @@ struct HomeView: View {
                 ))
 #endif
         }
-        .onContinueUserActivity(SpotlightConstants.activityType) { activity in
-            guard let idString = activity.userInfo?[SpotlightConstants.activityIdentifierKey] as? String,
-                  let id = UUID(uuidString: idString) else { return }
+        .onChange(of: pendingSpotlightConversationID, initial: true) {
+            guard let id = pendingSpotlightConversationID else { return }
+            handleExternalEntry()
+            pendingSpotlightConversationID = nil
             viewModel.send(.spotlightConversationRequested(id))
         }
         .task {
             viewModel.send(.viewAppeared)
         }
-        .onChange(of: viewModel.isPrivateChatRequested) { _, isRequested in
-            guard isRequested else { return }
+        .onChange(of: viewModel.isPrivateChatRequested, initial: true) {
+            guard viewModel.isPrivateChatRequested else { return }
 #if os(iOS)
             showsFolderDrawer = false
             dismissSidebarSearch()
@@ -95,8 +108,8 @@ struct HomeView: View {
             isPrivateChatActive = true
             viewModel.send(.privateChatRequestConsumed)
         }
-        .onChange(of: viewModel.pendingConversation) { _, conversation in
-            guard let conversation else { return }
+        .onChange(of: viewModel.pendingConversation, initial: true) {
+            guard let conversation = viewModel.pendingConversation else { return }
 #if os(iOS)
             showsFolderDrawer = false
             dismissSidebarSearch()
@@ -109,38 +122,34 @@ struct HomeView: View {
             openConversation(conversation)
             viewModel.send(.pendingConversationConsumed)
         }
-        .task {
+        .onChange(of: viewModel.pendingShortcutAction, initial: true) {
             guard let action = viewModel.pendingShortcutAction else { return }
-            try? await Task.sleep(for: .milliseconds(300))
-            handleShortcutAction(action)
-            viewModel.send(.shortcutActionConsumed)
-        }
-        .onChange(of: viewModel.pendingShortcutAction) { _, action in
-            guard let action else { return }
             handleShortcutAction(action)
             viewModel.send(.shortcutActionConsumed)
         }
 #if os(iOS)
-        .task {
+        .onChange(of: viewModel.hasPendingShare, initial: true) {
             guard viewModel.hasPendingShare else { return }
-            try? await Task.sleep(for: .milliseconds(300))
-            viewModel.send(.shareItemReceived)
-        }
-        .onChange(of: viewModel.hasPendingShare) { _, isPending in
-            guard isPending else { return }
+            handleExternalEntry()
             viewModel.send(.shareItemReceived)
         }
 #endif
-        .task {
+        .onChange(of: viewModel.pendingURLSchemeAction, initial: true) {
             guard viewModel.pendingURLSchemeAction != nil else { return }
-            try? await Task.sleep(for: .milliseconds(300))
-            viewModel.send(.urlSchemeActionReceived)
-        }
-        .onChange(of: viewModel.pendingURLSchemeAction) { _, action in
-            guard action != nil else { return }
+            handleExternalEntry()
             viewModel.send(.urlSchemeActionReceived)
         }
         .animation(.smooth, value: remoteBanner?.id)
+        .sheet(item: $remoteWhatsNew, onDismiss: performPendingNewsAction) { news in
+            WhatsNewView(news: news, onContinue: { remoteWhatsNew = nil }, onAction: {
+                pendingNewsAction = news
+                remoteWhatsNew = nil
+            })
+            .onAppear(perform: onNewsAppeared)
+        }
+        .sheet(item: $announcementWebPage) { page in
+            WebContentView(title: page.title, url: page.url)
+        }
     }
 }
 
@@ -271,6 +280,7 @@ private extension HomeView {
 #endif
 
     func handleShortcutAction(_ action: ShortcutAction) {
+        handleExternalEntry()
         switch action {
         case .newChat:
             viewModel.send(.newChatShortcutTriggered)
@@ -416,20 +426,12 @@ private extension HomeView {
             .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
+}
 
-    func handleRemoteBannerAction() {
-        guard let action = remoteBanner?.item.action else { return }
-
-        switch action {
-        case .close:
-            onRemoteBannerDismiss()
-        case .openURL:
-            onRemoteBannerAction()
-        case .feedback:
-            routeToSettings(.feedback)
-        case .tip:
-            routeToSettings(.tipJar)
-        }
+extension HomeView {
+    var hasPendingExternalEntry: Bool {
+        pendingSpotlightConversationID != nil || viewModel.pendingURLSchemeAction != nil
+            || viewModel.pendingShortcutAction != nil || viewModel.hasPendingShare
     }
 
     func routeToSettings(_ presentation: SettingsPresentation) {
@@ -439,11 +441,8 @@ private extension HomeView {
         selectMacDestination(.settings)
 #endif
         requestedSettingsPresentation = presentation
-        onRemoteBannerDismiss()
     }
-}
 
-extension HomeView {
     func openConversation(_ conversation: Conversation?) {
         newChatPlacement = nil
         selectedConversation = conversation

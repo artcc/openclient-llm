@@ -83,6 +83,42 @@ release-and-message `dismiss_banner_key` unless supplied; do not change the key 
 
 ### Valid banner actions
 
-Use only the exact, case-sensitive actions `close`, `open_url`, `feedback`, and `tip`; unknown values break decoding.
+Use only the exact, case-sensitive actions `close`, `open_url`, `feedback`, `tip`, and `write_review`. The last opens
+the app's fixed App Store review link; do not publish it in a banner consumed by older clients, which reject unknown
+action values for the entire config. `open_url` with the App Store link is compatible but uses the existing web sheet;
+`write_review` opens the system App Store destination directly.
 `open_url` requires a valid HTTP(S) URL. For other actions, use an empty `url` unless explicitly preserving one. An empty
 `cta` hides the action button.
+
+### Optional release highlights (`whats_new`)
+
+Keep `schema_version: 1`. Omit `whats_new` or set `active` to false to disable it independently of `app_update` and
+`banner`. Target the exact installed marketing `version` and `platforms` (`ios` includes iPadOS, or `macos`). Use one
+stable `id` per announcement. Do not rotate it for copy edits or patches. Keep development and production activation
+independent; changing these local files does not deploy them.
+
+`items` maps locales to a `title`, an ordered `highlights` array of `{ "symbol", "title", "body" }` objects (use SF Symbol
+names), and an optional `action_title`. Supply English fallback copy. The optional top-level `action` and `url` inside
+`whats_new` are shared across translations. For example:
+
+```json
+"whats_new": {
+  "active": false,
+  "id": "chat-folders-1.7.50",
+  "version": "1.7.50",
+  "platforms": ["ios", "macos"],
+  "action": "write_review",
+  "items": {
+    "en": {
+      "title": "Organize your chats",
+      "highlights": [
+        {"symbol": "folder", "title": "Chat folders", "body": "Group related conversations in a folder."}
+      ],
+      "action_title": "Write a review"
+    }
+  }
+}
+```
+
+Malformed notes must not invalidate maintenance, updates, or banners. Resolve locale by region, language, then English.
+An unsupported action, `close`, missing label, unavailable tip jar, or invalid `open_url` target leaves only Continue.

@@ -56,6 +56,7 @@ nonisolated struct RemoteConfig: Codable, Equatable, Sendable {
         case openURL = "open_url"
         case feedback
         case tip
+        case writeReview = "write_review"
     }
 
     let schemaVersion: Int
@@ -63,6 +64,7 @@ nonisolated struct RemoteConfig: Codable, Equatable, Sendable {
     let appUpdate: AppUpdate
     let banner: Banner
     let settingsSection: SettingsSection?
+    private(set) var whatsNew: WhatsNew?
 
     var isTipJarEnabled: Bool {
         settingsSection?.tipOption ?? true
@@ -78,6 +80,31 @@ nonisolated struct RemoteConfig: Codable, Equatable, Sendable {
         case appUpdate = "app_update"
         case banner
         case settingsSection = "settings_section"
+        case whatsNew = "whats_new"
+    }
+}
+
+extension RemoteConfig {
+    static func languageCandidates(for identifier: String) -> [String] {
+        let region = identifier.prefix { $0 != "@" }.replacingOccurrences(of: "_", with: "-")
+        return [region, String(region.prefix { $0 != "-" }), "en"]
+    }
+
+    static func isValidWebURL(_ url: URL?) -> Bool {
+        guard let url, let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme),
+              let host = url.host, !host.isEmpty, url.user == nil, url.password == nil else { return false }
+        return true
+    }
+
+    nonisolated init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        maintenanceMode = try container.decode(MaintenanceMode.self, forKey: .maintenanceMode)
+        appUpdate = try container.decode(AppUpdate.self, forKey: .appUpdate)
+        banner = try container.decode(Banner.self, forKey: .banner)
+        settingsSection = try container.decodeIfPresent(SettingsSection.self, forKey: .settingsSection)
+        // Optional release notes must never suppress maintenance or forced-update instructions.
+        whatsNew = try? container.decode(WhatsNew.self, forKey: .whatsNew)
     }
 }
 
