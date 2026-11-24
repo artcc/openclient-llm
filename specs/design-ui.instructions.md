@@ -57,10 +57,16 @@ description: "Use when changing OpenClient SwiftUI visuals, interaction feedback
 
 - Keep the banner in its existing Home inset with independent close and action targets. Reflow the text action below
   the copy when it cannot fit beside it; support Dynamic Type and narrow windows.
-- What's New is a dismissible native sheet for selected installed releases, not a first-install or required-update
-  screen. Present at Home when no update or external entry takes priority. Always offer Continue and at most one
-  localized contextual action. Both dismissal and action acknowledge the ID; opening the App Store does not mean a review
-  was submitted. Never automatically request a rating in a process that presented What's New.
+- What's New is a nonmodal floating card over the Home history for selected installed releases, not a first-install or
+  required-update screen. Center it in the Home window on macOS, including the sidebar in the alignment. On iOS,
+  anchor it above the tab bar in compact layouts or at the bottom trailing edge of the detail area in wider layouts.
+  Dim the entire Home window behind the card with translucent black, including safe areas. Leave
+  surrounding navigation interactive; never follow the user into a chat. Fit the card to its
+  contents with a 400-point maximum width, scroll notes only when needed, and keep the footer accessible. Use a fade
+  instead of spatial motion with Reduce Motion. Present when no update or external entry takes priority. Offer a
+  prominent Continue button and at most one secondary localized contextual action. Both dismissal and action acknowledge
+  the ID; opening the App Store does not mean a review was submitted. Never automatically request a rating in a process
+  that presented What's New.
 - Show at most one kind of announcement per app process, including across windows. After What's New closes, leave the
   banner eligible for a later launch without recording a banner dismissal.
 

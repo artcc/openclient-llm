@@ -18,7 +18,7 @@ struct HomeView: View {
     let onExternalEntry: () -> Void
     let onNewsAppeared: () -> Void
     @Environment(\.openURL) var openURL
-    @State var pendingNewsAction: RemoteWhatsNew?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State var announcementWebPage: AnnouncementWebPage?
 
     @State private var viewModel = HomeViewModel()
@@ -38,6 +38,7 @@ struct HomeView: View {
 #endif
 
 #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State var mobileHistory = ConversationListViewModel()
     @State var showsFolderDrawer = false
     private var folderScope: ConversationFolderScope { mobileHistory.requestedScope }
@@ -73,6 +74,7 @@ struct HomeView: View {
         Group {
 #if os(macOS)
             macOSLayout
+                .overlay(alignment: .center) { newsOverlay }
 #else
             iOSLayout
                 .safeAreaInset(edge: .top, spacing: 0) {
@@ -87,7 +89,7 @@ struct HomeView: View {
         }
         .onChange(of: pendingSpotlightConversationID, initial: true) {
             guard let id = pendingSpotlightConversationID else { return }
-            handleExternalEntry()
+            onExternalEntry()
             pendingSpotlightConversationID = nil
             viewModel.send(.spotlightConversationRequested(id))
         }
@@ -130,23 +132,17 @@ struct HomeView: View {
 #if os(iOS)
         .onChange(of: viewModel.hasPendingShare, initial: true) {
             guard viewModel.hasPendingShare else { return }
-            handleExternalEntry()
+            onExternalEntry()
             viewModel.send(.shareItemReceived)
         }
 #endif
         .onChange(of: viewModel.pendingURLSchemeAction, initial: true) {
             guard viewModel.pendingURLSchemeAction != nil else { return }
-            handleExternalEntry()
+            onExternalEntry()
             viewModel.send(.urlSchemeActionReceived)
         }
         .animation(.smooth, value: remoteBanner?.id)
-        .sheet(item: $remoteWhatsNew, onDismiss: performPendingNewsAction) { news in
-            WhatsNewView(news: news, onContinue: { remoteWhatsNew = nil }, onAction: {
-                pendingNewsAction = news
-                remoteWhatsNew = nil
-            })
-            .onAppear(perform: onNewsAppeared)
-        }
+        .modifier(WhatsNewBackdrop())
         .sheet(item: $announcementWebPage) { page in
             WebContentView(title: page.title, url: page.url)
         }
@@ -275,12 +271,13 @@ private extension HomeView {
                 ChatView(isPrivateChat: true)
             }
         }
+        .overlay(alignment: horizontalSizeClass == .regular ? .bottomTrailing : .bottom) { newsOverlay }
     }
 
 #endif
 
     func handleShortcutAction(_ action: ShortcutAction) {
-        handleExternalEntry()
+        onExternalEntry()
         switch action {
         case .newChat:
             viewModel.send(.newChatShortcutTriggered)
@@ -413,6 +410,23 @@ private extension HomeView {
         .id(conversation.id)
     }
 
+    var newsOverlay: some View {
+        ZStack {
+            if let news = visibleNews {
+                WhatsNewView(
+                    news: news,
+                    onContinue: { dismissNews(news, performAction: false) },
+                    onAction: { dismissNews(news, performAction: true) }
+                )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .transition(reduceMotion ? .opacity : .offset(y: 10).combined(with: .opacity))
+                .onAppear(perform: onNewsAppeared)
+            }
+        }
+        .animation(reduceMotion ? .easeOut(duration: 0.15) : .smooth(duration: 0.24), value: visibleNews?.id)
+    }
+
     @ViewBuilder
     var remoteBannerInset: some View {
         if let remoteBanner {
@@ -429,7 +443,19 @@ private extension HomeView {
 }
 
 extension HomeView {
-    var hasPendingExternalEntry: Bool {
+    var visibleNews: RemoteWhatsNew? {
+        guard let remoteWhatsNew, selectedConversation == nil, !isPrivateChatActive,
+              !hasPendingExternalEntry, !LaunchAnnouncementSession.shared.hasExternalEntry else { return nil }
+#if os(iOS)
+        guard selectedTab == .chats, !isSidebarSearchActive, !showsFolderDrawer else { return nil }
+#else
+        guard isShowingMacHistory, !macSearchRequested else { return nil }
+        if case .loaded(let loaded) = macHistory.state, !loaded.searchQuery.isEmpty { return nil }
+#endif
+        return remoteWhatsNew
+    }
+
+    private var hasPendingExternalEntry: Bool {
         pendingSpotlightConversationID != nil || viewModel.pendingURLSchemeAction != nil
             || viewModel.pendingShortcutAction != nil || viewModel.hasPendingShare
     }

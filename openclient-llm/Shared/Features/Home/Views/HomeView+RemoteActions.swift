@@ -22,16 +22,10 @@ extension HomeView {
         performRemoteAction(item.action, title: item.title, url: URL(string: item.url))
     }
 
-    func handleExternalEntry() {
-        pendingNewsAction = nil
-        onExternalEntry()
-    }
-
-    func performPendingNewsAction() {
-        guard let news = pendingNewsAction else { return }
-        pendingNewsAction = nil
-        guard !hasPendingExternalEntry, !LaunchAnnouncementSession.shared.hasExternalEntry,
-              let action = news.action else { return }
+    func dismissNews(_ news: RemoteWhatsNew, performAction: Bool) {
+        guard visibleNews?.id == news.id else { return }
+        remoteWhatsNew = nil
+        guard performAction, let action = news.action else { return }
         performRemoteAction(action, title: news.item.title, url: news.url)
     }
 

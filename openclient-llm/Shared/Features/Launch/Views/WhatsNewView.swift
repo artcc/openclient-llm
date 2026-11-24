@@ -9,107 +9,161 @@
 import SwiftUI
 
 struct WhatsNewView: View {
+    fileprivate static let cardShape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+
     let news: RemoteWhatsNew
     let onContinue: () -> Void
     let onAction: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(verbatim: "OpenClient \(news.version)")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.secondary)
-                        Text(verbatim: news.item.title)
-                            .font(.largeTitle.bold())
-                            .accessibilityAddTraits(.isHeader)
-                    }
-
-                    ForEach(news.item.highlights.indices, id: \.self) { index in
-                        WhatsNewHighlightRow(highlight: news.item.highlights[index])
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(24)
+        VStack(alignment: .leading, spacing: 14) {
+            ViewThatFits(in: .vertical) {
+                notes.fixedSize(horizontal: false, vertical: true)
+                ScrollView { notes }
+                    .scrollBounceBehavior(.basedOnSize)
             }
-
-            Divider()
             footer
-                .controlSize(.large)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
                 .layoutPriority(1)
         }
-#if os(macOS)
-        .frame(minWidth: 360, idealWidth: 460, minHeight: 300, idealHeight: 480)
-#else
-        .presentationSizing(.form)
-        .presentationDragIndicator(.visible)
-#endif
+        .padding(20)
+        .frame(maxWidth: 400, alignment: .leading)
+        .background(.background, in: Self.cardShape)
+        .overlay { Self.cardShape.strokeBorder(.primary.opacity(0.12), lineWidth: 1).allowsHitTesting(false) }
+        .shadow(color: .black.opacity(0.14), radius: 10, y: 4)
+        .anchorPreference(key: WhatsNewCardBounds.self, value: .bounds) { $0 }
+        .accessibilityElement(children: .contain)
+        .accessibilityAction(.escape, onContinue)
     }
 }
 
 private extension WhatsNewView {
+    var notes: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                CurrentAppIconImage()
+                    .frame(width: 26, height: 26)
+                    .clipShape(.rect(cornerRadius: 6))
+                    .accessibilityHidden(true)
+                Text("What's New")
+                    .textCase(.uppercase)
+                    .fontWeight(.semibold)
+                Text(verbatim: "· \(news.version)")
+                    .monospacedDigit()
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .accessibilityElement(children: .combine)
+
+            Text(verbatim: news.item.title)
+                .font(.title3.bold())
+                .accessibilityAddTraits(.isHeader)
+
+            ForEach(news.item.highlights.indices, id: \.self) { index in
+                WhatsNewHighlightRow(highlight: news.item.highlights[index])
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     @ViewBuilder
     var footer: some View {
         if let actionTitle = news.actionTitle {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { buttons(actionTitle: actionTitle) }
-                VStack(spacing: 8) { buttons(actionTitle: actionTitle) }
+                HStack(spacing: 12) {
+                    contextualAction(actionTitle)
+                    Spacer(minLength: 0)
+                    continueButton
+                }
+                VStack(alignment: .trailing, spacing: 4) {
+                    contextualAction(actionTitle)
+                    continueButton
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
         } else {
-            continueButton.buttonStyle(.borderedProminent)
+            continueButton.frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 
-    @ViewBuilder
-    func buttons(actionTitle: String) -> some View {
+    func contextualAction(_ title: String) -> some View {
         Button(action: onAction) {
-            buttonLabel(Text(verbatim: actionTitle))
-        }
-        .buttonStyle(.borderedProminent)
-
-        continueButton.buttonStyle(.borderless)
-    }
-
-    var continueButton: some View {
-        Button(action: onContinue) {
-            buttonLabel(Text("Continue"))
-        }
-        .keyboardShortcut(.defaultAction)
-    }
-
-    func buttonLabel(_ text: Text) -> some View {
-        text
-            .multilineTextAlignment(.center)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity)
+            HStack(spacing: 4) {
+                Text(verbatim: title)
+                if news.action == .writeReview {
+                    Image(systemName: "arrow.up.right")
+                        .imageScale(.small)
+                        .accessibilityHidden(true)
+                }
+            }
+            .font(.subheadline.weight(.medium))
+            .multilineTextAlignment(.leading)
 #if os(iOS)
             .frame(minHeight: 44)
 #endif
             .contentShape(.rect)
+        }
+        .buttonStyle(.borderless)
+    }
+
+    var continueButton: some View {
+        Button(action: onContinue) {
+            Text("Continue")
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 6)
+#if os(iOS)
+                .frame(minHeight: 32)
+#endif
+        }
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.capsule)
+    }
+}
+
+private nonisolated struct WhatsNewCardBounds: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? { nil }
+
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = nextValue() ?? value
+    }
+}
+
+struct WhatsNewBackdrop: ViewModifier {
+    func body(content: Content) -> some View {
+        content.overlayPreferenceValue(WhatsNewCardBounds.self) { anchor in
+            if let anchor {
+                GeometryReader { geometry in
+                    Path { path in
+                        path.addRect(CGRect(origin: .zero, size: geometry.size))
+                        path.addPath(WhatsNewView.cardShape.path(in: geometry[anchor]))
+                    }
+                    .fill(.black.opacity(0.3), style: FillStyle(eoFill: true))
+                }
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            }
+        }
     }
 }
 
 private struct WhatsNewHighlightRow: View {
-    @ScaledMetric(relativeTo: .title2) private var symbolWidth = 32.0
+    @ScaledMetric(relativeTo: .subheadline) private var symbolWidth = 24.0
 
     let highlight: RemoteWhatsNew.Highlight
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: highlight.symbol)
-                .font(.title2)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.tint)
                 .frame(width: symbolWidth)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: highlight.title)
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
                 Text(verbatim: highlight.body)
-                    .font(.body)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
         }
@@ -118,20 +172,22 @@ private struct WhatsNewHighlightRow: View {
 }
 
 #if DEBUG
-private func previewSheet(actionTitle: String?) -> some View {
+private func previewCard(actionTitle: String?) -> some View {
     WhatsNewView(
         news: RemoteWhatsNew(
             id: "preview",
-            version: "2.0",
+            version: "1.0.0",
             item: .init(
-                title: "What’s new in OpenClient",
+                title: "Un sitio para los chats de un mismo tema",
                 highlights: [
-                    .init(symbol: "pin", title: "Pinned chats", body: "Keep your most-used conversations at the top."),
-                    .init(symbol: "tag", title: "Tags", body: "Organise your conversations by topic.")
+                    .init(symbol: "folder", title: "Organiza tus chats en carpetas",
+                          body: "Mueve un chat o varios a la vez. Su orden en el historial no cambia."),
+                    .init(symbol: "arrow.branch", title: "Mantén juntas las ramificaciones",
+                          body: "Cuando creas una rama de un chat, la nueva conversación empieza en la misma carpeta.")
                 ],
                 actionTitle: actionTitle
             ),
-            action: actionTitle == nil ? nil : .feedback,
+            action: actionTitle == nil ? nil : .writeReview,
             url: nil
         ),
         onContinue: {},
@@ -139,14 +195,19 @@ private func previewSheet(actionTitle: String?) -> some View {
     )
 }
 
-#Preview("Compact with action") {
-    previewSheet(actionTitle: "Share feedback about this release")
-        .environment(\.dynamicTypeSize, .accessibility1)
-        .frame(width: 360, height: 460)
+#Preview("iPhone · Folder release") {
+    previewCard(actionTitle: "Escribir una reseña")
+        .padding(12)
+        .frame(width: 375, height: 580, alignment: .bottomTrailing)
+        .modifier(WhatsNewBackdrop())
+        .environment(\.locale, Locale(identifier: "es"))
 }
 
-#Preview("Wide without action") {
-    previewSheet(actionTitle: nil)
-        .frame(width: 520, height: 460)
+#Preview("Large text · No action") {
+    previewCard(actionTitle: nil)
+        .environment(\.dynamicTypeSize, .accessibility2)
+        .padding(16)
+        .frame(width: 520, height: 420, alignment: .bottomTrailing)
+        .modifier(WhatsNewBackdrop())
 }
 #endif
