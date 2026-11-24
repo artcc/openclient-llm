@@ -23,8 +23,7 @@ extension SettingsView {
     }
 
     func requestAppReview() {
-        let urlString = "https://apps.apple.com/app/\(Constants.App.appStoreId)?action=write-review"
-        guard let url = URL(string: urlString) else { return }
+        guard let url = Constants.URLs.writeReview else { return }
 #if os(iOS)
         UIApplication.shared.open(url)
 #else

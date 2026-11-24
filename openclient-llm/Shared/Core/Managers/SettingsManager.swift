@@ -39,6 +39,8 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         static let failedMCPServerIds = "failedMCPServerIds"
         static let mcpDiscoveryFailed = "mcpDiscoveryFailed"
         static let dismissedRemoteBannerKey = "dismissedRemoteBannerKey"
+        static let seenWhatsNewIDs = "seenWhatsNewIDs"
+        static let freshInstallVersion = "freshInstallVersion"
 
         static func ttsVoiceKey(forModelId modelId: String) -> String {
             "tts_voice_\(modelId)"
@@ -223,6 +225,16 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         defaults.set(value, forKey: Keys.dismissedRemoteBannerKey)
     }
 
+    var seenWhatsNewIDs: Set<String> {
+        get { Set(defaults.stringArray(forKey: Keys.seenWhatsNewIDs) ?? []) }
+        set { defaults.set(Array(newValue), forKey: Keys.seenWhatsNewIDs) }
+    }
+
+    var freshInstallVersion: String? {
+        get { defaults.string(forKey: Keys.freshInstallVersion) }
+        set { defaults.set(newValue, forKey: Keys.freshInstallVersion) }
+    }
+
     func deleteAll() {
         let wasCloudSyncEnabled = getIsCloudSyncEnabled()
         defaults.removeObject(forKey: Keys.isOnboardingCompleted)
@@ -256,6 +268,8 @@ final class SettingsManager: SettingsManagerProtocol, @unchecked Sendable {
         defaults.removeObject(forKey: Keys.failedMCPServerIds)
         defaults.removeObject(forKey: Keys.mcpDiscoveryFailed)
         defaults.removeObject(forKey: Keys.dismissedRemoteBannerKey)
+        defaults.removeObject(forKey: Keys.seenWhatsNewIDs)
+        defaults.removeObject(forKey: Keys.freshInstallVersion)
         defaults.removeObject(forKey: LegacyKeys.serverBaseURL)
         defaults.removeObject(forKey: LegacyKeys.apiKey)
         keychainManager.deleteAll()

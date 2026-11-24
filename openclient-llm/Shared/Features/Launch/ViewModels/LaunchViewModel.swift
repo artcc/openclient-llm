@@ -15,9 +15,13 @@ final class LaunchViewModel {
 
     enum Event {
         case viewAppeared
+        case viewDisappeared
         case onboardingCompleted
         case availableUpdateDismissed
         case remoteBannerDismissed
+        case remoteWhatsNewDismissed
+        case remoteWhatsNewAppeared
+        case externalEntryRequested
         case resetRetried
     }
 
@@ -33,7 +37,14 @@ final class LaunchViewModel {
     private(set) var state: State
     private(set) var availableUpdate: RemoteConfig.PlatformUpdate?
     private(set) var remoteBanner: RemoteBanner?
+    private(set) var launchTask: Task<Void, Never>?
+    var remoteWhatsNew: RemoteWhatsNew? { announcementSession.hasExternalEntry ? nil : selectedNews }
 
+    private var selectedNews: RemoteWhatsNew?
+    private let announcementSession: LaunchAnnouncementSession
+    private var hasStartedLaunch = false
+    private var hasPresentedNews = false
+    private var initialReset: Task<Void, Error>?
     private let checkOnboardingUseCase: CheckOnboardingUseCaseProtocol
     private let resetAppDataUseCase: ResetAppDataUseCaseProtocol
     private let configureVoticeUseCase: ConfigureVoticeUseCaseProtocol
@@ -54,6 +65,7 @@ final class LaunchViewModel {
         attachmentMigrationUseCase: AttachmentMigrationUseCaseProtocol = AttachmentMigrationUseCase(),
         remoteConfigManager: RemoteConfigManagerProtocol = RemoteConfigManager.shared,
         settingsManager: SettingsManagerProtocol = SettingsManager(),
+        announcementSession: LaunchAnnouncementSession = .shared,
         currentVersion: String? = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
         localeIdentifier: String = Locale.current.identifier,
         launchDelay: Duration = .milliseconds(1000)
@@ -65,6 +77,7 @@ final class LaunchViewModel {
         self.attachmentMigrationUseCase = attachmentMigrationUseCase
         self.remoteConfigManager = remoteConfigManager
         self.settingsManager = settingsManager
+        self.announcementSession = announcementSession
         self.currentVersion = currentVersion
         self.localeIdentifier = localeIdentifier
         self.launchDelay = launchDelay
@@ -75,30 +88,42 @@ final class LaunchViewModel {
     func send(_ event: Event) {
         switch event {
         case .viewAppeared:
-            configureVotice()
-            attachmentMigrationUseCase.execute()
-
-            let isCompleted = checkOnboardingUseCase.execute()
-            if isCompleted {
-                startLaunch(isOnboardingCompleted: true)
-            } else {
-                resetBeforeOnboarding()
-            }
+            beginLaunch()
+        case .viewDisappeared:
+            endPresentation()
         case .onboardingCompleted:
             state = .home
         case .availableUpdateDismissed:
             availableUpdate = nil
         case .remoteBannerDismissed:
-            guard let remoteBanner else { return }
-            settingsManager.setDismissedRemoteBannerKey(remoteBanner.id)
-            self.remoteBanner = nil
+            dismissBanner()
+        case .remoteWhatsNewDismissed:
+            acknowledgeNews()
+        case .remoteWhatsNewAppeared:
+            hasPresentedNews = remoteWhatsNew != nil
+        case .externalEntryRequested:
+            announcementSession.hasExternalEntry = true
+            selectedNews = nil
         case .resetRetried:
+            initialReset = nil
             state = .loading
-            resetBeforeOnboarding()
+            startLaunch(isOnboardingCompleted: false)
         }
     }
 
     // MARK: - Private functions
+
+    private func dismissBanner() {
+        guard let remoteBanner else { return }
+        settingsManager.setDismissedRemoteBannerKey(remoteBanner.id)
+        self.remoteBanner = nil
+    }
+
+    private func acknowledgeNews() {
+        guard let remoteWhatsNew else { return }
+        settingsManager.seenWhatsNewIDs.insert(remoteWhatsNew.id)
+        selectedNews = nil
+    }
 
     func configureVotice() {
         do {
@@ -108,25 +133,45 @@ final class LaunchViewModel {
         }
     }
 
-    func resetBeforeOnboarding() {
-        Task {
-            do {
-                try await resetAppDataUseCase.execute()
-                startLaunch(isOnboardingCompleted: false)
-            } catch {
-                LogManager.error("Initial app data reset failed")
-                state = .resetFailed
-            }
+    private func beginLaunch() {
+        guard !hasStartedLaunch else { return }
+        hasStartedLaunch = true
+        configureVotice()
+        attachmentMigrationUseCase.execute()
+        startLaunch(isOnboardingCompleted: checkOnboardingUseCase.execute())
+    }
+
+    private func endPresentation() {
+        launchTask?.cancel()
+        launchTask = nil
+        if selectedNews != nil, !hasPresentedNews {
+            announcementSession.presentation = .undecided
+            selectedNews = nil
+            hasStartedLaunch = false
+        } else if state == .loading {
+            hasStartedLaunch = false
         }
     }
 
-    func startLaunch(isOnboardingCompleted: Bool) {
-        Task { [weak self, launchDelay] in
-            guard let self else { return }
-
+    private func startLaunch(isOnboardingCompleted: Bool) {
+        if !isOnboardingCompleted, initialReset == nil {
+            // Once cleanup starts, closing the window must not cancel it between stores.
+            initialReset = Task { [resetAppDataUseCase] in try await resetAppDataUseCase.execute() }
+        }
+        launchTask = Task {
+            do {
+                if !isOnboardingCompleted { try await initialReset?.value }
+            } catch {
+                guard !Task.isCancelled else { return }
+                LogManager.error("Initial app data reset failed")
+                state = .resetFailed
+                return
+            }
+            guard !Task.isCancelled else { return }
             async let launchDelayCompleted: Void = Self.waitForLaunchDelay(launchDelay)
             let remoteConfig = await loadRemoteConfig()
             await launchDelayCompleted
+            guard !Task.isCancelled else { return }
             finishLaunch(remoteConfig: remoteConfig, isOnboardingCompleted: isOnboardingCompleted)
         }
     }
@@ -146,6 +191,9 @@ final class LaunchViewModel {
         availableUpdate = nil
         remoteBanner = nil
         let update = availableUpdate(from: remoteConfig)
+        if !isOnboardingCompleted {
+            settingsManager.freshInstallVersion = currentVersion
+        }
 
         if remoteConfig?.maintenanceMode.enabled == true {
             state = .maintenance
@@ -153,9 +201,33 @@ final class LaunchViewModel {
             state = .forceUpdate(update)
         } else {
             availableUpdate = update
-            remoteBanner = availableBanner(from: remoteConfig)
+            selectAnnouncement(from: remoteConfig, allowsNews: isOnboardingCompleted && update == nil)
             state = isOnboardingCompleted ? .home : .onboarding
         }
+    }
+
+    private func selectAnnouncement(from config: RemoteConfig?, allowsNews: Bool) {
+        guard announcementSession.presentation != .whatsNew else { return }
+        if allowsNews, announcementSession.canPresentNews, let currentVersion,
+           let news = config?.resolvedWhatsNew(
+               installedVersion: currentVersion, platform: platform, localeIdentifier: localeIdentifier
+           ),
+           settingsManager.freshInstallVersion != news.version,
+           !settingsManager.seenWhatsNewIDs.contains(news.id) {
+            selectedNews = news
+            announcementSession.presentation = .whatsNew
+        } else if let banner = availableBanner(from: config) {
+            remoteBanner = banner
+            announcementSession.presentation = .banner
+        }
+    }
+
+    private var platform: RemoteConfig.Platform {
+#if os(iOS)
+        .ios
+#else
+        .macos
+#endif
     }
 
     func availableUpdate(from remoteConfig: RemoteConfig?) -> RemoteConfig.PlatformUpdate? {
@@ -175,12 +247,6 @@ final class LaunchViewModel {
     func availableBanner(from remoteConfig: RemoteConfig?) -> RemoteBanner? {
         guard let banner = remoteConfig?.banner, banner.active else { return nil }
 
-#if os(iOS)
-        let platform = RemoteConfig.Platform.ios
-#else
-        let platform = RemoteConfig.Platform.macos
-#endif
-
         guard banner.platforms.contains(platform) else { return nil }
         guard settingsManager.getDismissedRemoteBannerKey() != banner.dismissBannerKey else { return nil }
         guard let item = localizedBannerItem(from: banner.items) else { return nil }
@@ -188,15 +254,7 @@ final class LaunchViewModel {
     }
 
     func localizedBannerItem(from items: [String: RemoteConfig.Item]) -> RemoteConfig.Item? {
-        let baseIdentifier = localeIdentifier
-            .split(separator: "@", maxSplits: 1)
-            .first
-            .map(String.init) ?? localeIdentifier
-        let normalizedIdentifier = baseIdentifier.replacingOccurrences(of: "_", with: "-")
-        let languageCode = normalizedIdentifier.split(separator: "-").first.map(String.init)
-        let candidates = [normalizedIdentifier, languageCode, "en"].compactMap { $0 }
-
-        for candidate in candidates {
+        for candidate in RemoteConfig.languageCandidates(for: localeIdentifier) {
             if let item = items.first(where: { $0.key.caseInsensitiveCompare(candidate) == .orderedSame })?.value {
                 return item
             }

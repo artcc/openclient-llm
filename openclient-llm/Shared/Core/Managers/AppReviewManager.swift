@@ -27,6 +27,8 @@ struct AppReviewManager: AppReviewManagerProtocol {
     // MARK: - Public functions
 
     func requestReview() {
+        let session = LaunchAnnouncementSession.shared
+        guard session.presentation != .whatsNew else { return }
 #if os(iOS)
         guard let scene = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
@@ -34,6 +36,7 @@ struct AppReviewManager: AppReviewManagerProtocol {
             LogManager.warning("App review request skipped: no active window scene")
             return
         }
+        session.hasRequestedReview = true
         AppStore.requestReview(in: scene)
 #elseif os(macOS)
         guard let viewController = (NSApplication.shared.keyWindow ?? NSApplication.shared.mainWindow)?
@@ -41,6 +44,7 @@ struct AppReviewManager: AppReviewManagerProtocol {
             LogManager.warning("App review request skipped: no active view controller")
             return
         }
+        session.hasRequestedReview = true
         AppStore.requestReview(in: viewController)
 #endif
     }

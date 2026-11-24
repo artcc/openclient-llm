@@ -13,21 +13,28 @@ struct LaunchView: View {
 
     @Environment(\.openURL) private var openURL
     @State private var viewModel = LaunchViewModel()
-    @State private var presentedBannerWebDestination: BannerWebDestination?
+    @State private var pendingSpotlightConversationID: UUID?
 
     // MARK: - View
 
     var body: some View {
-        Group {
+        ZStack {
 #if os(macOS)
             macOSBody
 #else
             iOSBody
 #endif
         }
+        .onContinueUserActivity(SpotlightConstants.activityType) { activity in
+            guard let identifier = activity.userInfo?[SpotlightConstants.activityIdentifierKey] as? String,
+                  let id = UUID(uuidString: identifier) else { return }
+            viewModel.send(.externalEntryRequested)
+            pendingSpotlightConversationID = id
+        }
         .task {
             viewModel.send(.viewAppeared)
         }
+        .onDisappear { viewModel.send(.viewDisappeared) }
         .alert(
             String(localized: "Update available"),
             isPresented: availableUpdateAlertBinding
@@ -43,9 +50,6 @@ struct LaunchView: View {
             }
         } message: {
             Text(availableUpdateMessage)
-        }
-        .sheet(item: $presentedBannerWebDestination) { destination in
-            WebContentView(title: destination.title, url: destination.url)
         }
     }
 
@@ -129,10 +133,17 @@ private extension LaunchView {
     var homeView: some View {
         HomeView(
             remoteBanner: viewModel.remoteBanner,
-            onRemoteBannerDismiss: {
-                viewModel.send(.remoteBannerDismissed)
-            },
-            onRemoteBannerAction: handleRemoteBannerAction
+            onRemoteBannerDismiss: { viewModel.send(.remoteBannerDismissed) },
+            remoteWhatsNew: Binding(
+                get: { viewModel.remoteWhatsNew },
+                set: { if $0 == nil { viewModel.send(.remoteWhatsNewDismissed) } }
+            ),
+            pendingSpotlightConversationID: Binding(
+                get: { viewModel.state == .home ? pendingSpotlightConversationID : nil },
+                set: { pendingSpotlightConversationID = $0 }
+            ),
+            onExternalEntry: { viewModel.send(.externalEntryRequested) },
+            onNewsAppeared: { viewModel.send(.remoteWhatsNewAppeared) }
         )
     }
 
@@ -147,21 +158,6 @@ private extension LaunchView {
             }
             .buttonStyle(.borderedProminent)
         }
-    }
-
-    func handleRemoteBannerAction() {
-        guard let remoteBanner = viewModel.remoteBanner else { return }
-
-        if remoteBanner.item.action == .openURL,
-           let url = URL(string: remoteBanner.item.url),
-           let scheme = url.scheme?.lowercased(),
-           ["http", "https"].contains(scheme) {
-            presentedBannerWebDestination = BannerWebDestination(
-                title: remoteBanner.item.title,
-                url: url
-            )
-        }
-        viewModel.send(.remoteBannerDismissed)
     }
 
     var availableUpdateAlertBinding: Binding<Bool> {
@@ -189,13 +185,6 @@ private extension LaunchView {
         case .home:
             false
         }
-    }
-
-    struct BannerWebDestination: Identifiable {
-        let title: String
-        let url: URL
-
-        var id: URL { url }
     }
 }
 

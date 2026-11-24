@@ -45,6 +45,9 @@ enum Constants {
         }
 
         static let authorGitHub = URL(string: "https://github.com/ArtCC")
+        static let writeReview = URL(
+            string: "https://apps.apple.com/app/\(Constants.App.appStoreId)?action=write-review"
+        )
         static let manageSubscriptions = URL(string: "https://apps.apple.com/account/subscriptions")
 #if DEBUG
         static let remoteConfig = URL(string: "https://openclient-artcc05.web.app/config-dev.json")

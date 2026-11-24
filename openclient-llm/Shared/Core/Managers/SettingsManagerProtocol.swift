@@ -81,6 +81,8 @@ protocol SettingsManagerProtocol: Sendable {
     ) -> Bool
     func getDismissedRemoteBannerKey() -> String?
     func setDismissedRemoteBannerKey(_ value: String?)
+    var seenWhatsNewIDs: Set<String> { get nonmutating set }
+    var freshInstallVersion: String? { get nonmutating set }
     func deleteAll()
 }
 

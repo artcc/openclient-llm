@@ -29,9 +29,11 @@ final class LaunchRemoteBannerTests: XCTestCase {
         sut = LaunchViewModel(
             checkOnboardingUseCase: mockCheckOnboardingUseCase,
             resetAppDataUseCase: MockResetAppDataUseCase(),
+            configureVoticeUseCase: NoOpConfigureVoticeUseCase(),
             attachmentMigrationUseCase: MockAttachmentMigrationUseCase(),
             remoteConfigManager: mockRemoteConfigManager,
             settingsManager: mockSettingsManager,
+            announcementSession: LaunchAnnouncementSession(),
             currentVersion: "1.0.0",
             localeIdentifier: "es-ES",
             launchDelay: .zero
@@ -144,8 +146,7 @@ private extension LaunchRemoteBannerTests {
     }
 
     func waitForLaunch() async {
-        for _ in 0..<10 {
-            await Task.yield()
-        }
+        guard let launch = sut.launchTask else { return XCTFail("Expected a launch task") }
+        await launch.value
     }
 }
