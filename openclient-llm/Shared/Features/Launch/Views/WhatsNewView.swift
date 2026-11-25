@@ -207,7 +207,7 @@ private func previewCard(actionTitle: String?) -> some View {
     previewCard(actionTitle: nil)
         .environment(\.dynamicTypeSize, .accessibility2)
         .padding(16)
-        .frame(width: 520, height: 420, alignment: .bottomTrailing)
+        .frame(width: 520, height: 420, alignment: .center)
         .modifier(WhatsNewBackdrop())
 }
 #endif

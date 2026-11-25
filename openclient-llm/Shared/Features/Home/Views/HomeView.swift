@@ -38,6 +38,7 @@ struct HomeView: View {
 #endif
 
 #if os(iOS)
+    private var centersNewsInWindow: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State var mobileHistory = ConversationListViewModel()
     @State var showsFolderDrawer = false
@@ -85,6 +86,9 @@ struct HomeView: View {
                     isPresented: $showsFolderDrawer,
                     onSelect: selectMobileFolder
                 ))
+                .overlay(alignment: .center) {
+                    if centersNewsInWindow { newsOverlay }
+                }
 #endif
         }
         .onChange(of: pendingSpotlightConversationID, initial: true) {
@@ -271,7 +275,9 @@ private extension HomeView {
                 ChatView(isPrivateChat: true)
             }
         }
-        .overlay(alignment: horizontalSizeClass == .regular ? .bottomTrailing : .bottom) { newsOverlay }
+        .overlay(alignment: horizontalSizeClass == .regular ? .bottomTrailing : .bottom) {
+            if !centersNewsInWindow { newsOverlay }
+        }
     }
 
 #endif

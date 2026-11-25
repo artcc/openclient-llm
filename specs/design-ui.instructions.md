@@ -58,7 +58,7 @@ description: "Use when changing OpenClient SwiftUI visuals, interaction feedback
 - Keep the banner in its existing Home inset with independent close and action targets. Reflow the text action below
   the copy when it cannot fit beside it; support Dynamic Type and narrow windows.
 - What's New is a nonmodal floating card over the Home history for selected installed releases, not a first-install or
-  required-update screen. Center it in the Home window on macOS, including the sidebar in the alignment. On iOS,
+  required-update screen. Center it in the Home window on iPad and macOS, including the sidebar in the alignment. On iPhone,
   anchor it above the tab bar in compact layouts or at the bottom trailing edge of the detail area in wider layouts.
   Dim the entire Home window behind the card with translucent black, including safe areas. Leave
   surrounding navigation interactive; never follow the user into a chat. Fit the card to its

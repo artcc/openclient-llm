@@ -104,8 +104,8 @@ names), and an optional `action_title`. Supply English fallback copy. The option
 ```json
 "whats_new": {
   "active": false,
-  "id": "chat-folders-1.7.50",
-  "version": "1.7.50",
+  "id": "chat-folders-1.0.0",
+  "version": "1.0.0",
   "platforms": ["ios", "macos"],
   "action": "write_review",
   "items": {
