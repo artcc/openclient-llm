@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## [1.7.55-build-141] - 2026-11-25
+
+### Changed
+
+- The button that opens chat folders on iPad now uses a folder icon to distinguish it from the main sidebar button.
+- The What’s New card on iPad now appears in the center of the window whether the sidebar is open or collapsed.
+
 ## [1.7.50-build-139] - 2026-11-24
 
 ### Added

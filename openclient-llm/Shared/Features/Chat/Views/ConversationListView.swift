@@ -86,9 +86,13 @@ struct ConversationListView: View {
         .toolbar {
             if let onShowFolders {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Folders", systemImage: "sidebar.left", action: onShowFolders)
-                        .labelStyle(.iconOnly)
-                        .accessibilityLabel("Show Folders")
+                    Button(
+                        "Folders",
+                        systemImage: UIDevice.current.userInterfaceIdiom == .pad ? "folder" : "sidebar.left",
+                        action: onShowFolders
+                    )
+                    .labelStyle(.iconOnly)
+                    .accessibilityLabel("Show Folders")
                 }
             }
         }
